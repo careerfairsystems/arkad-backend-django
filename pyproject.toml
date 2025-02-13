@@ -1,0 +1,6 @@
+[tool.mypy]
+strict = true
+plugins = ["django-stubs"]
+
+[tool.ruff]
+target-version = "py313"

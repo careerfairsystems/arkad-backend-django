@@ -1,1 +1,4 @@
 /.idea/*
+/.dmypy.json
+venv
+.venv
