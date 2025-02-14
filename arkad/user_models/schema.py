@@ -1,5 +1,5 @@
 from ninja import Schema, ModelSchema
-from user_models.models import User
+from user_models.models import User, Company
 
 
 class SigninSchema(Schema):
@@ -25,3 +25,8 @@ class ProfileSchema(ModelSchema):
                   'is_active',
                   'is_staff',
                   'is_superuser',)
+
+class CompanySchema(ModelSchema):
+    class Meta:
+        model = Company
+        fields = ('id', 'name', 'description')
