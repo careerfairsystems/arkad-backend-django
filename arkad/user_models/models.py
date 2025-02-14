@@ -29,12 +29,19 @@ class Programme(models.TextChoices):
     TEKNISK_FYSIK = "Teknisk Fysik"
     BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
 
+class Company(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(null=True, blank=True)
+
 class User(AbstractUser):
     first_name = models.CharField("first name", max_length=150, blank=True, null=True)
     last_name = models.CharField("last name", max_length=150, blank=True, null=True)
 
     food_preferences = models.TextField(null=True, blank=True)
 
+
+    is_company = models.BooleanField(default=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, default=None, null=True)
 
     is_student = models.BooleanField(default=True)
     cv = models.FileField("Users cv", upload_to="user/cv", null=True, blank=True)

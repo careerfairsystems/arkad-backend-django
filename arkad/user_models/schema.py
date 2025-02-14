@@ -1,5 +1,5 @@
-from ninja import Schema, ModelSchema, UploadedFile
-from user_models.models import User
+from ninja import Schema, ModelSchema
+from user_models.models import User, Company
 
 
 class SigninSchema(Schema):
@@ -45,3 +45,8 @@ class UpdateProfileSchema(ModelSchema):
                   'master_title',
                   'study_year',
                   )
+
+class CompanySchema(ModelSchema):
+    class Meta:
+        model = Company
+        fields = ('id', 'name', 'description')
