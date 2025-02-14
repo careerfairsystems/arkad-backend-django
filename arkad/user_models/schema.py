@@ -6,6 +6,14 @@ class SigninSchema(Schema):
     username: str
     password: str
 
+class SignupSchema(Schema):
+    username: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+
+
 class ProfileSchema(ModelSchema):
     class Meta:
         model = User
