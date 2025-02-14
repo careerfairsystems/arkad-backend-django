@@ -11,3 +11,6 @@ type-check:
 	dmypy check arkad
 
 check: lint type-check
+
+dev:
+	cd arkad && python manage.py runserver
