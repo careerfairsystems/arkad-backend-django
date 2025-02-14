@@ -8,7 +8,7 @@ from arkad.settings import SECRET_KEY
 
 class User(AbstractUser):
     def create_jwt_token(self) -> str:
-        return jwt.encode({
+        return "Bearer " + jwt.encode({
             "exp": datetime.now(tz=timezone.utc) + timedelta(minutes=5),
             "user_id": self.id,
         }, SECRET_KEY, algorithm="HS512")
