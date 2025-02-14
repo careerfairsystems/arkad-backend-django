@@ -6,6 +6,7 @@ import jwt
 from .settings import SECRET_KEY
 from user_models.models import User
 from user_models.api import router as user_router
+from student_sessions.api import router as student_sessions_router
 
 
 class AuthBearer(HttpBearer):
@@ -23,6 +24,7 @@ class AuthBearer(HttpBearer):
 
 api = NinjaAPI(title="Arkad API", docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer(), csrf=False)
 api.add_router("user", user_router)
+api.add_router("student-session", student_sessions_router)
 
 @api.exception_handler(jwt.InvalidKeyError)
 def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
