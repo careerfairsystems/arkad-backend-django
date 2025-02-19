@@ -5,12 +5,20 @@ from user_models.schema import ProfileSchema, CompanySchema
 
 
 class StudentSessionSchema(ModelSchema):
-    interviewee: ProfileSchema
+    interviewee: ProfileSchema | None
     company: CompanySchema
 
     class Meta:
         model = StudentSession
         fields = ("start_time", "duration", "company", "interviewee", "booking_close_time")
+
+
+class CreateStudentSessionSchema(ModelSchema):
+    company_id: int
+
+    class Meta:
+        model = StudentSession
+        fields = ("start_time", "duration", "booking_close_time")
 
 class StudentSessionListSchema(Schema):
     student_sessions: list[StudentSessionSchema]
