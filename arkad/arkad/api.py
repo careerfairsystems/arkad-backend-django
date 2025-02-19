@@ -18,7 +18,7 @@ class AuthBearer(HttpBearer):
         request.user = user
         return user
 
-api = NinjaAPI(docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer())
+api = NinjaAPI(title="Arkad API", docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer())
 api.add_router("user", user_router)
 
 @api.exception_handler(jwt.InvalidKeyError)
