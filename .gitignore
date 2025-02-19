@@ -2,3 +2,4 @@
 /.dmypy.json
 venv
 .venv
+.env
