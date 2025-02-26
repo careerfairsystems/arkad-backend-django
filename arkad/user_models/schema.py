@@ -22,6 +22,14 @@ class ProfileSchema(ModelSchema):
                   'email',
                   'first_name',
                   'last_name',
+                  'is_student',
+                  'cv',
+                  'profile_picture',
+                  'programme',
+                  'linkedin',
+                  'master_title',
+                  'study_year',
                   'is_active',
-                  'is_staff',
-                  'is_superuser',)
+                  'is_staff'
+                  )
+

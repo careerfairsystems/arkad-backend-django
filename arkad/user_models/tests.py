@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class UserAPITests(TestCase):
+class UserSignin(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
