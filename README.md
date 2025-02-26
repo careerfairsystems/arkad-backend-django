@@ -5,6 +5,6 @@ This backend uses django and postgres as the database
 ### Required environment variables
 
 Required environment variables are:
-- SECRET_KEY (Set this to a long secret value)
+- SECRET_KEY (Set this to a long secret value), Used for signing JWT and sessions.
 - DEBUG (Must be set to "False" in production)
 - POSTGRES_PASSWORD (The postgres database password for the user arkad_db_user)

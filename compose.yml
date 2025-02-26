@@ -1,11 +1,9 @@
 services:
   web:
+    command: "cd arkad && gunicorn --workers 8 --timeout 16 --bind 0.0.0.0:8000 arkad.wsgi:application"
     build: .
-    command: python arkad/manage.py runserver 0.0.0.0:8000
-    ports:
-      - "8000:8000"
     environment:
-      - DEBUG=True
+      - DEBUG=${DEBUG}  # Must be False in production!
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DB_HOST=db
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -13,23 +11,24 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python arkad/manage.py migrate --check"]
+      test: ["CMD-SHELL", "python arkad/manage.py check --database default"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - arkad_network
+    volumes:
+      - static_volume:/app/arkad/static
+      - media_volume:/app/arkad/media
 
   db:
     image: postgres:15
     volumes:
-      - ./db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=arkad
       - POSTGRES_USER=arkad_db_user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U arkad_db_user -d arkad"]
       interval: 5s
@@ -38,8 +37,23 @@ services:
     networks:
       - arkad_network
 
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/app/arkad/static
+      - media_volume:/app/arkad/media
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    networks:
+      - arkad_network
+
 volumes:
   postgres_data:
+  static_volume:
+  media_volume:
 
 networks:
   arkad_network:

@@ -25,13 +25,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
+
+ALLOWED_HOSTS: list[str] = [".arkadtlth.se", ]
 if DEBUG:
+    ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
 
-ALLOWED_HOSTS: list[str] = []
 
-
-# Application definition
+STATIC_URL = '/static/'
+STATIC_ROOT = "/app/arkad/static"
+MEDIA_ROOT = "/app/arkad/media"
 
 INSTALLED_APPS = [
     "django.contrib.admin",

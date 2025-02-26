@@ -2,8 +2,9 @@
 
 # Apply database migrations
 echo "Applying database migrations..."
-python arkad/manage.py migrate
+python manage.py migrate
 
-# Start server
-echo "Starting server..."
-python arkad/manage.py runserver 0.0.0.0:8000
+echo "Collecting static files"
+python manage.py collectstatic --noinput
+
+#gunicorn --workers 8 --timeout 16 --bind 0.0.0.0:8000 arkad.wsgi:application
