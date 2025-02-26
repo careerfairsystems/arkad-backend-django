@@ -26,7 +26,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 if DEBUG:
     print("DEBUG ENABLED")
-
+MEDIA_ROOT: Path = BASE_DIR / "media"
+MEDIA_URL: str = "/media/"
 ALLOWED_HOSTS: list[str] = []
 
 

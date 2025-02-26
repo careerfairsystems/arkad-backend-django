@@ -30,7 +30,11 @@ class Programme(models.TextChoices):
     BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
 
 class User(AbstractUser):
+    first_name = models.CharField("first name", max_length=150, blank=True, null=True)
+    last_name = models.CharField("last name", max_length=150, blank=True, null=True)
+
     food_preferences = models.TextField(null=True, blank=True)
+
 
     is_student = models.BooleanField(default=True)
     cv = models.FileField("Users cv", upload_to="user/cv", null=True, blank=True)
@@ -43,6 +47,6 @@ class User(AbstractUser):
 
     def create_jwt_token(self) -> str:
         return "Bearer " + jwt.encode({
-            "exp": datetime.now(tz=timezone.utc) + timedelta(minutes=5),
+            "exp": datetime.now(tz=timezone.utc) + timedelta(hours=2),
             "user_id": self.id,
         }, SECRET_KEY, algorithm="HS512")

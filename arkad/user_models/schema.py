@@ -1,4 +1,4 @@
-from ninja import Schema, ModelSchema
+from ninja import Schema, ModelSchema, UploadedFile
 from user_models.models import User
 
 
@@ -33,3 +33,15 @@ class ProfileSchema(ModelSchema):
                   'is_staff'
                   )
 
+class PutUpdateProfileSchema(ModelSchema):
+    class Meta:
+        model = User
+        fields = (
+                  'email',
+                  'first_name',
+                  'last_name',
+                  'programme',
+                  'linkedin',
+                  'master_title',
+                  'study_year',
+                  )
