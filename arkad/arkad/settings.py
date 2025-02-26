@@ -33,8 +33,8 @@ if DEBUG:
 
 
 STATIC_URL = '/static/'
-STATIC_ROOT = "/app/arkad/static"
-MEDIA_ROOT = "/app/arkad/media"
+STATIC_ROOT = BASE_DIR / "static"
+MEDIA_ROOT = BASE_DIR / "media"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
