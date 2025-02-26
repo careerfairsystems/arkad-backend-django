@@ -11,19 +11,25 @@ router = Router()
 
 @router.post("signup", auth=None, response={200: ProfileSchema, 400: str})
 def signup(request: HttpRequest, data: SignupSchema):
+    """
+    This endpoint creates a user with the given information.
+
+    username, password are required.
+    Returns user information if successful. Call signin with the username and password to retrieve a JWT.
+    """
     try:
         return 200, User.objects.create_user(
-            username=data.username,
-            email=data.email,
-            password=data.password,
-            first_name=data.first_name,
-            last_name=data.last_name,
+            **data.model_dump()
         )
     except IntegrityError:
         return 400, "Username already exists"
 
 @router.post('signin', auth=None, response={401: str, 200: str})
 def signin(request: HttpRequest, data: SigninSchema):
+    """
+    Returns a users JWT token when given a correct username and password.
+    """
+
     user: User | None = authenticate(request=request, **data.model_dump())
     if user is None:
         return 401, "Invalid username or password"
@@ -32,4 +38,7 @@ def signin(request: HttpRequest, data: SigninSchema):
 
 @router.get("profile", response={200: ProfileSchema})
 def get_user_profile(request: HttpRequest):
+    """
+    Returns the users profile information.
+    """
     return request.user
