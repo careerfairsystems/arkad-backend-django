@@ -2,8 +2,6 @@ from datetime import datetime, timezone, timedelta
 
 from django.contrib.auth.models import AbstractUser
 import jwt
-from django.db import models
-
 from arkad.settings import SECRET_KEY
 
 from django.db import models
