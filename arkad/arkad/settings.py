@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS: list[str] = [".arkadtlth.se", ]
+ALLOWED_HOSTS: list[str] = ["backend.arkadtlth.se", "staging.arkadtlth.se"]
 if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
