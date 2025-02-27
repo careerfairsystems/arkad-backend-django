@@ -5,7 +5,7 @@ from ninja import Router
 from student_sessions.models import StudentSession
 from student_sessions.schema import StudentSessionListSchema, StudentSessionSchema, AvailableStudentSessionListSchema, \
     AvailableStudentSessionSchema, CreateStudentSessionSchema
-from user_models.models import Company
+from user_models.company_models import Company
 
 router = Router()
 
