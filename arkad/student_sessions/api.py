@@ -3,18 +3,25 @@ from django.http import HttpRequest
 from ninja import Router
 
 from student_sessions.models import StudentSession
-from student_sessions.schema import StudentSessionListSchema, StudentSessionSchema, AvailableStudentSessionListSchema, \
-    AvailableStudentSessionSchema, CreateStudentSessionSchema
+from student_sessions.schema import (
+    StudentSessionSchema,
+    AvailableStudentSessionListSchema,
+    AvailableStudentSessionSchema,
+    CreateStudentSessionSchema,
+)
 from user_models.company_models import Company
 
 router = Router()
+
 
 @router.get("/available", response={200: AvailableStudentSessionListSchema})
 def get_available_student_sessions(request: HttpRequest):
     sessions: list = list(StudentSession.available_sessions())
     return AvailableStudentSessionListSchema(
         student_sessions=[AvailableStudentSessionSchema.from_orm(s) for s in sessions],
-        numElements=len(sessions))
+        numElements=len(sessions),
+    )
+
 
 @router.post("/", response={406: str, 201: StudentSessionSchema, 401: str})
 def create_student_session(request: HttpRequest, session: CreateStudentSessionSchema):
@@ -28,11 +35,14 @@ def create_student_session(request: HttpRequest, session: CreateStudentSessionSc
         return 201, StudentSession.objects.create(**data)
     return 401, "Insufficient permissions"
 
+
 @router.post("/book", response={406: str, 201: StudentSessionSchema})
 def book_session(request: HttpRequest, session_id: int):
     with transaction.atomic():
         try:
-            session: StudentSession = StudentSession.objects.select_for_update().get(id=session_id, interviewee=None)
+            session: StudentSession = StudentSession.objects.select_for_update().get(
+                id=session_id, interviewee=None
+            )
         except StudentSession.DoesNotExist:
             return 406, "Session not found or already booked"
 

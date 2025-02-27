@@ -5,6 +5,7 @@ install:
 
 lint:
 	ruff check arkad
+	ruff format arkad
 
 type-check:
 	dmypy status || dmypy start

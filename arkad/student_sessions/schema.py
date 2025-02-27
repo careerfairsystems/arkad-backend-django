@@ -10,7 +10,14 @@ class StudentSessionSchema(ModelSchema):
 
     class Meta:
         model = StudentSession
-        fields = ("start_time", "duration", "company", "interviewee", "booking_close_time", "id")
+        fields = (
+            "start_time",
+            "duration",
+            "company",
+            "interviewee",
+            "booking_close_time",
+            "id",
+        )
 
 
 class CreateStudentSessionSchema(ModelSchema):
@@ -20,9 +27,11 @@ class CreateStudentSessionSchema(ModelSchema):
         model = StudentSession
         fields = ("start_time", "duration", "booking_close_time")
 
+
 class StudentSessionListSchema(Schema):
     student_sessions: list[StudentSessionSchema]
     numElements: int
+
 
 class AvailableStudentSessionSchema(ModelSchema):
     company: CompanySchema
@@ -30,6 +39,7 @@ class AvailableStudentSessionSchema(ModelSchema):
     class Meta:
         model = StudentSession
         fields = ("start_time", "duration", "company", "booking_close_time", "id")
+
 
 class AvailableStudentSessionListSchema(Schema):
     student_sessions: list[AvailableStudentSessionSchema]

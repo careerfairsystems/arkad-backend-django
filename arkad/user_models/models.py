@@ -39,21 +39,30 @@ class User(AbstractUser):
 
     food_preferences = models.TextField(null=True, blank=True)
 
-
     is_company = models.BooleanField(default=False)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, default=None, null=True)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, default=None, null=True
+    )
 
     is_student = models.BooleanField(default=True)
     cv = models.FileField("Users cv", upload_to="user/cv", null=True, blank=True)
-    profile_picture = models.FileField("User profile picture", upload_to="user/profile-pictures", blank=True, null=True)
+    profile_picture = models.FileField(
+        "User profile picture", upload_to="user/profile-pictures", blank=True, null=True
+    )
 
-    programme = models.CharField(max_length=64, choices=Programme.choices, blank=True, null=True)
+    programme = models.CharField(
+        max_length=64, choices=Programme.choices, blank=True, null=True
+    )
     linkedin = models.URLField(blank=True, null=True)
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
 
     def create_jwt_token(self) -> str:
-        return "Bearer " + jwt.encode({
-            "exp": datetime.now(tz=timezone.utc) + timedelta(hours=2),
-            "user_id": self.id,
-        }, SECRET_KEY, algorithm="HS512")
+        return "Bearer " + jwt.encode(
+            {
+                "exp": datetime.now(tz=timezone.utc) + timedelta(hours=2),
+                "user_id": self.id,
+            },
+            SECRET_KEY,
+            algorithm="HS512",
+        )
