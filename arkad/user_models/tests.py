@@ -140,3 +140,27 @@ class UserRoutesTestCase(TestCase):
         response = self.client.post("/api/user/profile/cv", {"cv": file}, **self.auth_headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), "CV updated")
+
+    def test_delete_profile_picture_existing(self):
+        file = SimpleUploadedFile("profile.jpg", b"file_content", content_type="image/jpeg")
+        self.assertEqual(200, self.client.post("/api/user/profile/profile-picture", {"profile_picture": file}, **self.auth_headers).status_code)
+        response = self.client.delete("/api/user/profile/profile-picture", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "Profile picture deleted")
+
+    def test_delete_profile_picture_nonexistent(self):
+        response = self.client.delete("/api/user/profile/profile-picture", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "Profile picture deleted")
+
+    def test_delete_cv_existing(self):
+        file = SimpleUploadedFile("cv.pdf", b"file_content", content_type="application/pdf")
+        self.assertEqual(200, self.client.post("/api/user/profile/cv", {"cv": file}, **self.auth_headers).status_code)
+        response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "CV deleted")
+
+    def test_delete_cv_nonexistent(self):
+        response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "CV deleted")

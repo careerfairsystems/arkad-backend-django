@@ -86,12 +86,42 @@ def update_profile_fields(request: HttpRequest, data: PatchDict[UpdateProfileSch
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(request: HttpRequest, profile_picture: UploadedFile = File(...)):
+    """
+    Update the profile picture to a new one.
+    Deletes the old profile picture.
+    """
+
+    request.user.profile_picture.delete()
     request.user.profile_picture = profile_picture
     request.user.save()
     return 200, "Profile picture updated"
 
+
+@profile.delete("profile-picture", response={200: str})
+def delete_profile_picture(request: HttpRequest):
+    """
+    Returns 200 if the file was deleted. Will also return 200 if the file never existed.
+    """
+    request.user.profile_picture.delete()
+    request.user.save()
+    return 200, "Profile picture deleted"
+
 @profile.post("cv", response={200: str})
 def update_cv(request: HttpRequest, cv: UploadedFile = File(...)):
+    """
+    Update the cv to a new one.
+    Deletes the old cv.
+    """
+    request.user.cv.delete()
     request.user.cv = cv
     request.user.save()
     return 200, "CV updated"
+
+@profile.delete("cv", response={200: str})
+def delete_cv(request: HttpRequest):
+    """
+    Returns 200 if the cv was deleted. Will also return 200 if the file never existed.
+    """
+    request.user.cv.delete()
+    request.user.save()
+    return 200, "CV deleted"
