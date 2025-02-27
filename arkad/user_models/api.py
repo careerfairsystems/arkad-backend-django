@@ -3,10 +3,10 @@ import logging
 from django.contrib.auth import authenticate, login
 from django.db import IntegrityError
 from django.http import HttpRequest
-from ninja import Router, File, UploadedFile
+from ninja import Router, File, UploadedFile, PatchDict
 
 from user_models.models import User
-from user_models.schema import SigninSchema, ProfileSchema, SignupSchema, PutUpdateProfileSchema
+from user_models.schema import SigninSchema, ProfileSchema, SignupSchema, UpdateProfileSchema
 
 
 auth = Router(tags=["Authentication"])
@@ -56,10 +56,10 @@ def get_user_profile(request: HttpRequest):
 
 @profile.put("", response={200: ProfileSchema})
 def update_profile(request: HttpRequest,
-                   data: PutUpdateProfileSchema):
+                   data: UpdateProfileSchema):
 
     """
-    Updates the users profile information to the given information.
+    Replaces the users profile information to the given information.
     """
     user = request.user
     user.email = data.email
@@ -71,6 +71,18 @@ def update_profile(request: HttpRequest,
     user.study_year = data.study_year
     user.save()
     return ProfileSchema.from_orm(user)
+
+@profile.patch("", response={200: ProfileSchema})
+def update_profile_fields(request: HttpRequest, data: PatchDict[UpdateProfileSchema]):
+    """
+    Updates the users profile information with the given, (not null) data.
+    """
+    user: User = request.user
+    for attr, value in data.items():
+        setattr(user, attr, value)
+    user.save()
+    return ProfileSchema.from_orm(user)
+
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(request: HttpRequest, profile_picture: UploadedFile = File(...)):

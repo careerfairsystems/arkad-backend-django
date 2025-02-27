@@ -67,6 +67,7 @@ class UserSignin(TestCase):
         self.assertEqual(response.status_code, 401)
 
 
+
 class UserRoutesTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -118,6 +119,15 @@ class UserRoutesTestCase(TestCase):
             self.assertEqual(data[k], v)
             self.assertEqual(v, u.__dict__[k])
 
+    def test_update_profile_fields(self):
+        data = {"first_name": "Updated", "last_name": "User"}
+        response = self.client.patch("/api/user/profile", data, content_type="application/json", **self.auth_headers)
+        u = User.objects.get(pk=response.json()["id"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["first_name"], "Updated")
+        self.assertEqual(response.json()["last_name"], "User")
+        self.assertEqual(u.first_name, "Updated")
+        self.assertEqual(u.last_name, "User")
 
     def test_update_profile_picture(self):
         file = SimpleUploadedFile("profile.jpg", b"file_content", content_type="image/jpeg")

@@ -33,7 +33,7 @@ class ProfileSchema(ModelSchema):
                   'is_staff'
                   )
 
-class PutUpdateProfileSchema(ModelSchema):
+class UpdateProfileSchema(ModelSchema):
     class Meta:
         model = User
         fields = (
