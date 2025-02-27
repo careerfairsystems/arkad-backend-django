@@ -6,6 +6,9 @@ from arkad.settings import SECRET_KEY
 
 from django.db import models
 
+from user_models.company_models import Company
+
+
 class Programme(models.TextChoices):
     BRANDINGENJOR = "Brandingenjör"
     MASKINTEKNIK_TD = "Maskinteknik_Teknisk_Design"
@@ -29,9 +32,6 @@ class Programme(models.TextChoices):
     TEKNISK_FYSIK = "Teknisk Fysik"
     BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
 
-class Company(models.Model):
-    name = models.CharField(max_length=200, unique=True)
-    description = models.TextField(null=True, blank=True)
 
 class User(AbstractUser):
     first_name = models.CharField("first name", max_length=150, blank=True, null=True)

@@ -1,5 +1,6 @@
 from ninja import Schema, ModelSchema
-from user_models.models import User, Company
+from user_models.models import User
+from user_models.company_models import Company
 
 
 class SigninSchema(Schema):
