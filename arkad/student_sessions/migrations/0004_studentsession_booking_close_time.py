@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('student_sessions', '0003_alter_studentsession_duration_and_more'),
+        ("student_sessions", "0003_alter_studentsession_duration_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='studentsession',
-            name='booking_close_time',
+            model_name="studentsession",
+            name="booking_close_time",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

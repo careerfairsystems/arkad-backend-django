@@ -28,8 +28,13 @@ api.add_router("student-session", student_sessions_router)
 
 @api.exception_handler(jwt.InvalidKeyError)
 def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(request, {"detail": "Invalid token supplied"}, status=401)
+    return api.create_response(
+        request, {"detail": "Invalid token supplied"}, status=401
+    )
+
 
 @api.exception_handler(jwt.ExpiredSignatureError)
 def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(request, {"detail": "Expired token supplied"}, status=401)
+    return api.create_response(
+        request, {"detail": "Expired token supplied"}, status=401
+    )

@@ -6,21 +6,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('student_sessions', '0002_alter_studentsession_interviewee'),
+        ("student_sessions", "0002_alter_studentsession_interviewee"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='studentsession',
-            name='duration',
-            field=models.IntegerField(default=30, help_text='Duration of the student session in minutes'),
+            model_name="studentsession",
+            name="duration",
+            field=models.IntegerField(
+                default=30, help_text="Duration of the student session in minutes"
+            ),
         ),
         migrations.AlterField(
-            model_name='studentsession',
-            name='interviewee',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            model_name="studentsession",
+            name="interviewee",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]
