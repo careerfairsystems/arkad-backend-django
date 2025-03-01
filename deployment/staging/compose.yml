@@ -39,6 +39,7 @@ services:
   nginx:
     image: nginx:latest
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.app-staging.rule=Host(`staging.backend.arkadtlth.se`)"
       - "traefik.http.routers.app-staging.entrypoints=websecure"
       - "traefik.http.routers.app-staging.tls=true"
