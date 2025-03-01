@@ -47,8 +47,10 @@ services:
       - static_volume:/app/arkad/static:ro
       - media_volume:/app/arkad/media:ro
       - ./nginx/conf.d:/etc/nginx/conf.d
-    ports:
-      - "80:80"
+    # ports:
+    #   - "80:80"
+    expose:
+      - 80
     depends_on:
       - web
     networks:
@@ -65,4 +67,3 @@ networks:
     driver: bridge
   traefik:
     external: true
-
