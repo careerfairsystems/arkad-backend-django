@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:16
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - ./postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=arkad_db_user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -58,7 +58,6 @@ services:
       - traefik
 
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
 
