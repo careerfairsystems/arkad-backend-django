@@ -22,11 +22,6 @@ services:
       python manage.py migrate &&
       gunicorn --workers 8 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
       "
-    labels:
-      - "traefik.http.routers.app-staging.rule=Host(`staging.backend.arkadtlth.se`)"
-      - "traefik.http.routers.app-staging.entrypoints=websecure"
-      - "traefik.http.routers.app-staging.tls=true"
-      - "traefik.http.routers.app-staging.tls.certresolver=production"
     volumes:
       - static_volume:/app/arkad/static
       - media_volume:/app/arkad/media
@@ -43,6 +38,11 @@ services:
 
   nginx:
     image: nginx:latest
+    labels:
+      - "traefik.http.routers.app-staging.rule=Host(`staging.backend.arkadtlth.se`)"
+      - "traefik.http.routers.app-staging.entrypoints=websecure"
+      - "traefik.http.routers.app-staging.tls=true"
+      - "traefik.http.routers.app-staging.tls.certresolver=production"
     volumes:
       - static_volume:/app/arkad/static:ro
       - media_volume:/app/arkad/media:ro
