@@ -1,0 +1,37 @@
+volumes:
+  traefik-ssl-certs:
+    driver: local
+  traefik-ssl-acme:
+    driver: local
+networks:
+  traefik:
+    external: true
+services:
+  traefik:
+    image: traefik:v2.10.4
+    container_name: traefik
+    networks:
+      - traefik
+    ports:
+      - 80:80
+      - 443:443
+      - 127.0.0.1:8080:8080
+    volumes:
+      - ./traefik:/etc/traefik
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-ssl-certs:/ssl-certs
+      - traefik-ssl-acme:/ssl-acme
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  # node_exporter:
+  #   image: quay.io/prometheus/node-exporter:latest
+  #   container_name: node_exporter
+  #   ports:
+  #     - 9100:9100
+  #   command:
+  #     - "--path.rootfs=/host"
+  #   pid: host
+  #   restart: unless-stopped
+  #   volumes:
+  #     - "/:/host:ro,rslave"

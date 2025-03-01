@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
@@ -10,7 +10,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=arkad
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U arkad_db_user -d arkad" ]
+      test: ["CMD-SHELL", "pg_isready -U arkad_db_user -d arkad"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -18,12 +18,17 @@ services:
       - app_network
 
   web:
-    build: .
+    build: ../../
     command: sh -c "
       python manage.py collectstatic --no-input &&
       python manage.py migrate &&
       gunicorn --workers 8 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
       "
+    labels:
+      - "traefik.http.routers.app-staging.rule=Host(`staging.backend.arkadtlth.se`)"
+      - "traefik.http.routers.app-staging.entrypoints=websecure"
+      - "traefik.http.routers.app-staging.tls=true"
+      - "traefik.http.routers.app-staging.tls.certresolver=production"
     volumes:
       - static_volume:/app/arkad/static
       - media_volume:/app/arkad/media
@@ -50,6 +55,7 @@ services:
       - web
     networks:
       - app_network
+      - traefik
 
 volumes:
   postgres_data:
@@ -59,3 +65,6 @@ volumes:
 networks:
   app_network:
     driver: bridge
+  traefik:
+    external: true
+
