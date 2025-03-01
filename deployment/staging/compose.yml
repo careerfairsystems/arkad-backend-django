@@ -47,7 +47,7 @@ services:
     volumes:
       - static_volume:/app/arkad/static:ro
       - media_volume:/app/arkad/media:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ../nginx/conf.d:/etc/nginx/conf.d
     ports:
       - "8081:80"
     expose:
