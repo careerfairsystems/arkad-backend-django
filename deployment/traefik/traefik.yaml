@@ -42,6 +42,3 @@ providers:
   docker:
     exposedByDefault: false
     network: traefik
-  file:
-    directory: /etc/traefik/file-configs
-    watch: true
