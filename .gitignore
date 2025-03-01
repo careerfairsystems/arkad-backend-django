@@ -3,4 +3,7 @@
 venv
 .venv
 .env
+**/__pycache__
+db_data
+**/postgres_data
 arkad/media/

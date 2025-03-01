@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=arkad_db_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=arkad
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arkad_db_user -d arkad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app_network
+
+  web:
+    build: ../../
+    command: sh -c "
+      python manage.py collectstatic --no-input &&
+      python manage.py migrate &&
+      gunicorn --workers 8 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
+      "
+    volumes:
+      - static_volume:/app/arkad/static
+      - media_volume:/app/arkad/media
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  nginx:
+    image: nginx:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-staging.rule=Host(`staging.backend.arkadtlth.se`)"
+      - "traefik.http.routers.app-staging.entrypoints=websecure"
+      - "traefik.http.routers.app-staging.tls=true"
+      - "traefik.http.routers.app-staging.tls.certresolver=production"
+    volumes:
+      - static_volume:/app/arkad/static:ro
+      - media_volume:/app/arkad/media:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - "8081:80"
+    expose:
+      - 80
+    depends_on:
+      - web
+    networks:
+      - app_network
+      - traefik
+
+volumes:
+  static_volume:
+  media_volume:
+
+networks:
+  app_network:
+    driver: bridge
+  traefik:
+    external: true
