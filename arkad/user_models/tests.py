@@ -1,9 +1,10 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class UserAPITests(TestCase):
+class UserSignin(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
@@ -64,3 +65,102 @@ class UserAPITests(TestCase):
     def test_profile_unauthenticated(self):
         response = self.client.get("/api/user/profile")
         self.assertEqual(response.status_code, 401)
+
+
+
+class UserRoutesTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="testuser", password="password123")
+        self.token = self.client.post("/api/user/signin", {"username": "testuser", "password": "password123"}, content_type="application/json").json()
+        self.auth_headers = {"HTTP_AUTHORIZATION": self.token}
+
+    def test_signup(self):
+        data = {"username": "newuser", "password": "securepassword"}
+        response = self.client.post("/api/user/signup", data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "newuser")
+
+        response_duplicate = self.client.post("/api/user/signup", data, content_type="application/json")
+        self.assertEqual(response_duplicate.status_code, 400)
+        self.assertEqual(response_duplicate.json(), "Username already exists")
+
+    def test_signin(self):
+        data = {"username": "testuser", "password": "password123"}
+        response = self.client.post("/api/user/signin", data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), str)  # JWT token expected
+
+        data_invalid = {"username": "testuser", "password": "wrongpassword"}
+        response_invalid = self.client.post("/api/user/signin", data_invalid, content_type="application/json")
+        self.assertEqual(response_invalid.status_code, 401)
+        self.assertEqual(response_invalid.json(), "Invalid username or password")
+
+    def test_get_user_profile(self):
+        response = self.client.get("/api/user/profile", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "testuser")
+
+    def test_update_profile(self):
+        upd_data = {
+            "email": "newemail@example.com",
+            "first_name": "New",
+            "last_name": "Name",
+            "programme": "CS",
+            "linkedin": "linkedin.com/in/test",
+            "master_title": "Master",
+            "study_year": 2
+        }
+        response = self.client.put("/api/user/profile", upd_data, content_type="application/json", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        u = User.objects.get(pk=data["id"])
+        for k, v in upd_data.items():
+            self.assertEqual(data[k], v)
+            self.assertEqual(v, u.__dict__[k])
+
+    def test_update_profile_fields(self):
+        data = {"first_name": "Updated", "last_name": "User"}
+        response = self.client.patch("/api/user/profile", data, content_type="application/json", **self.auth_headers)
+        u = User.objects.get(pk=response.json()["id"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["first_name"], "Updated")
+        self.assertEqual(response.json()["last_name"], "User")
+        self.assertEqual(u.first_name, "Updated")
+        self.assertEqual(u.last_name, "User")
+
+    def test_update_profile_picture(self):
+        file = SimpleUploadedFile("profile.jpg", b"file_content", content_type="image/jpeg")
+        response = self.client.post("/api/user/profile/profile-picture", {"profile_picture": file}, **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "Profile picture updated")
+
+    def test_update_cv(self):
+        file = SimpleUploadedFile("cv.pdf", b"file_content", content_type="application/pdf")
+        response = self.client.post("/api/user/profile/cv", {"cv": file}, **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "CV updated")
+
+    def test_delete_profile_picture_existing(self):
+        file = SimpleUploadedFile("profile.jpg", b"file_content", content_type="image/jpeg")
+        self.assertEqual(200, self.client.post("/api/user/profile/profile-picture", {"profile_picture": file}, **self.auth_headers).status_code)
+        response = self.client.delete("/api/user/profile/profile-picture", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "Profile picture deleted")
+
+    def test_delete_profile_picture_nonexistent(self):
+        response = self.client.delete("/api/user/profile/profile-picture", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "Profile picture deleted")
+
+    def test_delete_cv_existing(self):
+        file = SimpleUploadedFile("cv.pdf", b"file_content", content_type="application/pdf")
+        self.assertEqual(200, self.client.post("/api/user/profile/cv", {"cv": file}, **self.auth_headers).status_code)
+        response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "CV deleted")
+
+    def test_delete_cv_nonexistent(self):
+        response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), "CV deleted")

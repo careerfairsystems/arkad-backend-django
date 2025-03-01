@@ -14,7 +14,10 @@ class AuthBearer(HttpBearer):
         decoded: dict = jwt.decode(token, SECRET_KEY, algorithms=["HS512"])
         if "user_id" not in decoded:
             raise jwt.InvalidTokenError("No user id")
-        user: User =  User.objects.get(id=decoded["user_id"])
+        try:
+            user: User =  User.objects.get(id=decoded["user_id"])
+        except User.DoesNotExist:
+            raise jwt.InvalidTokenError("No such user")
         request.user = user
         return user
 

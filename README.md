@@ -2,6 +2,10 @@
 
 This backend uses django and postgres as the database
 
+## API
+
+The API is documented at /api/docs
+
 ### Required environment variables
 
 Required environment variables are:
