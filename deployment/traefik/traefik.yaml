@@ -1,0 +1,47 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+  insecure: true
+
+# -- Change EntryPoints here...
+entryPoints:
+  web:
+    address: :80
+    # -- (Optional) Redirect all HTTP to HTTPS
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+
+# -- Configure your CertificateResolver here...
+certificatesResolvers:
+  staging:
+    acme:
+      email: hugo.e.persson@gmail.com
+      storage: /ssl-acme/acme.json
+      caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      # -- (Optional) Remove this section, when using DNS Challenge
+      httpChallenge:
+        entryPoint: web
+  production:
+    acme:
+      email: hugo.e.persson@gmail.com
+      storage: /ssl-acme/acme.json
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      # -- (Optional) Remove this section, when using DNS Challenge
+      httpChallenge:
+        entryPoint: web
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: traefik
+  file:
+    directory: /etc/traefik/file-configs
+    watch: true
