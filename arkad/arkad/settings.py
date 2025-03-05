@@ -29,6 +29,9 @@ JEXPO_TOKEN: str = os.environ.get("JEXPO_TOKEN")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS: list[str] = ["backend.arkadtlth.se", "staging.backend.arkadtlth.se"]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Change this later
+CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
@@ -46,11 +49,13 @@ INSTALLED_APPS = [
     "user_models",
     "student_sessions",
     "event_booking",
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',  # Add this line
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -88,7 +93,7 @@ DATABASES = {
         "NAME": "arkad",
         "USER": "arkad_db_user",
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),  # Change if using a remote database
+        "HOST": os.environ.get("DB_HOST", "localhost"),  # Change if using a remote database
         "PORT": "5432",  # Default PostgreSQL port
     }
 }
