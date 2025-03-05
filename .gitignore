@@ -7,3 +7,4 @@ venv
 db_data
 **/postgres_data
 arkad/media/
+secrets.sh
