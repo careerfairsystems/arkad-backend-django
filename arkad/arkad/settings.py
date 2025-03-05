@@ -31,12 +31,6 @@ if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
 
-MEDIA_ROOT: Path = BASE_DIR / "media"
-MEDIA_URL: str = "/media/"
-ALLOWED_HOSTS: list[str] = []
-
-
-
 STATIC_ROOT = BASE_DIR / "static"
 MEDIA_ROOT = BASE_DIR / "media"
 
