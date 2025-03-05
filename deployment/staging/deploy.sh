@@ -17,7 +17,7 @@ ENVIRONMENT="staging"
 PROJECT_NAME="arkad-backend"
 
 echo "Starting deployment for $PROJECT_NAME in $ENVIRONMENT environment..."
-
+git pull
 # Build and start containers
 echo "Building Docker images..."
 docker compose build
@@ -41,4 +41,3 @@ curl -H "Content-Type: application/json" \
   $DISCORD_WEBHOOK_URL
 
 echo "Deployment script completed."
-
