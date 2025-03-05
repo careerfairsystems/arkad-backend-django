@@ -38,3 +38,5 @@ types-PyYAML==6.0.12.20241230
 typing_extensions==4.12.2
 tzdata==2025.1
 zope.interface==7.2
+
+requests~=2.32.3
