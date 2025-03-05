@@ -30,7 +30,7 @@ def update_or_create_company(schema: CompanySchema) -> Company | None:
 
     # Create base URL for logo (adjust according to your CDN pattern)
     logo_url = f"https://cdn.jexpo.se/logos/{logotype.file}" if logotype else None
-    print(logo_url)
+    print(logotype, logotype.file, logo_url)
     raise NotImplementedError
 
     # Map positions from 'weOffer' (add more mappings as needed)
