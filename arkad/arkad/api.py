@@ -22,7 +22,7 @@ class AuthBearer(HttpBearer):
         request.user = user
         return user
 
-api = NinjaAPI(title="Arkad API", docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer(), csrf=False)
+api = NinjaAPI(title="Arkad API", docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer())
 api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
 
