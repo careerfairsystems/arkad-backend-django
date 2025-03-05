@@ -55,6 +55,3 @@ class CompanySchema(BaseModel):
     def fetch(cls) -> list["CompanySchema"]:
         url: str = "https://v2cdn.jexpo.se/arkad/entities/exhibitors?filter=period:2024&entities"
         return [cls(**result) for result in requests.get(url).json()["results"]]
-
-
-print(CompanySchema.fetch())
