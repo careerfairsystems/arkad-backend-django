@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
-
+# Change to the script directory
+cd "$(dirname "$0")"
+echo "Changed to script directory: $(pwd)"
 # Configuration
 # Source secrets file if it exists
 SECRETS_FILE="../../secrets.sh"
