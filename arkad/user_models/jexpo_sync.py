@@ -1,13 +1,14 @@
 # sync_companies.py
+import traceback
 from typing import List, Tuple
 from django.db import transaction
 
 from user_models.company_models import Company
-from user_models.jexpo_ingestion import CompanySchema
+from user_models.jexpo_ingestion import ExhibitorSchema
 from user_models.translation import SWEDISH_TO_ENGLISH
 
 
-def update_or_create_company(schema: CompanySchema) -> Tuple[Company | None, bool]:
+def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, bool]:
     """
     Create or update a Company instance from a Pydantic schema.
     """
@@ -39,7 +40,23 @@ def update_or_create_company(schema: CompanySchema) -> Tuple[Company | None, boo
     }
     positions = [position_mapping.get(offer, offer)
                  for offer in profile.weOffer]
+    # schema.studentsession.sessions is either None or xdays where x is an integer
+    # Will read as many numerical prepended numbers as possible.
+    # xxxx works
+    # axxx will give 0
 
+    parse_session_days: int = 0
+    sessions: str | None = schema.studentsession.sessions if schema.studentsession else None
+    if sessions is not None:
+
+        # This is not the prettiest way to do this but easy to read
+        numerical_chars: list[int] = []
+        for i, char in enumerate(sessions):
+            if char.isnumeric():
+                numerical_chars.append(int(char))
+            else:
+                break
+        parse_session_days = sum(((10**i) * d for i, d in enumerate(reversed(numerical_chars), start=0)))
     # Create/update company with atomic transaction
     return Company.objects.update_or_create(
         name=schema.name,
@@ -47,31 +64,23 @@ def update_or_create_company(schema: CompanySchema) -> Tuple[Company | None, boo
             'description': profile.aboutUs,
             'did_you_know': profile.didYouKnow,
             'logo_url': logo_url,
+            'url_linkedin': profile.urlLinkedin,
+            'url_facebook': profile.urlFacebook,
+            'url_twitter': profile.urlTwitter,
+            'url_instagram': profile.urlInstagram,
+            'url_youtube': profile.urlYoutube,
             'website': profile.urlWebsite,
-            'host_name': profile.contactName,
-            'host_email': profile.contactEmail,
+            'company_name': profile.contactName,
+            'company_email': profile.contactEmail,
+            'company_phone': profile.contactPhone,
             'desired_degrees': profile.desiredDegree,
             'desired_programme': profile.desiredProgramme,
             'desired_competences': desired_competences,
             'positions': positions,
             'industries': industries,
+            'student_session_motivation': schema.studentsession.sessions_why if schema.studentsession else None,
+            'days_with_studentsession': parse_session_days,
+            'employees_locally': int(profile.employeesLocal.replace(".", "")) if profile.employeesLocal else None,
+            'employees_globally': int(profile.employeesGlobal.replace(".", "")) if profile.employeesGlobal else None,
         }
     )
-
-
-@transaction.atomic
-def sync_companies() -> List[Company]:
-    """
-    Fetch data from the external API and synchronize with the local database.
-    Returns a list of updated or created companies.
-    """
-    schemas = CompanySchema.fetch()
-    companies = []
-    for schema in schemas:
-        company = update_or_create_company(schema)
-        if company:
-            companies.append(company)
-    return companies
-
-if __name__ == '__main__':
-    sync_companies()

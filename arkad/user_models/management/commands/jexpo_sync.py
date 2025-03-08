@@ -1,9 +1,9 @@
 from django.core.management import BaseCommand
 from django.db import transaction
 
-from user_models.jexpo_ingestion import CompanySchema
+from user_models.jexpo_ingestion import ExhibitorSchema
 from user_models.jexpo_sync import update_or_create_company
-
+import json
 
 class Command(BaseCommand):
     help = "Synchronizes companies from an external API with the local database."
@@ -12,11 +12,14 @@ class Command(BaseCommand):
         self.stdout.write("Starting company synchronization...")
 
         try:
-            schemas = CompanySchema.fetch()
-            self.stdout.write(f"Fetched {len(schemas)} companies from the API.")
+            with open("export.json", "r") as f:
+                exhibitors: list[ExhibitorSchema] = [ExhibitorSchema(**d) for d in json.load(f)]
+
+
+            self.stdout.write(f"Extracted {len(exhibitors)} companies from the file.")
 
             with transaction.atomic():
-                for schema in schemas:
+                for schema in exhibitors:
                     company, created = update_or_create_company(schema)
                     if company:
                         self.stdout.write(f"{'Created' if created else 'Updated'} company: {company.name}")

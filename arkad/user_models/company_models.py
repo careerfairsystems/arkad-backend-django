@@ -89,18 +89,21 @@ class Company(models.Model):
     description = models.TextField(blank=True, null=True)
     did_you_know = models.TextField(blank=True, null=True)
     logo_url = models.URLField(blank=True, null=True)
+    url_linkedin = models.CharField(max_length=255, blank=True, null=True)
+    url_instagram = models.CharField(max_length=255, blank=True, null=True)
+    url_facebook = models.CharField(max_length=255, blank=True, null=True)
+    url_twitter = models.CharField(max_length=255, blank=True, null=True)
+    url_youtube = models.CharField(max_length=255, blank=True, null=True)
     website = models.URLField(blank=True, null=True)
-    host_name = models.CharField(max_length=255, blank=True, null=True)
-    host_email = models.EmailField(blank=True, null=True)
-    host_phone = models.CharField(max_length=20, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    company_email = models.EmailField(blank=True, null=True)
+    company_phone = models.CharField(max_length=100, blank=True, null=True)
     student_session_motivation = models.TextField(blank=True, null=True)
+    days_with_studentsession = models.IntegerField(default=0)
 
     # ArrayFields for lists
-    days_at_arkad = ArrayField(
-        models.DateField(), default=list, blank=True
-    )  # List of dates
     desired_degrees = ArrayField(
-        models.CharField(max_length=20, choices=DEGREE_CHOICES),
+        models.CharField(max_length=50, choices=DEGREE_CHOICES),
         default=list,
         blank=True,
     )  # List of degrees with enforced choices
@@ -113,7 +116,7 @@ class Company(models.Model):
         blank=True,
     )  # List of competences with enforced choices
     positions = ArrayField(
-        models.CharField(max_length=20, choices=POSITION_CHOICES),
+        models.CharField(max_length=50, choices=POSITION_CHOICES),
         default=list,
         blank=True,
     )  # List of positions with enforced choices
@@ -122,6 +125,9 @@ class Company(models.Model):
         default=list,
         blank=True,
     )  # List of industries with enforced choices
+
+    employees_locally = models.IntegerField(default=None, null=True, blank=True)
+    employees_globally = models.IntegerField(default=None, null=True, blank=True)
 
     def __str__(self):
         return self.name
