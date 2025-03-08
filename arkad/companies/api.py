@@ -9,3 +9,6 @@ router = Router(tags=["Companies"])
 @router.get("/", response={200: list[CompanyOut]})
 def get_companies(request: HttpRequest):
     return Company.objects.all()
+
+# We should probably not be able to change company information by api here, instead require Jexpo update.
+# Otherwise, we risk overwriting it.

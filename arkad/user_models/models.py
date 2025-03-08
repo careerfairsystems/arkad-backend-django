@@ -66,3 +66,6 @@ class User(AbstractUser):
             SECRET_KEY,
             algorithm="HS512",
         )
+
+    def is_company_admin(self, company_id: int) -> bool:
+        return self.is_company and self.company_id == company_id

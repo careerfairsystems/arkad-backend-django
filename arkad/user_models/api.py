@@ -30,6 +30,7 @@ def signup(request: HttpRequest, data: SignupSchema):
     Returns user information if successful. Call signin with the username and password to retrieve a JWT.
     """
     try:
+        # TODO enable password requirements! Important
         return 200, User.objects.create_user(**data.model_dump())
     except IntegrityError as e:
         logging.error(e)
