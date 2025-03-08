@@ -2,11 +2,13 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, HttpUrl, EmailStr
 
+
 # Helper models
 class UpdatedSubmittedBase(BaseModel):
     utc: Optional[datetime] = None
     clientIp: Optional[str] = None
     user: Optional[str] = None
+
 
 class FileBase(BaseModel):
     size: Optional[int] = None
@@ -15,12 +17,14 @@ class FileBase(BaseModel):
     file: Optional[str] = Field(None, alias="$file")  # type: ignore
     key: Optional[str] = Field(None, alias="$$key")  # type: ignore
 
+
 # Nested schemas
 class PrintContract(FileBase):
     scheduled: Optional[datetime] = None
     checksum: Optional[str] = None
     error: Optional[str] = None
     complete: Optional[datetime] = None
+
 
 class Tickets(BaseModel):
     lunch_tickets_day1: Optional[int] = None
@@ -29,11 +33,13 @@ class Tickets(BaseModel):
     updated: Optional[UpdatedSubmittedBase] = None
     submitted: Optional[UpdatedSubmittedBase] = None
 
+
 class PreregContact(BaseModel):
     inactive: Optional[bool] = None
     phone: Optional[str] = None
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+
 
 class Prereg(BaseModel):
     approved: Optional[datetime | bool] = None
@@ -42,12 +48,14 @@ class Prereg(BaseModel):
     language: Optional[str] = None
     submitted: Optional[UpdatedSubmittedBase] = None
 
+
 class Inventory(BaseModel):
     socket_output: Optional[str] = None
     socket_3phase: Optional[str | int] = None
     boothLarge: Optional[bool] = None
     updated: Optional[UpdatedSubmittedBase] = None
     submitted: Optional[UpdatedSubmittedBase] = None
+
 
 class Billing(BaseModel):
     country: Optional[str] = None
@@ -58,20 +66,24 @@ class Billing(BaseModel):
     corporateName: Optional[str] = None
     invoicing: Optional[str] = None
 
+
 class Terms(BaseModel):
     approve: Optional[bool] = None
     authorized: Optional[bool] = None
     updated: Optional[UpdatedSubmittedBase] = None
     submitted: Optional[UpdatedSubmittedBase] = None
 
+
 class Inquiry(BaseModel):
     inquiryCheck: Optional[bool] = None
     desiredCompetence: List[str] = Field(default_factory=list)
+
 
 class FairPkg(BaseModel):
     pkg: Optional[str] = None
     updated: Optional[UpdatedSubmittedBase] = None
     submitted: Optional[UpdatedSubmittedBase] = None
+
 
 class ContactList(BaseModel):
     inactive: Optional[bool] = None
@@ -79,10 +91,12 @@ class ContactList(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
 
+
 class Email(BaseModel):
     templateId: Optional[str] = None
     lastUsed: Optional[datetime] = None
     emailKey: Optional[str] = None
+
 
 class TokenDevice(BaseModel):
     userAgent: Optional[str] = None
@@ -92,11 +106,13 @@ class TokenDevice(BaseModel):
     clientHints: Optional[Dict[str, Any]] = None
     utc: Optional[datetime] = None
 
+
 class Token(BaseModel):
     code: Optional[str] = None
     devices: List[TokenDevice] = Field(default_factory=list)
     subject: Optional[str] = None
     utc: Optional[datetime] = None
+
 
 class OrderRow(BaseModel):
     description: Optional[str] = None
@@ -104,13 +120,16 @@ class OrderRow(BaseModel):
     key: Optional[str] = None
     approved: Optional[datetime] = None
 
+
 class ExhibitionLogotype(FileBase):
     thumbs: Optional[Dict[str, Any]] = None
+
 
 class Exhibition(BaseModel):
     industryCluster: Optional[str] = None
     boothSize: Optional[str] = None
     logotype: Optional[ExhibitionLogotype] = None
+
 
 class Job(BaseModel):
     link: Optional[HttpUrl | str] = None
@@ -119,8 +138,10 @@ class Job(BaseModel):
     type: List[str] = Field(default_factory=list)
     title: Optional[str] = None
 
+
 class Jobs(BaseModel):
     list: List[Job] = Field(default_factory=list)
+
 
 class ProfileLogotype(BaseModel):
     class Thumbs(BaseModel):
@@ -134,6 +155,7 @@ class ProfileLogotype(BaseModel):
     file: str = Field(..., alias="$file")
     type: str
     key: str = Field(..., alias="$$key")
+
 
 class Profile(BaseModel):
     aboutUs: Optional[str] = None
@@ -162,6 +184,7 @@ class Profile(BaseModel):
     updated: Optional[dict] = Field(default=None, alias="$updated")
     submitted: Optional[dict] = Field(default=None, alias="$submitted")
 
+
 class CompanyHost(BaseModel):
     key: Optional[str] = Field(None, alias="$key")  # type: ignore
     utc: Optional[datetime] = None
@@ -173,6 +196,7 @@ class StudentSession(BaseModel):
     updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")  # type: ignore
     submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")  # type: ignore
     sessions_why: Optional[str] = None
+
 
 # Main schema
 class ExhibitorSchema(BaseModel):

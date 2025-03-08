@@ -39,7 +39,6 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "tillverkning": "Manufacturing",
     "tvärvetenskapliga kompetenser": "InterdisciplinaryCompetences",
     "fysik": "Physics",
-
     # Position Choices
     "exjobb": "Thesis",
     "trainee": "TraineeEmployment",
@@ -47,7 +46,6 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "sommarjobb": "SummerJob",
     "utlandsmöjlighet": "ForeignOppurtunity",
     "deltid": "PartTime",
-
     # Industry Choices
     "el energi kraft": "ElectricityEnergyPower",
     "miljö": "Environment",

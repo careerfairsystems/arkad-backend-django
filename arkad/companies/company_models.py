@@ -80,6 +80,7 @@ INDUSTRY_CHOICES = [
     ("Coaching", "Coaching"),
 ]
 
+
 class Job(models.Model):
     link = models.CharField(max_length=400, null=True)
     description = models.TextField(max_length=2000, null=True)
@@ -89,7 +90,6 @@ class Job(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} - {self.job_type}"
-
 
 
 class Company(models.Model):
