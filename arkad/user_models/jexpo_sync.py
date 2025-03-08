@@ -1,5 +1,5 @@
 # sync_companies.py
-from typing import List
+from typing import List, Tuple
 from django.db import transaction
 
 from user_models.company_models import Company
@@ -7,12 +7,12 @@ from user_models.jexpo_ingestion import CompanySchema
 from user_models.translation import SWEDISH_TO_ENGLISH
 
 
-def update_or_create_company(schema: CompanySchema) -> Company | None:
+def update_or_create_company(schema: CompanySchema) -> Tuple[Company | None, bool]:
     """
     Create or update a Company instance from a Pydantic schema.
     """
     if not schema.name or not schema.profile:
-        return None  # Skip invalid entries
+        return None, False  # Skip invalid entries
 
     profile = schema.profile
     logotype = profile.logotype
@@ -28,10 +28,8 @@ def update_or_create_company(schema: CompanySchema) -> Company | None:
         for i in profile.industry
     ]
 
-    # Create base URL for logo (adjust according to your CDN pattern)
-    logo_url = f"https://cdn.jexpo.se/logos/{logotype.file}" if logotype else None
-    print(logotype, logotype.file, logo_url)
-    raise NotImplementedError
+    # The url for the image, it uses the key for the exibitors storage. Does not append a size here.
+    logo_url: str = f"https://v2cdn.jexpo.se/arkad/storage{schema.key}/{logotype.file}" if logotype else None
 
     # Map positions from 'weOffer' (add more mappings as needed)
     position_mapping = {
@@ -43,7 +41,7 @@ def update_or_create_company(schema: CompanySchema) -> Company | None:
                  for offer in profile.weOffer]
 
     # Create/update company with atomic transaction
-    company, created = Company.objects.update_or_create(
+    return Company.objects.update_or_create(
         name=schema.name,
         defaults={
             'description': profile.aboutUs,
@@ -59,8 +57,6 @@ def update_or_create_company(schema: CompanySchema) -> Company | None:
             'industries': industries,
         }
     )
-
-    return company
 
 
 @transaction.atomic

@@ -17,9 +17,9 @@ class Command(BaseCommand):
 
             with transaction.atomic():
                 for schema in schemas:
-                    company = update_or_create_company(schema)
+                    company, created = update_or_create_company(schema)
                     if company:
-                        self.stdout.write(f"Processed company: {company.name}")
+                        self.stdout.write(f"{'Created' if created else 'Updated'} company: {company.name}")
 
             self.stdout.write(self.style.SUCCESS("Company synchronization completed successfully!"))
         except Exception as e:
