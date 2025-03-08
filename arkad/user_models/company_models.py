@@ -80,6 +80,17 @@ INDUSTRY_CHOICES = [
     ("Coaching", "Coaching"),
 ]
 
+class Job(models.Model):
+    link = models.CharField(max_length=400, null=True)
+    description = models.TextField(max_length=2000, null=True)
+    location = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    job_type = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    title = models.CharField(max_length=500, null=True)
+
+    def __str__(self) -> str:
+        return f"{self.title} - {self.job_type}"
+
+
 
 class Company(models.Model):
     """Represents a company"""
@@ -128,6 +139,8 @@ class Company(models.Model):
 
     employees_locally = models.IntegerField(default=None, null=True, blank=True)
     employees_globally = models.IntegerField(default=None, null=True, blank=True)
+
+    jobs = models.ManyToManyField(Job)
 
     def __str__(self):
         return self.name

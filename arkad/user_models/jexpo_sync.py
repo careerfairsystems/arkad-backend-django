@@ -3,7 +3,7 @@ import traceback
 from typing import List, Tuple
 from django.db import transaction
 
-from user_models.company_models import Company
+from user_models.company_models import Company, Job
 from user_models.jexpo_ingestion import ExhibitorSchema
 from user_models.translation import SWEDISH_TO_ENGLISH
 
@@ -58,7 +58,7 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
                 break
         parse_session_days = sum(((10**i) * d for i, d in enumerate(reversed(numerical_chars), start=0)))
     # Create/update company with atomic transaction
-    return Company.objects.update_or_create(
+    company, created =  Company.objects.update_or_create(
         name=schema.name,
         defaults={
             'description': profile.aboutUs,
@@ -84,3 +84,12 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             'employees_globally': int(profile.employeesGlobal.replace(".", "")) if profile.employeesGlobal else None,
         }
     )
+    if schema.jobs is not None:
+        jobs: list[Job] = [Job.objects.create(link=job.link, description=job.description, location=job.location, title=job.title, job_type=job.type) for job in schema.jobs.list]
+
+        # Remove old jobs
+        for j in company.jobs.all():
+            j.delete()
+        company.jobs.set(jobs)
+        company.save()
+    return company, created
