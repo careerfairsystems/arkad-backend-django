@@ -1,7 +1,7 @@
 from django.core.management import BaseCommand
 from django.db import transaction
-from user_models.jexpo_ingestion import ExhibitorSchema
-from user_models.jexpo_sync import update_or_create_company
+from companies.jexpo_ingestion import ExhibitorSchema
+from companies.jexpo_sync import update_or_create_company
 import json
 import os
 

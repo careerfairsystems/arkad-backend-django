@@ -1,11 +1,9 @@
 # sync_companies.py
-import traceback
-from typing import List, Tuple
-from django.db import transaction
+from typing import Tuple
 
-from user_models.company_models import Company, Job
-from user_models.jexpo_ingestion import ExhibitorSchema
-from user_models.translation import SWEDISH_TO_ENGLISH
+from companies.company_models import Company, Job
+from companies.jexpo_ingestion import ExhibitorSchema
+from companies.translation import SWEDISH_TO_ENGLISH
 
 
 def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, bool]:

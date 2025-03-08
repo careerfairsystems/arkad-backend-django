@@ -9,7 +9,7 @@ from student_sessions.schema import (
     AvailableStudentSessionSchema,
     CreateStudentSessionSchema,
 )
-from user_models.company_models import Company
+from companies.company_models import Company
 
 router = Router()
 
