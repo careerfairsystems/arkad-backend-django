@@ -9,9 +9,9 @@ from student_sessions.schema import (
     AvailableStudentSessionSchema,
     CreateStudentSessionSchema,
 )
-from companies.company_models import Company
+from companies.models import Company
 
-router = Router()
+router = Router(tags=["Student Sessions"])
 
 
 @router.get("/available", response={200: AvailableStudentSessionListSchema})

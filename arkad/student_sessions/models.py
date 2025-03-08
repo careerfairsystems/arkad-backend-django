@@ -3,7 +3,7 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from user_models.models import User
-from companies.company_models import Company
+from companies.models import Company
 
 
 class StudentSession(models.Model):

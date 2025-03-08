@@ -1,7 +1,7 @@
 # sync_companies.py
 from typing import Tuple
 
-from companies.company_models import Company, Job
+from companies.models import Company, Job
 from companies.jexpo_ingestion import ExhibitorSchema
 from companies.translation import SWEDISH_TO_ENGLISH
 

@@ -6,7 +6,7 @@ from arkad.settings import SECRET_KEY
 
 from django.db import models
 
-from companies.company_models import Company
+from companies.models import Company
 
 
 class Programme(models.TextChoices):
