@@ -6,7 +6,6 @@ from user_models.schema import ProfileSchema, CompanySchema
 
 class StudentSessionSchema(ModelSchema):
     interviewee: ProfileSchema | None
-    company: CompanySchema
 
     class Meta:
         model = StudentSession
@@ -17,6 +16,7 @@ class StudentSessionSchema(ModelSchema):
             "interviewee",
             "booking_close_time",
             "id",
+            "applicants"
         )
 
 

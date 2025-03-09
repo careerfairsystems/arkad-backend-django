@@ -26,7 +26,7 @@ def get_available_student_sessions(request: HttpRequest):
     )
 
 
-@router.post("/", response={406: str, 201: StudentSessionSchema, 401: str})
+@router.post("/exhibitor", response={406: str, 201: StudentSessionSchema, 401: str})
 def create_student_session(request: HttpRequest, session: CreateStudentSessionSchema):
     data: dict = session.model_dump()
     company_id: int = data.pop("company_id")
@@ -37,6 +37,13 @@ def create_student_session(request: HttpRequest, session: CreateStudentSessionSc
             return 406, "Company not found"
         return 201, StudentSession.objects.create(**data)
     return 401, "Insufficient permissions"
+
+@router.get("/exhibitor/sessions", response={200: StudentSessionSchema, 401: str})
+def get_exhibitor_sessions(request: HttpRequest):
+    if not request.user.is_company:
+        return 401, "Insufficient permissions"
+    return StudentSession.objects.filter(company=request.user.company).prefetch_related("interviewee")
+
 
 @router.get("/applicants", response={200: list[ProfileSchema], 401: str, 404: str})
 def get_applicants(request: HttpRequest, session_id: int):
@@ -49,7 +56,7 @@ def get_applicants(request: HttpRequest, session_id: int):
         return 401, "Insufficient permissions"
     return 200, session.applicants
 
-@router.post("/accept", response={200: str, 409: str, 401: str, 404: str})
+@router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
 def accept_student_session(request: HttpRequest, session_id: int, applicant_user_id: int):
     with transaction.atomic():
         try:
