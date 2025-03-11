@@ -19,6 +19,9 @@ router = Router(tags=["Student Sessions"])
 
 @router.get("/available", response={200: AvailableStudentSessionListSchema})
 def get_available_student_sessions(request: HttpRequest):
+    """
+    Returns a list of available student sessions.
+    """
     sessions: list = list(StudentSession.available_sessions())
     return AvailableStudentSessionListSchema(
         student_sessions=[AvailableStudentSessionSchema.from_orm(s) for s in sessions],
@@ -28,6 +31,9 @@ def get_available_student_sessions(request: HttpRequest):
 
 @router.post("/exhibitor", response={406: str, 201: StudentSessionSchema, 401: str})
 def create_student_session(request: HttpRequest, session: CreateStudentSessionSchema):
+    """
+    Creates a student session, user must be an exhibitor.
+    """
     data: dict = session.model_dump()
     company_id: int = data.pop("company_id")
     if request.user.is_company_admin(company_id):
@@ -45,8 +51,11 @@ def get_exhibitor_sessions(request: HttpRequest):
     return StudentSession.objects.filter(company=request.user.company).prefetch_related("interviewee")
 
 
-@router.get("/applicants", response={200: list[ProfileSchema], 401: str, 404: str})
+@router.get("/exhibitor/applicants", response={200: list[ProfileSchema], 401: str, 404: str})
 def get_applicants(request: HttpRequest, session_id: int):
+    """
+    Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
+    """
     try:
         session: StudentSession = StudentSession.objects.get(id=session_id)
     except StudentSession.DoesNotExist:
@@ -58,6 +67,9 @@ def get_applicants(request: HttpRequest, session_id: int):
 
 @router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
 def accept_student_session(request: HttpRequest, session_id: int, applicant_user_id: int):
+    """
+    Used to accept a student for a student session, takes in a session_id and an applicant_user_id.
+    """
     with transaction.atomic():
         try:
             session: StudentSession = StudentSession.objects.select_for_update().get(id=session_id, interviewee=None)
@@ -73,6 +85,9 @@ def accept_student_session(request: HttpRequest, session_id: int, applicant_user
 
 @router.post("/apply", response={404: str, 409: str, 201: StudentSessionSchema})
 def apply_for_session(request: HttpRequest, session_id: int):
+    """
+    Used to apply to a student session, takes in the session id and signs up the current user.
+    """
     with transaction.atomic():
         try:
             session: StudentSession = StudentSession.objects.select_for_update().get(
