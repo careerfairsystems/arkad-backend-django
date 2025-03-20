@@ -87,6 +87,14 @@ def accept_student_session(request: HttpRequest, session_id: int, applicant_user
 
         session.interviewee_id = applicant_user_id
         session.save()
+
+        # Remove this interviewee from the rest of the company's lists
+
+        for s in  StudentSession.objects.filter(company_id=request.user.company.id,
+                                                applicants__id__contains=applicant_user_id):
+            s.applicants.remove(applicant_user_id)
+            s.save()
+
         return 200, "Accepted user"
 
 @router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
@@ -101,6 +109,11 @@ def apply_for_session(request: HttpRequest, session_id: int):
             )
         except StudentSession.DoesNotExist:
             return 404, "Session not found or already booked"
+
+        # User already has a booked session with the same company
+        if StudentSession.objects.filter(interviewee_id=request.user.id, company_id=session.company_id).exists():
+            return 409, "User already booked"
+
         session.applicants.add(request.user)
         session.save()
     return 200, session
