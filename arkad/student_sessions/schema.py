@@ -1,46 +1,41 @@
-from ninja import ModelSchema, Schema
+from datetime import datetime
+from typing import List, Optional
 
-from student_sessions.models import StudentSession
-from user_models.schema import ProfileSchema, CompanySchema
+from ninja import Schema
 
-
-class StudentSessionSchema(ModelSchema):
-    interviewee: ProfileSchema | None
-
-    class Meta:
-        model = StudentSession
-        fields = (
-            "start_time",
-            "duration",
-            "company",
-            "interviewee",
-            "booking_close_time",
-            "id",
-            "applicants"
-        )
+from user_models.schema import ProfileSchema
 
 
-class CreateStudentSessionSchema(ModelSchema):
+class StudentSessionSchema(Schema):
+    start_time: datetime
+    duration: int
     company_id: int
+    interviewee: Optional[ProfileSchema] = None
+    booking_close_time: datetime
+    id: int
+    applicants: List[ProfileSchema]
 
-    class Meta:
-        model = StudentSession
-        fields = ("start_time", "duration", "booking_close_time")
+
+class CreateStudentSessionSchema(Schema):
+    start_time: datetime
+    duration: int
+    booking_close_time: datetime
+    company_id: int
 
 
 class StudentSessionListSchema(Schema):
-    student_sessions: list[StudentSessionSchema]
+    student_sessions: List[StudentSessionSchema]
     numElements: int
 
 
-class AvailableStudentSessionSchema(ModelSchema):
-    company: CompanySchema
-
-    class Meta:
-        model = StudentSession
-        fields = ("start_time", "duration", "company", "booking_close_time", "id")
+class AvailableStudentSessionSchema(Schema):
+    start_time: datetime
+    duration: int
+    company_id: int
+    booking_close_time: datetime
+    id: int
 
 
 class AvailableStudentSessionListSchema(Schema):
-    student_sessions: list[AvailableStudentSessionSchema]
+    student_sessions: List[AvailableStudentSessionSchema]
     numElements: int

@@ -22,9 +22,15 @@ def get_available_student_sessions(request: HttpRequest):
     """
     Returns a list of available student sessions.
     """
-    sessions: list = list(StudentSession.available_sessions())
+    sessions: list[StudentSession] = list(StudentSession.available_sessions())
     return AvailableStudentSessionListSchema(
-        student_sessions=[AvailableStudentSessionSchema.from_orm(s) for s in sessions],
+        student_sessions=[AvailableStudentSessionSchema(
+            start_time=s.start_time,
+            duration=s.duration,
+            company_id=s.company_id,
+            booking_close_time=s.booking_close_time,
+            id=s.id
+        ) for s in sessions],
         numElements=len(sessions),
     )
 
@@ -44,7 +50,7 @@ def create_student_session(request: HttpRequest, session: CreateStudentSessionSc
         return 201, StudentSession.objects.create(**data)
     return 401, "Insufficient permissions"
 
-@router.get("/exhibitor/sessions", response={200: StudentSessionSchema, 401: str})
+@router.get("/exhibitor/sessions", response={200: list[StudentSessionSchema], 401: str})
 def get_exhibitor_sessions(request: HttpRequest):
     if not request.user.is_company:
         return 401, "Insufficient permissions"
