@@ -6,6 +6,8 @@ import jwt
 from .settings import SECRET_KEY
 from user_models.models import User
 from user_models.api import router as user_router
+from student_sessions.api import router as student_sessions_router
+from companies.api import router as company_router
 
 
 class AuthBearer(HttpBearer):
@@ -15,19 +17,32 @@ class AuthBearer(HttpBearer):
         if "user_id" not in decoded:
             raise jwt.InvalidTokenError("No user id")
         try:
-            user: User =  User.objects.get(id=decoded["user_id"])
+            user: User = User.objects.get(id=decoded["user_id"])
         except User.DoesNotExist:
             raise jwt.InvalidTokenError("No such user")
         request.user = user
         return user
 
-api = NinjaAPI(title="Arkad API", docs=Swagger(settings={"persistAuthorization": True}), auth=AuthBearer(), csrf=False)
+
+api = NinjaAPI(
+    title="Arkad API",
+    docs=Swagger(settings={"persistAuthorization": True}),
+    auth=AuthBearer(),
+)
 api.add_router("user", user_router)
+api.add_router("student-session", student_sessions_router)
+api.add_router("company", company_router)
+
 
 @api.exception_handler(jwt.InvalidKeyError)
 def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(request, {"detail": "Invalid token supplied"}, status=401)
+    return api.create_response(
+        request, {"detail": "Invalid token supplied"}, status=401
+    )
+
 
 @api.exception_handler(jwt.ExpiredSignatureError)
 def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(request, {"detail": "Expired token supplied"}, status=401)
+    return api.create_response(
+        request, {"detail": "Expired token supplied"}, status=401
+    )

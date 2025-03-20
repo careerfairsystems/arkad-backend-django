@@ -31,3 +31,9 @@ You should also set a good postgres password.
 Enter the bash with: `docker compose run web bash`
 Enter the shell utility: `python manage.py createsuperuser`
 Follow the instructions.
+
+### Update company information
+
+It is possible to automatically update the database with new information about all companies.
+For example jobs, if they have studentsessions etc. 
+This is done by running `python manage.py jexpo_sync --file /path/to/jexpo.json`
