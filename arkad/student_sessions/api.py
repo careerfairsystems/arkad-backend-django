@@ -89,7 +89,7 @@ def accept_student_session(request: HttpRequest, session_id: int, applicant_user
         session.save()
         return 200, "Accepted user"
 
-@router.post("/apply", response={404: str, 409: str, 201: StudentSessionSchema})
+@router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
 def apply_for_session(request: HttpRequest, session_id: int):
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
@@ -101,9 +101,6 @@ def apply_for_session(request: HttpRequest, session_id: int):
             )
         except StudentSession.DoesNotExist:
             return 404, "Session not found or already booked"
-        except IntegrityError as e:
-            logging.error(e)
-            return 409, "You may only have one session per company"
         session.applicants.add(request.user)
         session.save()
-    return 201, session
+    return 200, session

@@ -13,8 +13,6 @@ class StudentSessionSchema(Schema):
     interviewee: Optional[ProfileSchema] = None
     booking_close_time: datetime
     id: int
-    applicants: List[ProfileSchema]
-
 
 class CreateStudentSessionSchema(Schema):
     start_time: datetime

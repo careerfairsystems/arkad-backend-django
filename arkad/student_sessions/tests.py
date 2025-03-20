@@ -7,6 +7,7 @@ from companies.models import Company
 from student_sessions.models import StudentSession
 from student_sessions.schema import CreateStudentSessionSchema, AvailableStudentSessionListSchema, StudentSessionSchema
 from user_models.models import User
+from user_models.schema import ProfileSchema
 
 
 class StudentSessionTests(TestCase):
@@ -142,3 +143,100 @@ class StudentSessionTests(TestCase):
         self.assertEqual(200, other_company.status_code)
         data = [StudentSessionSchema(**s) for s in correct_company.json()]
         self.assertEqual(len(data), len(sessions))
+
+    def test_get_applicants(self):
+        session = self._create_session(self.company_user1)
+        for s in self.student_users:
+            session.applicants.add(s)
+        session.save()
+
+        self.assertEqual(401, self.client.get(
+            "/api/student-session/exhibitor/applicants?session_id="+str(session.id),
+            headers=self._get_auth_headers(self.student_users[0])
+        ).status_code)
+        self.assertEqual(401, self.client.get(
+            "/api/student-session/exhibitor/applicants?session_id="+str(session.id),
+            headers=self._get_auth_headers(self.company_user2)
+        ).status_code)
+        self.assertEqual(404, self.client.get(
+            "/api/student-session/exhibitor/applicants?session_id="+str(session.id+3),
+            headers=self._get_auth_headers(self.company_user1)
+        ).status_code)
+        resp = self.client.get(
+            "/api/student-session/exhibitor/applicants?session_id="+str(session.id),
+            headers=self._get_auth_headers(self.company_user1)
+        )
+        self.assertEqual(200, resp.status_code)
+        data = [ProfileSchema(**p) for p in resp.json()]
+        self.assertEqual(len(data), len(self.student_users))
+
+    def test_accept_student_session(self):
+        session = self._create_session(self.company_user1)
+        for s in self.student_users:
+            session.applicants.add(s)
+        session.save()
+
+        url: str = (f"/api/student-session/exhibitor/accept?"
+                    f"session_id={session.id}&applicant_user_id={self.student_users[-1].id}")
+        resp = self.client.post(
+            url,
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(401, resp.status_code)
+
+        resp = self.client.post(
+            url,
+            headers=self._get_auth_headers(self.company_user2)
+        )
+        self.assertEqual(401, resp.status_code)
+
+        resp = self.client.post(
+            url,
+            headers=self._get_auth_headers(self.company_user1)
+        )
+        self.assertEqual(200, resp.status_code)
+
+        url = (f"/api/student-session/exhibitor/accept"
+               f"?session_id={session.id}&applicant_user_id={self.student_users[-2].id}")
+        resp = self.client.post(
+            url,
+            headers=self._get_auth_headers(self.company_user1)
+        )
+        self.assertEqual(404, resp.status_code)
+
+    def test_apply_for_sessions(self):
+        session1 = self._create_session(self.company_user1)
+        session2 = self._create_session(self.company_user1)
+        url = "/api/student-session/apply?session_id="
+
+        resp = self.client.post(
+            url + str(session1.id),
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(200, resp.status_code)
+
+        resp = self.client.post(
+            url + str(session2.id),
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(200, resp.status_code)
+
+    def test_apply_for_sessions_accepted(self):
+        session1 = self._create_session(self.company_user1)
+        session2 = self._create_session(self.company_user1)
+        url = "/api/student-session/apply?session_id="
+
+        resp = self.client.post(
+            url + str(session1.id),
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(200, resp.status_code)
+
+        session2.interviewee = self.student_users[1]
+        session2.save()
+
+        resp = self.client.post(
+            url + str(session2.id),
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(404, resp.status_code)
