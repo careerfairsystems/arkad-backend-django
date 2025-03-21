@@ -25,6 +25,7 @@ services:
     volumes:
       - static_volume:/app/arkad/static
       - media_volume:/app/arkad/media
+      - ./config:/app/arkad/config
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DEBUG=${DEBUG}
