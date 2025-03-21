@@ -23,10 +23,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+JEXPO_TOKEN: str = os.environ.get("JEXPO_TOKEN")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS: list[str] = ["backend.arkadtlth.se", "staging.backend.arkadtlth.se"]
+CSRF_TRUSTED_ORIGINS = ["https://" + h for h in ALLOWED_HOSTS]
+CORS_ALLOW_ALL_ORIGINS = True  # Change this later
+CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
@@ -41,14 +46,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "companies",
     "user_models",
     "student_sessions",
     "event_booking",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # Add this line
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -86,7 +94,9 @@ DATABASES = {
         "NAME": "arkad",
         "USER": "arkad_db_user",
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),  # Change if using a remote database
+        "HOST": os.environ.get(
+            "DB_HOST", "localhost"
+        ),  # Change if using a remote database
         "PORT": "5432",  # Default PostgreSQL port
     }
 }
