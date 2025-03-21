@@ -2,7 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, QuerySet, ForeignKey, UniqueConstraint
+from django.db.models import Q, QuerySet, UniqueConstraint, CheckConstraint
 from django.utils import timezone
 
 from companies.models import Company
@@ -24,17 +24,13 @@ class Ticket(models.Model):
         constraints = [
             UniqueConstraint(name="one_ticket_per_user_event", fields=("user", "event"))
         ]
-        indexes = [
-            models.Index(fields=["user", "event"]),
-            models.Index(fields=["uuid"]),
-        ]
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
 class Event(models.Model):
     name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField()
 
     type = models.CharField(choices=EVENT_TYPES, max_length=2)
     location = models.CharField(max_length=300)
@@ -45,21 +41,16 @@ class Event(models.Model):
     start_time = models.DateTimeField(null=False)
     end_time = models.DateTimeField(null=False)
 
+    number_booked = models.IntegerField(default=0, null=False)  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
     class Meta:
         constraints = [
-            models.CheckConstraint(
-                check=models.Q(tickets__count__lte=models.F('capacity')),
-                name='capacity_not_exceeded'
+            CheckConstraint(
+                check=Q(number_booked__lte=models.F("capacity")),
+                name="capacity_not_exceeded",
             )
         ]
-        indexes = [
-            models.Index(fields=["start_time"]),
-            models.Index(fields=["company"]),
-        ]
-        ordering = ["start_time"]
-
 
     def clean(self):
         if self.end_time <= self.start_time:
@@ -68,10 +59,6 @@ class Event(models.Model):
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
 
-
-    @property
-    def number_booked(self) -> int:
-        return self.tickets.count()
 
     @staticmethod
     def available_filter() -> Q:

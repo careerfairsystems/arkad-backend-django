@@ -4,7 +4,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from event_booking.models import Event, Ticket
-from event_booking.schemas import EventSchema, TicketSchema
+from event_booking.schemas import EventSchema, TicketSchema, UseTicketSchema
 
 router = Router(tags=["Events"])
 
@@ -20,7 +20,7 @@ def get_booked_events(request: HttpRequest):
     ts: list[Ticket] = request.user.tickets.prefetch_related('event').all()
     return [t.event for t in ts]
 
-@router.get("{event_id}", response={200: EventSchema, 404: str})
+@router.get("{event_id}/", response={200: EventSchema, 404: str})
 def get_event(request: HttpRequest, event_id: int):
     """
     Returns a single event
@@ -30,7 +30,7 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
-@router.get("{event_id}/ticket", response={200: TicketSchema, 401: str})
+@router.get("{event_id}/ticket", response={200: UseTicketSchema, 401: str})
 def get_event_ticket(request: HttpRequest, event_id: int):
     """
     Returns a ticket
@@ -39,10 +39,10 @@ def get_event_ticket(request: HttpRequest, event_id: int):
     if not tickets.exists():
         return 401, "Unauthorized"
     ticket: Ticket = tickets.first()  # Should only be one
-    return TicketSchema(uuid=ticket.uuid, event_id=ticket.event_id, user_id=ticket.user_id, used=ticket.used)
+    return UseTicketSchema(uuid=ticket.uuid)
 
-@router.post("{event_id}/use-ticket", response={200: TicketSchema, 401: str})
-def verify_ticket(request:HttpRequest, ticket: TicketSchema):
+@router.post("use-ticket", response={200: TicketSchema, 401: str})
+def verify_ticket(request:HttpRequest, ticket: UseTicketSchema):
     """
     Returns 200 and the ticket schema which will now be used.
 
@@ -51,7 +51,7 @@ def verify_ticket(request:HttpRequest, ticket: TicketSchema):
     modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, used=False).update(used=True)
     if modified_tickets == 1:
         ticket.used = True
-        return 200, ticket
+        return 200, Ticket.objects.get(uuid=ticket.uuid)
     return 401, "Unauthorized"
 
 
@@ -68,7 +68,8 @@ def book_event(request: HttpRequest, event_id: int):
         if event.number_booked < event.capacity:
             if event.tickets.filter(user_id=request.user.id).exists():
                 return 409, "You have already booked this event"
-            ticket: Ticket = Ticket.objects.create(user=request.user)
+            ticket: Ticket = Ticket.objects.create(user=request.user, event=event)
+            event.number_booked += 1
             event.tickets.add(ticket)
             event.save()
             return 200, event
@@ -78,13 +79,22 @@ def book_event(request: HttpRequest, event_id: int):
 @router.post("{event_id}/unbook", response={200: EventSchema, 409: str, 404: str})
 def unbook_event(request: HttpRequest, event_id: int):
     """
-    Unbook an event if you have a ticket
+    Unbook an event if you have a ticket.
     """
     with transaction.atomic():
         try:
-            event: Event = Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
+            event: Event = Event.objects.select_for_update().get(id=event_id)
         except Event.DoesNotExist:
             return 404, "Event not found"
-        event.tickets.filter(user_id=request.user.id).delete()
+
+        # Delete the ticket
+        deleted_count, _ = event.tickets.filter(user_id=request.user.id).delete()
+
+        if deleted_count == 0:
+            return 404, "You do not have a ticket for this event"
+
+        # Update the counter
+        event.number_booked -= 1
         event.save()
+
         return 200, event

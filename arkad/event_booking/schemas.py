@@ -20,3 +20,6 @@ class TicketSchema(Schema):
     uuid: UUID
     event_id: int
     used: bool
+
+class UseTicketSchema(Schema):
+    uuid: UUID
