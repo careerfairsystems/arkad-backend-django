@@ -42,3 +42,6 @@ class StudentSession(models.Model):
     @classmethod
     def available_sessions(cls) -> QuerySet:
         return cls.objects.filter(cls.available_filter()).all()
+
+    def __str__(self):
+        return f"{self.company.name}:  {self.start_time}"

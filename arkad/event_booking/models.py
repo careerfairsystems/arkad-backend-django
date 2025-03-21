@@ -5,11 +5,11 @@ from django.utils import timezone
 from companies.models import Company
 from user_models.models import User
 
-EVENT_TYPES: list[tuple[str, str]] = [
-    ("Company event", "ce"),
-    ("Lunch", "lu"),
-    ("Banquet", "ba"),
-]
+EVENT_TYPES: dict[str, str] = {
+    "ce": "Company event",
+    "lu": "Lunch",
+    "ba": "Banquet"
+}
 
 class Event(models.Model):
     name = models.CharField(max_length=100)

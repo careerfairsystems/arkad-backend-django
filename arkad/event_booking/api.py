@@ -7,14 +7,19 @@ from event_booking.schemas import EventSchema
 
 router = Router(tags=["Events"])
 
-@router.get("/events", response={200: list[EventSchema]})
+@router.get("", response={200: list[EventSchema]})
 def get_events(request: HttpRequest):
     """
     Returns a list of all events
     """
     return Event.objects.all()
 
-@router.get("/events/{event_id}", response={200: EventSchema, 404: str})
+
+@router.get("booked-events", response={200: list[EventSchema]})
+def get_booked_events(request: HttpRequest):
+    return request.user.event_set.all()
+
+@router.get("{event_id}", response={200: EventSchema, 404: str})
 def get_event(request: HttpRequest, event_id: int):
     """
     Returns a single event
@@ -24,6 +29,7 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
+
 @router.post("/events/{event_id}/book", response={200: EventSchema, 409: str})
 def book_event(request: HttpRequest, event_id: int):
     """
@@ -31,7 +37,7 @@ def book_event(request: HttpRequest, event_id: int):
     """
     with transaction.atomic():
         try:
-            event: Event = Event.objects.select_for_update().get(id=event_id)
+            event: Event = Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
         except Event.DoesNotExist:
             return 404, "Event not found"
         if event.number_booked < event.capacity:
@@ -40,6 +46,21 @@ def book_event(request: HttpRequest, event_id: int):
             event.number_booked += 1
             event.attending.add(request.user)
             event.save()
+            return 200, event
         else:
             return 409, "Event already fully"
 
+@router.post("/events/{event_id}/unbook", response={200: EventSchema, 409: str})
+def unbook_event(request: HttpRequest, event_id: int):
+    """
+    Unbook an event if you have a ticket
+    """
+    with transaction.atomic():
+        try:
+            event: Event = request.user.event_set.select_for_update().get(id=event_id)
+        except Event.DoesNotExist:
+            return 404, "Event not found"
+        event.number_booked -= 1
+        event.attending.remove(request.user)
+        event.save()
+        return 200, event

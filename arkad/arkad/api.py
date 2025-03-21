@@ -8,6 +8,7 @@ from user_models.models import User
 from user_models.api import router as user_router
 from student_sessions.api import router as student_sessions_router
 from companies.api import router as company_router
+from event_booking.api import router as event_booking_router
 
 
 class AuthBearer(HttpBearer):
@@ -32,6 +33,7 @@ api = NinjaAPI(
 api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
 api.add_router("company", company_router)
+api.add_router("events", event_booking_router)
 
 
 @api.exception_handler(jwt.InvalidKeyError)
