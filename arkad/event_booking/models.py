@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import UniqueConstraint, CheckConstraint, Q, QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from companies.models import Company
@@ -29,6 +29,13 @@ class Event(models.Model):
     attending = models.ManyToManyField(to=User)
     number_booked = models.IntegerField(null=False)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(number_booked__lte=models.F('capacity')),
+                name='capacity_not_exceeded'
+            )
+        ]
 
     @staticmethod
     def available_filter() -> Q:
