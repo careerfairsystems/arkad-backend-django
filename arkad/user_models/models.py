@@ -41,7 +41,7 @@ class User(AbstractUser):
 
     is_company = models.BooleanField(default=False)
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, default=None, null=True
+        Company, on_delete=models.CASCADE, default=None, null=True, blank=True
     )
 
     is_student = models.BooleanField(default=True)
