@@ -1,13 +1,10 @@
-import datetime
-
 from django.db import transaction
+from django.db.models import QuerySet
 from django.http import HttpRequest
-from django.utils import timezone
 from ninja import Router
 
-from arkad.jwt_utils import jwt_encode
-from event_booking.models import Event
-from event_booking.schemas import EventSchema
+from event_booking.models import Event, Ticket
+from event_booking.schemas import EventSchema, TicketSchema
 
 router = Router(tags=["Events"])
 
@@ -18,10 +15,10 @@ def get_events(request: HttpRequest):
     """
     return Event.objects.all()
 
-
 @router.get("booked-events", response={200: list[EventSchema]})
 def get_booked_events(request: HttpRequest):
-    return request.user.event_set.all()
+    ts: list[Ticket] = request.user.tickets.prefetch_related('event').all()
+    return [t.event for t in ts]
 
 @router.get("{event_id}", response={200: EventSchema, 404: str})
 def get_event(request: HttpRequest, event_id: int):
@@ -33,18 +30,32 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
-@router.get("token/{event_id}", response={200: str, 401: str})
-def get_token(request: HttpRequest, event_id: int):
-    if request.user.event_set.filter(id=event_id).exists():
-        return 200, jwt_encode({
-            "event_id": event_id,
-            "user_id": request.user.id,
-            "ticket_is_valid": True,
-            "expires_at": timezone.now() + datetime.timedelta(minutes=1)
-        })
-    return 401, "Not authorized"
+@router.get("{event_id}/ticket", response={200: TicketSchema, 401: str})
+def get_event_ticket(request: HttpRequest, event_id: int):
+    """
+    Returns a ticket
+    """
+    tickets: QuerySet[Ticket] = request.user.tickets.prefetch_related('event').filter(event_id=event_id)
+    if not tickets.exists():
+        return 401, "Unauthorized"
+    ticket: Ticket = tickets.first()  # Should only be one
+    return TicketSchema(uuid=ticket.uuid, event_id=ticket.event_id, user_id=ticket.user_id, used=ticket.used)
 
-@router.post("/events/{event_id}/book", response={200: EventSchema, 409: str})
+@router.post("{event_id}/use-ticket", response={200: TicketSchema, 401: str})
+def verify_ticket(request:HttpRequest, ticket: TicketSchema):
+    """
+    Returns 200 and the ticket schema which will now be used.
+
+    If used or non-existing return 401.
+    """
+    modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, used=False).update(used=True)
+    if modified_tickets == 1:
+        ticket.used = True
+        return 200, ticket
+    return 401, "Unauthorized"
+
+
+@router.post("{event_id}/book", response={200: EventSchema, 409: str, 404: str})
 def book_event(request: HttpRequest, event_id: int):
     """
     Book an event if it is not already fully booked
@@ -55,26 +66,25 @@ def book_event(request: HttpRequest, event_id: int):
         except Event.DoesNotExist:
             return 404, "Event not found"
         if event.number_booked < event.capacity:
-            if event.attending.filter(id=request.user.id).exists():
+            if event.tickets.filter(user_id=request.user.id).exists():
                 return 409, "You have already booked this event"
-            event.number_booked += 1
-            event.attending.add(request.user)
+            ticket: Ticket = Ticket.objects.create(user=request.user)
+            event.tickets.add(ticket)
             event.save()
             return 200, event
         else:
-            return 409, "Event already fully"
+            return 409, "Event already fully booked"
 
-@router.post("/events/{event_id}/unbook", response={200: EventSchema, 409: str})
+@router.post("{event_id}/unbook", response={200: EventSchema, 409: str, 404: str})
 def unbook_event(request: HttpRequest, event_id: int):
     """
     Unbook an event if you have a ticket
     """
     with transaction.atomic():
         try:
-            event: Event = request.user.event_set.select_for_update().get(id=event_id)
+            event: Event = Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
         except Event.DoesNotExist:
             return 404, "Event not found"
-        event.number_booked -= 1
-        event.attending.remove(request.user)
+        event.tickets.filter(user_id=request.user.id).delete()
         event.save()
         return 200, event

@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from ninja import Schema
 
@@ -13,3 +14,9 @@ class EventSchema(Schema):
     capacity: int
     number_booked: int
     company_id: int | None
+
+class TicketSchema(Schema):
+    user_id: int
+    uuid: UUID
+    event_id: int
+    used: bool
