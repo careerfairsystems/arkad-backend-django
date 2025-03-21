@@ -2,6 +2,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 
+from arkad.jwt_utils import jwt_encode, jwt_decode, PUBLIC_KEY
+
 User = get_user_model()
 
 
@@ -229,3 +231,19 @@ class UserRoutesTestCase(TestCase):
         response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), "CV deleted")
+
+class AuthenticationTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_asymmetric_jwt(self):
+        message: str = "Hello World!"
+        self.assertEqual(jwt_decode(jwt_encode({"msg": message}))["msg"], message)
+
+    def test_asymmetric_jwt_public_key_endpoint(self):
+        resp = self.client.get("/api/get-public-key")
+        self.assertEqual(200, resp.status_code)
+        self.maxDiff = None
+        self.assertEqual(
+            PUBLIC_KEY, resp.json()['public_key']
+        )

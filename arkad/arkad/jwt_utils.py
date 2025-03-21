@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import jwt
+from ninja import Schema
 
 from arkad.settings import BASE_DIR
 
@@ -28,6 +29,9 @@ def jwt_encode(payload: dict):
 
 def jwt_decode(token: str):
     return jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+
+class PublicKeySchema(Schema):
+    public_key: str
 
 if __name__ == "__main__":
     # Verify that the setup works correctly:

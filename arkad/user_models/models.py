@@ -1,11 +1,7 @@
 from datetime import datetime, timezone, timedelta
-
 from django.contrib.auth.models import AbstractUser
-import jwt
-from arkad.settings import SECRET_KEY
-
+from arkad.jwt_utils import jwt_encode
 from django.db import models
-
 from companies.models import Company
 
 
@@ -58,13 +54,11 @@ class User(AbstractUser):
     study_year = models.IntegerField(blank=True, null=True)
 
     def create_jwt_token(self) -> str:
-        return "Bearer " + jwt.encode(
+        return "Bearer " + jwt_encode(
             {
                 "exp": datetime.now(tz=timezone.utc) + timedelta(hours=2),
                 "user_id": self.id,
             },
-            SECRET_KEY,
-            algorithm="HS512",
         )
 
     def is_company_admin(self, company_id: int) -> bool:

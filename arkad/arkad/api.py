@@ -3,7 +3,7 @@ from ninja import NinjaAPI, Swagger
 from ninja.security import HttpBearer
 import jwt
 
-from .settings import SECRET_KEY
+from .jwt_utils import jwt_decode, PUBLIC_KEY, PublicKeySchema
 from user_models.models import User
 from user_models.api import router as user_router
 from student_sessions.api import router as student_sessions_router
@@ -14,7 +14,7 @@ from event_booking.api import router as event_booking_router
 class AuthBearer(HttpBearer):
     def authenticate(self, request: HttpRequest, token: str) -> User:
         # Implement authentication
-        decoded: dict = jwt.decode(token, SECRET_KEY, algorithms=["HS512"])
+        decoded: dict = jwt_decode(token)
         if "user_id" not in decoded:
             raise jwt.InvalidTokenError("No user id")
         try:
@@ -48,3 +48,12 @@ def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
         request, {"detail": "Expired token supplied"}, status=401
     )
+
+
+@api.get("get-public-key", response={200: PublicKeySchema}, auth=None, tags=["Cryptography"])
+def get_public_key(request: HttpRequest):
+    if (not PUBLIC_KEY.strip().startswith("-----BEGIN PUBLIC KEY-----")
+            or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----")):
+        raise jwt.InvalidTokenError("Something went very wrong")
+
+    return PublicKeySchema(public_key=PUBLIC_KEY)
