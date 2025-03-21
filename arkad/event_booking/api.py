@@ -1,7 +1,11 @@
+import datetime
+
 from django.db import transaction
 from django.http import HttpRequest
+from django.utils import timezone
 from ninja import Router
 
+from arkad.jwt_utils import jwt_encode
 from event_booking.models import Event
 from event_booking.schemas import EventSchema
 
@@ -29,6 +33,16 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
+@router.get("token/{event_id}", response={200: str, 401: str})
+def get_token(request: HttpRequest, event_id: int):
+    if request.user.event_set.filter(id=event_id).exists():
+        return 200, jwt_encode({
+            "event_id": event_id,
+            "user_id": request.user.id,
+            "ticket_is_valid": True,
+            "expires_at": timezone.now() + datetime.timedelta(minutes=1)
+        })
+    return 401, "Not authorized"
 
 @router.post("/events/{event_id}/book", response={200: EventSchema, 409: str})
 def book_event(request: HttpRequest, event_id: int):
