@@ -29,7 +29,7 @@ JEXPO_TOKEN: str = os.environ.get("JEXPO_TOKEN")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS: list[str] = ["backend.arkadtlth.se", "staging.backend.arkadtlth.se"]
-
+CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
 CORS_ALLOW_ALL_ORIGINS = True  # Change this later
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
