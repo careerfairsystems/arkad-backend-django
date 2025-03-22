@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from event_booking.models import Event, Ticket
 from companies.models import Company
+from event_booking.schemas import UseTicketSchema
 
 User = get_user_model()
 
@@ -13,6 +14,7 @@ class EventBookingTestCase(TestCase):
         self.client = Client()
         self.company = Company.objects.create(name="Test Company")
         self.user = User.objects.create_user(username="testuser", password="password")
+        self.staff_user = User.objects.create_user(username="teststaffuser", password="password", is_staff=True)
         self.event = Event.objects.create(
             name="Test Event",
             description="Test Event Description",
@@ -52,7 +54,7 @@ class EventBookingTestCase(TestCase):
 
     def test_book_event(self):
         headers = self._get_auth_headers(self.user)
-        response = self.client.post(f"/api/events/{self.event.id}/book", headers=headers)
+        response = self.client.post(f"/api/events/acquire-ticket/{self.event.id}", headers=headers)
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
@@ -62,7 +64,7 @@ class EventBookingTestCase(TestCase):
         Ticket.objects.create(user=self.user, event=self.event)
         self.event.number_booked += 1
         self.event.save()
-        response = self.client.post(f"/api/events/{self.event.id}/unbook", headers=headers)
+        response = self.client.post(f"/api/events/remove-ticket/{self.event.id}", headers=headers)
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 0)
@@ -70,22 +72,30 @@ class EventBookingTestCase(TestCase):
     def test_use_ticket(self):
         headers = self._get_auth_headers(self.user)
         self.ticket = Ticket.objects.create(user=self.user, event=self.event)
-        response = self.client.post("/api/events/use-ticket", {"uuid": str(self.ticket.uuid)}, headers=headers)
-        print(response.content)
+        response = self.client.post("/api/events/use-ticket",
+                                    data=UseTicketSchema(uuid=self.ticket.uuid).model_dump(),
+                                    content_type="application/json",
+                                    headers=headers)
+        self.assertEqual(response.status_code, 401)
+        response = self.client.post("/api/events/use-ticket",
+                                    data=UseTicketSchema(uuid=self.ticket.uuid).model_dump(),
+                                    content_type="application/json",
+                                    headers=self._get_auth_headers(self.staff_user))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["used"], True)
         self.ticket.refresh_from_db()
         self.assertTrue(self.ticket.used)
 
     def test_book_event_twice(self):
         headers = self._get_auth_headers(self.user)
-        self.client.post(f"/api/events/{self.event.id}/book", headers=headers)
-        response = self.client.post(f"/api/events/{self.event.id}/book", headers=headers)
+        self.client.post(f"/api/events/acquire-ticket/{self.event.id}", headers=headers)
+        response = self.client.post(f"/api/events/acquire-ticket/{self.event.id}", headers=headers)
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "You have already booked this event")
 
     def test_unbook_without_booking(self):
         headers = self._get_auth_headers(self.user)
-        response = self.client.post(f"/api/events/{self.event.id}/unbook", headers=headers)
+        response = self.client.post(f"/api/events/remove-ticket/{self.event.id}", headers=headers)
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), "You do not have a ticket for this event")
 
@@ -94,6 +104,6 @@ class EventBookingTestCase(TestCase):
         self.event.number_booked = 1
         self.event.save()
         headers = self._get_auth_headers(self.user)
-        response = self.client.post(f"/api/events/{self.event.id}/book", headers=headers)
+        response = self.client.post(f"/api/events/acquire-ticket/{self.event.id}", headers=headers)
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "Event already fully booked")

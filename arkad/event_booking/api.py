@@ -30,7 +30,7 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
-@router.get("{event_id}/ticket", response={200: UseTicketSchema, 401: str})
+@router.get("get-ticket/{event_id}", response={200: UseTicketSchema, 401: str})
 def get_event_ticket(request: HttpRequest, event_id: int):
     """
     Returns a ticket
@@ -48,14 +48,15 @@ def verify_ticket(request:HttpRequest, ticket: UseTicketSchema):
 
     If used or non-existing return 401.
     """
+    if not request.user.is_staff:
+        return 401, "This route is staff only."
     modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, used=False).update(used=True)
     if modified_tickets == 1:
-        ticket.used = True
         return 200, Ticket.objects.get(uuid=ticket.uuid)
     return 401, "Unauthorized"
 
 
-@router.post("{event_id}/book", response={200: EventSchema, 409: str, 404: str})
+@router.post("acquire-ticket/{event_id}", response={200: EventSchema, 409: str, 404: str})
 def book_event(request: HttpRequest, event_id: int):
     """
     Book an event if it is not already fully booked
@@ -76,7 +77,7 @@ def book_event(request: HttpRequest, event_id: int):
         else:
             return 409, "Event already fully booked"
 
-@router.post("{event_id}/unbook", response={200: EventSchema, 409: str, 404: str})
+@router.post("remove-ticket/{event_id}", response={200: EventSchema, 409: str, 404: str})
 def unbook_event(request: HttpRequest, event_id: int):
     """
     Unbook an event if you have a ticket.
