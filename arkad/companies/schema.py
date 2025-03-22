@@ -1,6 +1,5 @@
 from ninja import Schema
 from typing import List, Optional
-from pydantic import EmailStr, AnyUrl
 
 class JobSchema(Schema):
     id: int

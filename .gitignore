@@ -8,3 +8,5 @@ db_data
 **/postgres_data
 arkad/media/
 secrets.sh
+arkad/private
+arkad/config

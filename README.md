@@ -6,6 +6,19 @@ This backend uses django and postgres as the database
 
 The API is documented at /api/docs
 
+## Private/Public keys
+
+To run the server locally the user must manually create a RS256 public/private keypair and add them in arkad/private,
+With the names public.pem, private.pem
+
+This can be done with:
+```shell
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+You can then run jwt_utils in arkad if you want to test the setup.
+
 ### Required environment variables
 
 Required environment variables are:
