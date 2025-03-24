@@ -29,6 +29,7 @@ echo "Building Docker images..."
 docker compose build
 
 echo "Starting containers..."
+docker compose restart nginx
 docker compose up -d
 
 # Get deployment status
@@ -47,3 +48,4 @@ curl -H "Content-Type: application/json" \
   $DISCORD_WEBHOOK_URL
 
 echo "Deployment script completed."
+
