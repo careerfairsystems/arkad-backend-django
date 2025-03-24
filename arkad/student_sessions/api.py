@@ -1,6 +1,5 @@
-import logging
 
-from django.db import transaction, IntegrityError
+from django.db import transaction
 from django.http import HttpRequest
 from ninja import Router
 

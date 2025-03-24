@@ -26,6 +26,7 @@ services:
       - static_volume:/app/arkad/static
       - media_volume:/app/arkad/media
       - ./config:/app/arkad/config
+      - ./private:/app/arkad/private
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DEBUG=${DEBUG}
@@ -47,7 +48,7 @@ services:
       - "traefik.http.routers.app-staging.tls.certresolver=production"
     volumes:
       - static_volume:/app/arkad/static:ro
-      - media_volume:/app/arkad/media:ro
+      - media_volume:/app/arkad/media:rw
       - ../nginx/conf.d:/etc/nginx/conf.d
     ports:
       - "8081:80"
