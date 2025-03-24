@@ -1,35 +1,10 @@
 import boto3
 from botocore.exceptions import ClientError
 import settings  # Needed to import env variables when running like this
+
 SENDER = "Arkad No Reply <no-reply@arkadtlth.se>"
 AWS_REGION = "eu-north-1"
-
-# The subject line for the email.
-SUBJECT = "Amazon SES Test (SDK for Python)"
-
-# The email body for recipients with non-HTML email clients.
-BODY_TEXT = (
-    "Amazon SES Test (Python)\r\n"
-    "This email was sent with Amazon SES using the "
-    "AWS SDK for Python (Boto)."
-)
-
-# The HTML body of the email.
-BODY_HTML = """
-    <html>
-    <head></head>
-    <body>
-      <h1>Amazon SES Test (SDK for Python)</h1>
-      <p>This email was sent with
-        <a href='https://aws.amazon.com/ses/'>Amazon SES</a> using the
-        <a href='https://aws.amazon.com/sdk-for-python/'>
-          AWS SDK for Python (Boto)</a>.</p>
-    </body>
-    </html>
-"""
-
-# The character encoding for the email.
-CHARSET: str = "UTF-8"
+CHARSET: str = "UTF-8"  # The character encoding for the email.
 
 # Create a new SES resource and specify a region.
 client = boto3.client("ses", region_name=AWS_REGION)
