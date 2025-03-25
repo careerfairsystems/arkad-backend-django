@@ -1,9 +1,8 @@
 import boto3
 from botocore.exceptions import ClientError
-import settings  # Needed to import env variables when running like this
 
 SENDER = "Arkad No Reply <no-reply@arkadtlth.se>"
-AWS_REGION = "eu-north-1"
+AWS_REGION = "us-west-2"
 CHARSET: str = "UTF-8"  # The character encoding for the email.
 
 # Create a new SES resource and specify a region.
