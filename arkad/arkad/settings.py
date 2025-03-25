@@ -14,6 +14,15 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://177fe492b27e4d5d3f7b812e188b64fb@o1031864.ingest.us.sentry.io/4509039927033856",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
+
 load_dotenv(verbose=True)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
