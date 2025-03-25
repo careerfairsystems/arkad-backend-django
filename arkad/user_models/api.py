@@ -45,6 +45,9 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     except ValidationError as e:
         return 415, "\n".join(e.messages)
 
+    if User.objects.filter(email=data.email, username=data.email).exists():
+        return 415, "User with this email already exists."
+
     # 6 random numbers
     code: str = str(secrets.randbelow(1000000))
     code = ("0" * (6 - len(code)) + code)[:6]
@@ -58,7 +61,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     })
 
 
-@auth.post("complete-signup", auth=None, response={200: ProfileSchema, 400: str, 415: str, 401: str})
+@auth.post("complete-signup", auth=None, response={200: ProfileSchema, 401: str, 400: str})
 def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
     """
     Complete the signup process, must be given the same data as in begin signup, the 2fa code and the token
@@ -76,11 +79,7 @@ def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
         return 401, "Signup data hash does not match"
 
     try:
-        # TODO enable password requirements! Important
-        try:
-            validate_password(data.password)
-        except ValidationError as e:
-            return 415, e.message
+        # We should not need any validations here, do it in begin_signup
         return 200, User.objects.create_user(**signup_schema.model_dump(), username=data.email)
     except IntegrityError as e:
         logging.error(e)
