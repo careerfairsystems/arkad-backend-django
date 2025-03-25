@@ -95,9 +95,10 @@ def signin(request: HttpRequest, data: SigninSchema):
     Returns a users JWT token when given a correct username and password.
     """
 
-    user: User | None = authenticate(request=request, **data.model_dump())
+    user: User | None = authenticate(request=request, **data.model_dump(), username=data.email)
+
     if user is None:
-        return 401, "Invalid username or password"
+        return 401, "Invalid email or password"
     login(request, user)
     return 200, user.create_jwt_token()
 

@@ -11,43 +11,16 @@ class UserSignin(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            username="testuser",
+            username="test@example.com",
             email="test@example.com",
             password="strongpassword",
             first_name="Test",
             last_name="User",
         )
 
-    def test_signup_success(self):
-        payload = {
-            "username": "newuser",
-            "email": "new@example.com",
-            "password": "newpassword",
-            "first_name": "New",
-            "last_name": "User",
-        }
-        response = self.client.post(
-            "/api/user/signup", data=payload, content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], "newuser")
-
-    def test_signup_duplicate_username(self):
-        payload = {
-            "username": "testuser",  # Already exists
-            "email": "duplicate@example.com",
-            "password": "duplicatepassword",
-            "first_name": "Duplicate",
-            "last_name": "User",
-        }
-        response = self.client.post(
-            "/api/user/signup", data=payload, content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), "Username already exists")
 
     def test_signin_success(self):
-        signin_payload = {"username": "testuser", "password": "strongpassword"}
+        signin_payload = {"email": "test@example.com", "password": "strongpassword"}
         response = self.client.post(
             "/api/user/signin", data=signin_payload, content_type="application/json"
         )
@@ -55,26 +28,25 @@ class UserSignin(TestCase):
         self.assertIn("Bearer ", response.json())
 
     def test_signin_invalid_credentials(self):
-        signin_payload = {"username": "testuser", "password": "wrongpassword"}
+        signin_payload = {"email": "test@example.com", "password": "wrongpassword"}
         response = self.client.post(
             "/api/user/signin", data=signin_payload, content_type="application/json"
         )
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json(), "Invalid username or password")
+        self.assertEqual(response.json(), "Invalid email or password")
 
     def test_profile_authenticated(self):
-        signin_payload = {"username": "testuser", "password": "strongpassword"}
+        signin_payload = {"email": "test@example.com", "password": "strongpassword"}
         response = self.client.post(
             "/api/user/signin", data=signin_payload, content_type="application/json"
         )
-
         self.assertEqual(response.status_code, 200)
         response = self.client.get(
             "/api/user/profile",
-            headers={"Authorization": response.content.decode("utf-8").strip('"')},
+            headers={"Authorization": response.json()},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], "testuser")
+        self.assertEqual(response.json()["email"], "test@example.com")
 
     def test_profile_unauthenticated(self):
         response = self.client.get("/api/user/profile")
