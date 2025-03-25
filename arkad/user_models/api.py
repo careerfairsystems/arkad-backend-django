@@ -117,7 +117,6 @@ def update_profile(request: HttpRequest, data: UpdateProfileSchema):
     Replaces the users profile information to the given information.
     """
     user = request.user
-    user.email = data.email
     user.first_name = data.first_name
     user.last_name = data.last_name
     user.programme = data.programme

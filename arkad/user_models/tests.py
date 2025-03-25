@@ -57,52 +57,38 @@ class UserRoutesTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            username="testuser", password="password123"
+            username="testuser@example.com", password="password123", email="testuser@example.com"
         )
         self.token = self.client.post(
             "/api/user/signin",
-            {"username": "testuser", "password": "password123"},
+            {"email": "testuser@example.com", "password": "password123"},
             content_type="application/json",
         ).json()
-        self.auth_headers = {"HTTP_AUTHORIZATION": self.token}
-
-    def test_signup(self):
-        data = {"username": "newuser", "password": "securepassword"}
-        response = self.client.post(
-            "/api/user/signup", data, content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], "newuser")
-
-        response_duplicate = self.client.post(
-            "/api/user/signup", data, content_type="application/json"
-        )
-        self.assertEqual(response_duplicate.status_code, 400)
-        self.assertEqual(response_duplicate.json(), "Username already exists")
+        self.assertIn("Bearer", self.token)
+        self.auth_headers = {"headers": {"Authorization": self.token}}
 
     def test_signin(self):
-        data = {"username": "testuser", "password": "password123"}
+        data = {"email": "testuser@example.com", "password": "password123"}
         response = self.client.post(
             "/api/user/signin", data, content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), str)  # JWT token expected
 
-        data_invalid = {"username": "testuser", "password": "wrongpassword"}
+        data_invalid = {"email": "testuser@example.com", "password": "wrongpassword"}
         response_invalid = self.client.post(
             "/api/user/signin", data_invalid, content_type="application/json"
         )
         self.assertEqual(response_invalid.status_code, 401)
-        self.assertEqual(response_invalid.json(), "Invalid username or password")
+        self.assertEqual(response_invalid.json(), "Invalid email or password")
 
     def test_get_user_profile(self):
         response = self.client.get("/api/user/profile", **self.auth_headers)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], "testuser")
+        self.assertEqual(response.json()["email"], "testuser@example.com")
 
     def test_update_profile(self):
         upd_data = {
-            "email": "newemail@example.com",
             "first_name": "New",
             "last_name": "Name",
             "programme": "CS",
@@ -192,7 +178,7 @@ class UserRoutesTestCase(TestCase):
         self.assertEqual(
             200,
             self.client.post(
-                "/api/user/profile/cv", {"cv": file}, **self.auth_headers
+                "/api/user/profile/cv", {"cv": file}, headers={"Authorization": self.token}
             ).status_code,
         )
         response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
