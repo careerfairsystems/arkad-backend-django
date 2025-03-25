@@ -1,17 +1,26 @@
+import base64
 import logging
+import os
+import secrets
 
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpRequest
 from ninja import Router, File, UploadedFile, PatchDict
 
+from arkad.email_utils import send_mail
+from arkad.jwt_utils import jwt_encode, jwt_decode
+from arkad.settings import SECRET_KEY
 from user_models.models import User
 from user_models.schema import (
     SigninSchema,
     ProfileSchema,
     SignupSchema,
-    UpdateProfileSchema,
+    UpdateProfileSchema, CompleteSignupSchema,
 )
+from hashlib import sha256
 
 
 auth = Router(tags=["Authentication"])
@@ -21,21 +30,61 @@ router.add_router("", auth)
 router.add_router("profile", profile)
 
 
-@auth.post("signup", auth=None, response={200: ProfileSchema, 400: str})
-def signup(request: HttpRequest, data: SignupSchema):
+@auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str})
+def begin_signup(request: HttpRequest, data: SignupSchema):
     """
-    This endpoint creates a user with the given information.
+    This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
 
-    username, password are required.
-    Returns user information if successful. Call signin with the username and password to retrieve a JWT.
     """
+
+    def generate_salt(length: int = 16) -> str:
+        return base64.b64encode(os.urandom(length)).decode('utf-8')
+
     try:
-        # TODO enable password requirements! Important
-        return 200, User.objects.create_user(**data.model_dump())
+        validate_password(data.password)
+    except ValidationError as e:
+        return 415, "\n".join(e.messages)
+
+    if User.objects.filter(email=data.email, username=data.email).exists():
+        return 415, "User with this email already exists."
+
+    # 6 random numbers
+    code: str = str(secrets.randbelow(1000000))
+    code = ("0" * (6 - len(code)) + code)[:6]
+    salt: str = generate_salt()
+    # Send 2fa code
+    send_mail(data.email, code, code, code)  # TODO: Make this nice
+    return 200, jwt_encode({
+        "code2fa": sha256((SECRET_KEY+salt+code).encode("utf-8"), usedforsecurity=True).hexdigest(),
+        "salt2fa": salt,
+        "signup-data-hash": sha256(data.model_dump_json().encode("utf-8"), usedforsecurity=False).hexdigest()
+    })
+
+
+@auth.post("complete-signup", auth=None, response={200: ProfileSchema, 401: str, 400: str})
+def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
+    """
+    Complete the signup process, must be given the same data as in begin signup, the 2fa code and the token
+    received when beginning signup
+    """
+    jwt_data: dict = jwt_decode(data.token)
+    if jwt_data["code2fa"] != sha256((SECRET_KEY + jwt_data["salt2fa"] + data.code).encode("utf-8")).hexdigest():
+        return 401, f"Non matching 2fa codes"
+    signup_schema: SignupSchema = SignupSchema(**data.model_dump())
+    signup_data_hash_current: str = sha256(signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False).hexdigest()
+    signup_data_hash: str | None = jwt_data.get("signup-data-hash", None)
+    if signup_data_hash is None:
+        return 401, "Signup data hash was empty"
+    if signup_data_hash != signup_data_hash_current:
+        return 401, "Signup data hash does not match"
+
+    try:
+        # We should not need any validations here, do it in begin_signup
+        return 200, User.objects.create_user(**signup_schema.model_dump(), username=data.email)
     except IntegrityError as e:
         logging.error(e)
         if "duplicate key" in str(e):
-            return 400, "Username already exists"
+            return 400, "Email already exists"
         else:
             return 500, "Something went wrong"
 
@@ -46,9 +95,10 @@ def signin(request: HttpRequest, data: SigninSchema):
     Returns a users JWT token when given a correct username and password.
     """
 
-    user: User | None = authenticate(request=request, **data.model_dump())
+    user: User | None = authenticate(request=request, **data.model_dump(), username=data.email)
+
     if user is None:
-        return 401, "Invalid username or password"
+        return 401, "Invalid email or password"
     login(request, user)
     return 200, user.create_jwt_token()
 
@@ -67,7 +117,6 @@ def update_profile(request: HttpRequest, data: UpdateProfileSchema):
     Replaces the users profile information to the given information.
     """
     user = request.user
-    user.email = data.email
     user.first_name = data.first_name
     user.last_name = data.last_name
     user.programme = data.programme

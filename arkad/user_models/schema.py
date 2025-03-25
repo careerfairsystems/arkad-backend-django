@@ -4,24 +4,29 @@ from companies.models import Company
 
 
 class SigninSchema(Schema):
-    username: str
+    email: str
     password: str
 
 
 class SignupSchema(Schema):
-    username: str
     password: str
     first_name: str | None = None
     last_name: str | None = None
-    email: str | None = None
+    email: str
 
+class CompleteSignupSchema(Schema):
+    token: str
+    code: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str
 
 class ProfileSchema(ModelSchema):
     class Meta:
         model = User
         fields = (
             "id",
-            "username",
             "email",
             "first_name",
             "last_name",
@@ -41,7 +46,6 @@ class UpdateProfileSchema(ModelSchema):
     class Meta:
         model = User
         fields = (
-            "email",
             "first_name",
             "last_name",
             "programme",

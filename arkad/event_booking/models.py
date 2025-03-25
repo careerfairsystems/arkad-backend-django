@@ -30,7 +30,7 @@ class Ticket(models.Model):
 
 class Event(models.Model):
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(default="")
 
     type = models.CharField(choices=EVENT_TYPES, max_length=2)
     location = models.CharField(max_length=300)
