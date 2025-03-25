@@ -53,6 +53,9 @@ class User(AbstractUser):
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
 
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
     def create_jwt_token(self) -> str:
         return "Bearer " + jwt_encode(
             {
