@@ -4,7 +4,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from event_booking.models import Event, Ticket
-from event_booking.schemas import EventSchema, TicketSchema, UseTicketSchema
+from event_booking.schemas import EventSchema, TicketSchema, UseTicketSchema, EventUserInformation
 
 router = Router(tags=["Events"])
 
@@ -30,14 +30,16 @@ def get_event(request: HttpRequest, event_id: int):
     except Event.DoesNotExist:
         return 404, "Event not found"
 
-@router.get("/{event_id}/attending", response={200: list[str], 401: str})
+@router.get("/{event_id}/attending", response={200: list[EventUserInformation], 401: str})
 def get_users_attending_event(request: HttpRequest, event_id: int):
     """
     Returns a list of names of the attending users, only if the calling user is staff
     """
     if not request.user.is_staff:
        return 401, "Not a staff user"
-    return 200, [str(ticket.user) for ticket in Ticket.objects.prefetch_related("user").filter(event_id=event_id)]
+    return 200, [EventUserInformation(
+        full_name=str(ticket.user), food_preferences=ticket.user.food_preferences
+    ) for ticket in Ticket.objects.prefetch_related("user").filter(event_id=event_id)]
 
 @router.get("get-ticket/{event_id}", response={200: UseTicketSchema, 401: str})
 def get_event_ticket(request: HttpRequest, event_id: int):

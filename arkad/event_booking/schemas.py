@@ -23,3 +23,7 @@ class TicketSchema(Schema):
 
 class UseTicketSchema(Schema):
     uuid: UUID
+
+class EventUserInformation(Schema):
+    full_name: str
+    food_preferences: str | None
