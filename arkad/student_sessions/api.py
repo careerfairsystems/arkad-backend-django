@@ -6,8 +6,8 @@ from ninja import Router
 from student_sessions.models import StudentSession
 from student_sessions.schema import (
     StudentSessionSchema,
-    AvailableStudentSessionListSchema,
-    AvailableStudentSessionSchema,
+    StudentSessionNormalUserListSchema,
+    StudentSessionNormalUserSchema,
     CreateStudentSessionSchema,
 )
 from companies.models import Company
@@ -16,19 +16,27 @@ from user_models.schema import ProfileSchema
 router = Router(tags=["Student Sessions"])
 
 
-@router.get("/available", response={200: AvailableStudentSessionListSchema})
-def get_available_student_sessions(request: HttpRequest):
+@router.get("/all", response={200: StudentSessionNormalUserListSchema})
+def get_student_sessions(request: HttpRequest, only_available_sessions: bool = False):
     """
     Returns a list of available student sessions.
+
+    Set only_available_sessions to True to only return available sessions.
     """
-    sessions: list[StudentSession] = list(StudentSession.available_sessions())
-    return AvailableStudentSessionListSchema(
-        student_sessions=[AvailableStudentSessionSchema(
+    sessions: list[StudentSession]
+    if only_available_sessions:
+        sessions = list(StudentSession.available_sessions())
+    else:
+        sessions = list(StudentSession.objects.all())
+
+    return StudentSessionNormalUserListSchema(
+        student_sessions=[StudentSessionNormalUserSchema(
             start_time=s.start_time,
             duration=s.duration,
             company_id=s.company_id,
             booking_close_time=s.booking_close_time,
-            id=s.id
+            id=s.id,
+            available=s.interviewee is None
         ) for s in sessions],
         numElements=len(sessions),
     )

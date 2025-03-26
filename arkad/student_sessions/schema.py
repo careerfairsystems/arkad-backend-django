@@ -26,14 +26,14 @@ class StudentSessionListSchema(Schema):
     numElements: int
 
 
-class AvailableStudentSessionSchema(Schema):
+class StudentSessionNormalUserSchema(Schema):
     start_time: datetime
     duration: int
     company_id: int
     booking_close_time: datetime
+    available: bool
     id: int
 
-
-class AvailableStudentSessionListSchema(Schema):
-    student_sessions: List[AvailableStudentSessionSchema]
+class StudentSessionNormalUserListSchema(Schema):
+    student_sessions: List[StudentSessionNormalUserSchema]
     numElements: int
