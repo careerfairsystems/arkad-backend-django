@@ -39,6 +39,7 @@ class ProfileSchema(ModelSchema):
             "study_year",
             "is_active",
             "is_staff",
+            "food_preferences"
         )
 
 
@@ -52,6 +53,7 @@ class UpdateProfileSchema(ModelSchema):
             "linkedin",
             "master_title",
             "study_year",
+            "food_preferences"
         )
 
 
