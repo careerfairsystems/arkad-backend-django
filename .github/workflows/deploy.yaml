@@ -20,5 +20,4 @@ jobs:
 
       - name: Run deployment script
         run: |
-          ssh -o StrictHostKeyChecking=no ec2-user@ec2-44-201-157-224.compute-1.amazonaws.com 'cd /etc/arkad/arkad-backend-django/deployment/staging/ && bash deploy.sh'
-
+          ssh -o StrictHostKeyChecking=no ec2-user@51.21.44.86 'cd /home/ec2-user/arkad-backend/deployment/staging/ && bash deploy.sh'
