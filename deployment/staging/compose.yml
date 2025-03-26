@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: postgres:16
     volumes:
       - ./postgres_data:/var/lib/postgresql/data/
@@ -16,6 +17,7 @@ services:
       - app_network
 
   web:
+    restart: unless-stopped
     build: ../../
     command: sh -c "
       python manage.py collectstatic --no-input &&
@@ -27,11 +29,8 @@ services:
       - media_volume:/app/arkad/media
       - ./config:/app/arkad/config
       - ./private:/app/arkad/private
-    environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=${DEBUG}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_HOST=db
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -39,6 +38,7 @@ services:
       - app_network
 
   nginx:
+    restart: unless-stopped
     image: nginx:latest
     labels:
       - "traefik.enable=true"
