@@ -123,6 +123,7 @@ def update_profile(request: HttpRequest, data: UpdateProfileSchema):
     user.linkedin = data.linkedin
     user.master_title = data.master_title
     user.study_year = data.study_year
+    user.food_preferences = data.food_preferences
     user.save()
     return ProfileSchema.from_orm(user)
 
