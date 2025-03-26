@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: postgres:16
     volumes:
       - ./postgres_data:/var/lib/postgresql/data/
@@ -16,6 +17,7 @@ services:
       - app_network
 
   web:
+    restart: unless-stopped
     build: ../../
     command: sh -c "
       python manage.py collectstatic --no-input &&
@@ -36,6 +38,7 @@ services:
       - app_network
 
   nginx:
+    restart: unless-stopped
     image: nginx:latest
     labels:
       - "traefik.enable=true"
