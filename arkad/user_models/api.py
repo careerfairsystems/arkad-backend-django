@@ -69,7 +69,7 @@ def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
     """
     jwt_data: dict = jwt_decode(data.token)
     if jwt_data["code2fa"] != sha256((SECRET_KEY + jwt_data["salt2fa"] + data.code).encode("utf-8")).hexdigest():
-        return 401, f"Non matching 2fa codes"
+        return 401, "Non matching 2fa codes"
     signup_schema: SignupSchema = SignupSchema(**data.model_dump())
     signup_data_hash_current: str = sha256(signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False).hexdigest()
     signup_data_hash: str | None = jwt_data.get("signup-data-hash", None)

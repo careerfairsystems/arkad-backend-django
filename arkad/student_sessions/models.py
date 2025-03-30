@@ -5,6 +5,18 @@ from django.utils import timezone
 from user_models.models import User
 from companies.models import Company
 
+class CompanyStudentSessionMotivation(models.Model):
+    motivation_text = models.TextField()
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['company', 'user'], name='unique_student_session_motivation')
+        ]
+
+class StudentSessionApplication(models.Model):
+    motivation = models.ForeignKey(CompanyStudentSessionMotivation, on_delete=models.CASCADE)
 
 class StudentSession(models.Model):
     interviewee = models.ForeignKey(
@@ -19,7 +31,7 @@ class StudentSession(models.Model):
 
     booking_close_time = models.DateTimeField(null=True, blank=True)
 
-    applicants = models.ManyToManyField(to=User)
+    applications = models.ManyToManyField(to=StudentSessionApplication)
 
     class Meta:
         constraints = [

@@ -3,12 +3,12 @@ from django.db import transaction
 from django.http import HttpRequest
 from ninja import Router
 
-from student_sessions.models import StudentSession
+from student_sessions.models import StudentSession, StudentSessionApplication, CompanyStudentSessionMotivation
 from student_sessions.schema import (
     StudentSessionSchema,
     StudentSessionNormalUserListSchema,
     StudentSessionNormalUserSchema,
-    CreateStudentSessionSchema,
+    CreateStudentSessionSchema, ApplicantSchema, StudentSessionApplicationSchema,
 )
 from companies.models import Company
 from user_models.schema import ProfileSchema
@@ -64,7 +64,7 @@ def get_exhibitor_sessions(request: HttpRequest):
     return StudentSession.objects.filter(company=request.user.company).prefetch_related("interviewee")
 
 
-@router.get("/exhibitor/applicants", response={200: list[ProfileSchema], 401: str, 404: str})
+@router.get("/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str})
 def get_applicants(request: HttpRequest, session_id: int):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
@@ -76,7 +76,11 @@ def get_applicants(request: HttpRequest, session_id: int):
 
     if not request.user.is_company_admin(session.company_id):
         return 401, "Insufficient permissions"
-    return 200, session.applicants
+    return 200, [ApplicantSchema(
+        user=ProfileSchema.from_orm(a.motivation.user),
+        motivation_text=a.motivation.motivation_text
+    ) for a in session.applications.prefetch_related("motivation").all()
+    ]
 
 @router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
 def accept_student_session(request: HttpRequest, session_id: int, applicant_user_id: int):
@@ -98,21 +102,20 @@ def accept_student_session(request: HttpRequest, session_id: int, applicant_user
         # Remove this interviewee from the rest of the company's lists
 
         for s in  StudentSession.objects.filter(company_id=request.user.company.id,
-                                                applicants__id__contains=applicant_user_id):
-            s.applicants.remove(applicant_user_id)
+                                                applications__motivation__user__id__contains=applicant_user_id):
+            s.applications.filter(motivation__user=applicant_user_id).delete()
             s.save()
-
         return 200, "Accepted user"
 
 @router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
-def apply_for_session(request: HttpRequest, session_id: int):
+def apply_for_session(request: HttpRequest, data: StudentSessionApplicationSchema):
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
     """
     with transaction.atomic():
         try:
             session: StudentSession = StudentSession.objects.select_for_update().get(
-                id=session_id, interviewee=None
+                id=data.session_id, interviewee=None
             )
         except StudentSession.DoesNotExist:
             return 404, "Session not found or already booked"
@@ -121,6 +124,11 @@ def apply_for_session(request: HttpRequest, session_id: int):
         if StudentSession.objects.filter(interviewee_id=request.user.id, company_id=session.company_id).exists():
             return 409, "User already booked"
 
-        session.applicants.add(request.user)
+        motivation = CompanyStudentSessionMotivation.objects.get_or_create(user=request.user, company=session.company)[0]
+        if data.motivation_text is not None:
+            motivation.motivation_text = data.motivation_text
+            motivation.save()
+        application: StudentSessionApplication = StudentSessionApplication.objects.create(motivation=motivation)
+        session.applications.add(application)
         session.save()
     return 200, session

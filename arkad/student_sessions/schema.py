@@ -37,3 +37,11 @@ class StudentSessionNormalUserSchema(Schema):
 class StudentSessionNormalUserListSchema(Schema):
     student_sessions: List[StudentSessionNormalUserSchema]
     numElements: int
+
+class ApplicantSchema(Schema):
+    user: ProfileSchema
+    motivation_text: str
+
+class StudentSessionApplicationSchema(Schema):
+    motivation_text: str | None = None
+    session_id: int

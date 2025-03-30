@@ -4,8 +4,9 @@ from django.test import TestCase, Client
 from django.utils import timezone
 
 from companies.models import Company
-from student_sessions.models import StudentSession
-from student_sessions.schema import CreateStudentSessionSchema, AvailableStudentSessionListSchema, StudentSessionSchema
+from student_sessions.models import StudentSession, CompanyStudentSessionMotivation, StudentSessionApplication
+from student_sessions.schema import CreateStudentSessionSchema, StudentSessionSchema, \
+    StudentSessionNormalUserListSchema, StudentSessionApplicationSchema
 from user_models.models import User
 from user_models.schema import ProfileSchema
 
@@ -79,11 +80,11 @@ class StudentSessionTests(TestCase):
         s4_closed = self._create_session(self.company_user2,
                                          booking_close_time=timezone.now() - datetime.timedelta(hours=1))
         resp = self.client.get(
-            "/api/student-session/available",
+            "/api/student-session/all?only_available_sessions=true",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(resp.status_code, 200)
-        data = AvailableStudentSessionListSchema(**resp.json())
+        data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
 
         sessions = [s.id for s in data.student_sessions]
@@ -147,7 +148,11 @@ class StudentSessionTests(TestCase):
     def test_get_applicants(self):
         session = self._create_session(self.company_user1)
         for s in self.student_users:
-            session.applicants.add(s)
+            motivation = CompanyStudentSessionMotivation.objects.create(motivation_text="asd",
+                                                                        company=session.company,
+                                                                        user=s)
+            application = StudentSessionApplication.objects.create(motivation=motivation)
+            session.applications.add(application)
         session.save()
 
         self.assertEqual(401, self.client.get(
@@ -174,9 +179,15 @@ class StudentSessionTests(TestCase):
         session = self._create_session(self.company_user1)
         session2 = self._create_session(self.company_user1)
         for s in self.student_users:
-            session.applicants.add(s)
-            session2.applicants.add(s)
+            motivation = CompanyStudentSessionMotivation.objects.create(motivation_text="asd",
+                                                                        company=session.company,
+                                                                        user=s)
+            application = StudentSessionApplication.objects.create(motivation=motivation)
+            session.applications.add(application)
+            application = StudentSessionApplication.objects.create(motivation=motivation)
+            session2.applications.add(application)
         session.save()
+        session2.save()
 
         url: str = (f"/api/student-session/exhibitor/accept?"
                     f"session_id={session.id}&applicant_user_id={self.student_users[-1].id}")
@@ -198,7 +209,7 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(200, resp.status_code)
         session2.refresh_from_db()
-        self.assertFalse(session2.applicants.filter(id=self.student_users[-1].id).exists())
+        self.assertFalse(session2.applications.filter(id=self.student_users[-1].id).exists())
 
         url = (f"/api/student-session/exhibitor/accept"
                f"?session_id={session.id}&applicant_user_id={self.student_users[-2].id}")
@@ -211,16 +222,21 @@ class StudentSessionTests(TestCase):
     def test_apply_for_sessions(self):
         session1 = self._create_session(self.company_user1)
         session2 = self._create_session(self.company_user1)
-        url = "/api/student-session/apply?session_id="
+        url = "/api/student-session/apply"
 
         resp = self.client.post(
-            url + str(session1.id),
+            url,
+            data=StudentSessionApplicationSchema(motivation_text="love this company", session_id=session1.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
+        print(resp.json())
         self.assertEqual(200, resp.status_code)
 
         resp = self.client.post(
-            url + str(session2.id),
+            url,
+            data=StudentSessionApplicationSchema(motivation_text="love this company too", session_id=session2.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(200, resp.status_code)
@@ -231,7 +247,9 @@ class StudentSessionTests(TestCase):
         url = "/api/student-session/apply?session_id="
 
         resp = self.client.post(
-            url + str(session1.id),
+            url,
+            data=StudentSessionApplicationSchema(motivation_text="good company", session_id=session1.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(200, resp.status_code)
@@ -240,7 +258,9 @@ class StudentSessionTests(TestCase):
         session2.save()
 
         resp = self.client.post(
-            url + str(session2.id),
+            url,
+            data=StudentSessionApplicationSchema(session_id=session2.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(404, resp.status_code)
@@ -248,10 +268,12 @@ class StudentSessionTests(TestCase):
     def test_apply_for_multiple_company_sessions(self):
         session1 = self._create_session(self.company_user1)
         session2 = self._create_session(self.company_user1)
-        url = "/api/student-session/apply?session_id="
+        url = "/api/student-session/apply"
 
         resp = self.client.post(
-            url + str(session1.id),
+            url,
+            data=StudentSessionApplicationSchema(session_id=session1.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(200, resp.status_code)
@@ -260,7 +282,9 @@ class StudentSessionTests(TestCase):
         session1.save()
 
         resp = self.client.post(
-            url + str(session2.id),
+            url,
+            data=StudentSessionApplicationSchema(session_id=session2.id).model_dump(),
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(409, resp.status_code)
