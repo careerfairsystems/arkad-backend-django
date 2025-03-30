@@ -59,10 +59,10 @@ class User(AbstractUser):
             return self.email
         return name
 
-    def create_jwt_token(self) -> str:
+    def create_jwt_token(self, expiry_hours: int = 96) -> str:
         return "Bearer " + jwt_encode(
             {
-                "exp": datetime.now(tz=timezone.utc) + timedelta(hours=2),
+                "exp": datetime.now(tz=timezone.utc) + timedelta(hours=expiry_hours),
                 "user_id": self.id,
             },
         )
