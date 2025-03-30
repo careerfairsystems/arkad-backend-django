@@ -241,6 +241,29 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(200, resp.status_code)
 
+    def test_session_user_validation(self):
+        session1 = self._create_session(self.company_user1)
+        url = "/api/student-session/apply"
+
+        u = User.objects.create_user(
+            email="a@student.com",
+            password="PASSWORD",
+            username="Student12312",
+            is_student=True,
+            is_company=False
+        )
+        resp = self.client.post(
+            url,
+            data=StudentSessionApplicationSchema(
+                motivation_text="love this company",
+                session_id=session1.id
+            ).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(u)
+        )
+        self.assertEqual(409, resp.status_code)
+
+
     def test_apply_for_sessions_already_accepted(self):
         session1 = self._create_session(self.company_user1)
         session2 = self._create_session(self.company_user1)

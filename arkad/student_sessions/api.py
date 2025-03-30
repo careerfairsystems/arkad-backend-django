@@ -1,7 +1,8 @@
-
 from django.db import transaction
 from django.http import HttpRequest
 from ninja import Router
+from pydantic import BaseModel
+from pydantic_core import ValidationError
 
 from student_sessions.models import StudentSession, StudentSessionApplication, CompanyStudentSessionMotivation
 from student_sessions.schema import (
@@ -101,7 +102,7 @@ def accept_student_session(request: HttpRequest, session_id: int, applicant_user
 
         # Remove this interviewee from the rest of the company's lists
 
-        for s in  StudentSession.objects.filter(company_id=request.user.company.id,
+        for s in StudentSession.objects.filter(company_id=request.user.company.id,
                                                 applications__motivation__user__id__contains=applicant_user_id):
             s.applications.filter(motivation__user=applicant_user_id).delete()
             s.save()
@@ -112,6 +113,17 @@ def apply_for_session(request: HttpRequest, data: StudentSessionApplicationSchem
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
     """
+
+    class UserRequirements(BaseModel):
+        first_name: str
+        last_name: str
+
+    try:
+        UserRequirements(first_name=request.user.first_name, last_name=request.user.last_name)
+    except ValidationError as e:
+        return 409, str(e.errors())
+
+
     with transaction.atomic():
         try:
             session: StudentSession = StudentSession.objects.select_for_update().get(
