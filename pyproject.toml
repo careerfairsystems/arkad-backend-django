@@ -50,7 +50,7 @@ ignore_missing_imports = false
 module = [
     "tests.*",
     "tests/*",
-    "*tests*",
+    "*/tests",
 ]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
@@ -59,8 +59,8 @@ ignore_missing_imports = true  # Useful if tests use fixtures or mocks
 # Override for migrations (skip most checks)
 [[tool.mypy.overrides]]
 module = [
-    "*migrations*",
-    "*migrations.*",
+    "migrations",
+    "migrations",
 ]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
