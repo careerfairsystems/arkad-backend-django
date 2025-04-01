@@ -14,6 +14,7 @@ class StudentSessionSchema(Schema):
     booking_close_time: datetime
     id: int
 
+
 class CreateStudentSessionSchema(Schema):
     start_time: datetime
     duration: int
@@ -34,13 +35,16 @@ class StudentSessionNormalUserSchema(Schema):
     available: bool
     id: int
 
+
 class StudentSessionNormalUserListSchema(Schema):
     student_sessions: List[StudentSessionNormalUserSchema]
     numElements: int
 
+
 class ApplicantSchema(Schema):
     user: ProfileSchema
     motivation_text: str
+
 
 class StudentSessionApplicationSchema(Schema):
     motivation_text: str | None = None

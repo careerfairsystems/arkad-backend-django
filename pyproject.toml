@@ -1,7 +1,5 @@
 [tool.ruff]
 line-length = 88
-ignore = []
-unfixable = []
 target-version = "py313"
 exclude = [
     ".git",
@@ -12,8 +10,13 @@ exclude = [
     "migrations"
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+ignore = []
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
 
 [tool.mypy]
 plugins = [

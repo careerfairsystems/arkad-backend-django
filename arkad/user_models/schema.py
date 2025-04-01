@@ -14,6 +14,7 @@ class SignupSchema(Schema):
     last_name: str | None = None
     email: str
 
+
 class CompleteSignupSchema(Schema):
     token: str
     code: str
@@ -21,6 +22,7 @@ class CompleteSignupSchema(Schema):
     first_name: str | None = None
     last_name: str | None = None
     email: str
+
 
 class ProfileSchema(ModelSchema):
     class Meta:
@@ -39,7 +41,7 @@ class ProfileSchema(ModelSchema):
             "study_year",
             "is_active",
             "is_staff",
-            "food_preferences"
+            "food_preferences",
         )
 
 
@@ -53,7 +55,7 @@ class UpdateProfileSchema(ModelSchema):
             "linkedin",
             "master_title",
             "study_year",
-            "food_preferences"
+            "food_preferences",
         )
 
 

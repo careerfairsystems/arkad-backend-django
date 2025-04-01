@@ -1,4 +1,4 @@
-.PHONY: install check ruff mypy mypy-strict mypy-server clean dev
+.PHONY: install check ruff mypy mypy-strict mypy-server clean dev lint
 
 # Project configuration
 PROJECT_DIR = arkad
@@ -15,7 +15,7 @@ dev:
 # Linting and formatting
 ruff:
 	cd $(PROJECT_DIR) && ruff check . --fix
-	cd $(PROJECT_DIR) && ruff format . --fix
+	cd $(PROJECT_DIR) && ruff format .
 
 # Type checking
 mypy:
@@ -48,3 +48,4 @@ clean:
 
 # Combined checks
 check: ruff mypy
+lint: mypy

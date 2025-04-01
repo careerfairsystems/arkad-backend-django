@@ -18,7 +18,6 @@ class UserSignin(TestCase):
             last_name="User",
         )
 
-
     def test_signin_success(self):
         signin_payload = {"email": "test@example.com", "password": "strongpassword"}
         response = self.client.post(
@@ -57,7 +56,9 @@ class UserRoutesTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            username="testuser@example.com", password="password123", email="testuser@example.com"
+            username="testuser@example.com",
+            password="password123",
+            email="testuser@example.com",
         )
         self.token = self.client.post(
             "/api/user/signin",
@@ -178,7 +179,9 @@ class UserRoutesTestCase(TestCase):
         self.assertEqual(
             200,
             self.client.post(
-                "/api/user/profile/cv", {"cv": file}, headers={"Authorization": self.token}
+                "/api/user/profile/cv",
+                {"cv": file},
+                headers={"Authorization": self.token},
             ).status_code,
         )
         response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
@@ -189,6 +192,7 @@ class UserRoutesTestCase(TestCase):
         response = self.client.delete("/api/user/profile/cv", **self.auth_headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), "CV deleted")
+
 
 class AuthenticationTestCase(TestCase):
     def setUp(self):
@@ -202,6 +206,4 @@ class AuthenticationTestCase(TestCase):
         resp = self.client.get("/api/get-public-key")
         self.assertEqual(200, resp.status_code)
         self.maxDiff = None
-        self.assertEqual(
-            PUBLIC_KEY, resp.json()['public_key']
-        )
+        self.assertEqual(PUBLIC_KEY, resp.json()["public_key"])

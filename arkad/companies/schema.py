@@ -1,6 +1,7 @@
 from ninja import Schema
 from typing import List, Optional
 
+
 class JobSchema(Schema):
     id: int
     link: Optional[str] = None
@@ -33,6 +34,7 @@ class CompanyUpdate(Schema):
     industries: Optional[List[str]] = None
     employees_locally: Optional[int] = None
     employees_globally: Optional[int] = None
+
 
 class CompanyOut(Schema):
     id: int

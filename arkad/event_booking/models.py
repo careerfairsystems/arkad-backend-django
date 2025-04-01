@@ -8,11 +8,8 @@ from django.utils import timezone
 from companies.models import Company
 from user_models.models import User
 
-EVENT_TYPES: dict[str, str] = {
-    "ce": "Company event",
-    "lu": "Lunch",
-    "ba": "Banquet"
-}
+EVENT_TYPES: dict[str, str] = {"ce": "Company event", "lu": "Lunch", "ba": "Banquet"}
+
 
 class Ticket(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -28,6 +25,7 @@ class Ticket(models.Model):
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
+
 class Event(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(default="")
@@ -41,7 +39,9 @@ class Event(models.Model):
     start_time = models.DateTimeField(null=False)
     end_time = models.DateTimeField(null=False)
 
-    number_booked = models.IntegerField(default=0, null=False)  # Counter for booked tickets
+    number_booked = models.IntegerField(
+        default=0, null=False
+    )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
     class Meta:
@@ -58,7 +58,6 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
-
 
     @staticmethod
     def available_filter() -> Q:

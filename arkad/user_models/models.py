@@ -54,7 +54,7 @@ class User(AbstractUser):
     study_year = models.IntegerField(blank=True, null=True)
 
     def __str__(self) -> str:
-        name: str = (self.first_name or '') + " " + (self.last_name or '')
+        name: str = (self.first_name or "") + " " + (self.last_name or "")
         if self.first_name is None and self.last_name is None:
             return self.email
         return name

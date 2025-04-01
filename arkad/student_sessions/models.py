@@ -5,6 +5,7 @@ from django.utils import timezone
 from user_models.models import User
 from companies.models import Company
 
+
 class CompanyStudentSessionMotivation(models.Model):
     motivation_text = models.TextField()
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
@@ -12,17 +13,32 @@ class CompanyStudentSessionMotivation(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['company', 'user'], name='unique_student_session_motivation')
+            UniqueConstraint(
+                fields=["company", "user"], name="unique_student_session_motivation"
+            )
         ]
 
+
 class StudentSessionApplication(models.Model):
-    motivation = models.ForeignKey(CompanyStudentSessionMotivation, on_delete=models.CASCADE)
+    motivation = models.ForeignKey(
+        CompanyStudentSessionMotivation, on_delete=models.CASCADE
+    )
+
 
 class StudentSession(models.Model):
     interviewee = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True, related_name="interviewee"
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="interviewee",
     )
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False, related_name="company_representative")
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name="company_representative",
+    )
 
     start_time = models.DateTimeField(null=False)
     duration = models.IntegerField(
@@ -35,8 +51,13 @@ class StudentSession(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(name="No duplicated start time", fields=("start_time", "company")),
-            UniqueConstraint(name="A single user may only book one session per company", fields=("interviewee", "company")),
+            UniqueConstraint(
+                name="No duplicated start time", fields=("start_time", "company")
+            ),
+            UniqueConstraint(
+                name="A single user may only book one session per company",
+                fields=("interviewee", "company"),
+            ),
         ]
 
     @property

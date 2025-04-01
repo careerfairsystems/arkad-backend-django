@@ -50,10 +50,13 @@ def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     )
 
 
-@api.get("get-public-key", response={200: PublicKeySchema}, auth=None, tags=["Cryptography"])
+@api.get(
+    "get-public-key", response={200: PublicKeySchema}, auth=None, tags=["Cryptography"]
+)
 def get_public_key(request: HttpRequest):
-    if (not PUBLIC_KEY.strip().startswith("-----BEGIN PUBLIC KEY-----")
-            or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----")):
+    if not PUBLIC_KEY.strip().startswith(
+        "-----BEGIN PUBLIC KEY-----"
+    ) or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----"):
         raise jwt.InvalidTokenError("Something went very wrong")
 
     return PublicKeySchema(public_key=PUBLIC_KEY)

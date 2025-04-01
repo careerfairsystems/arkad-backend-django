@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 if not DEBUG:
     import sentry_sdk
+
     sentry_sdk.init(
         dsn="https://177fe492b27e4d5d3f7b812e188b64fb@o1031864.ingest.us.sentry.io/4509039927033856",
         # Add data like request headers and IP for users,

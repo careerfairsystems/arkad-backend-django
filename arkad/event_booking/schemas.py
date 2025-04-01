@@ -3,6 +3,7 @@ from uuid import UUID
 
 from ninja import Schema
 
+
 class EventSchema(Schema):
     name: str
     description: str
@@ -15,14 +16,17 @@ class EventSchema(Schema):
     number_booked: int
     company_id: int | None
 
+
 class TicketSchema(Schema):
     user_id: int
     uuid: UUID
     event_id: int
     used: bool
 
+
 class UseTicketSchema(Schema):
     uuid: UUID
+
 
 class EventUserInformation(Schema):
     full_name: str

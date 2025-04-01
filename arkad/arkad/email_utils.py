@@ -39,5 +39,6 @@ def send_mail(recipient_email: str, body_html: str, body_text: str, subject: str
         print(e.response["Error"]["Message"])
         raise e
 
+
 if __name__ == "__main__":
     send_mail("ludvig@llindholm.com", "hello", "hello", "hello")

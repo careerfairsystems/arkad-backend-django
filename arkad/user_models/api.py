@@ -18,7 +18,8 @@ from user_models.schema import (
     SigninSchema,
     ProfileSchema,
     SignupSchema,
-    UpdateProfileSchema, CompleteSignupSchema,
+    UpdateProfileSchema,
+    CompleteSignupSchema,
 )
 from hashlib import sha256
 
@@ -38,7 +39,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     """
 
     def generate_salt(length: int = 16) -> str:
-        return base64.b64encode(os.urandom(length)).decode('utf-8')
+        return base64.b64encode(os.urandom(length)).decode("utf-8")
 
     try:
         validate_password(data.password)
@@ -54,24 +55,39 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     salt: str = generate_salt()
     # Send 2fa code
     send_mail(data.email, code, code, code)  # TODO: Make this nice
-    return 200, jwt_encode({
-        "code2fa": sha256((SECRET_KEY+salt+code).encode("utf-8"), usedforsecurity=True).hexdigest(),
-        "salt2fa": salt,
-        "signup-data-hash": sha256(data.model_dump_json().encode("utf-8"), usedforsecurity=False).hexdigest()
-    })
+    return 200, jwt_encode(
+        {
+            "code2fa": sha256(
+                (SECRET_KEY + salt + code).encode("utf-8"), usedforsecurity=True
+            ).hexdigest(),
+            "salt2fa": salt,
+            "signup-data-hash": sha256(
+                data.model_dump_json().encode("utf-8"), usedforsecurity=False
+            ).hexdigest(),
+        }
+    )
 
 
-@auth.post("complete-signup", auth=None, response={200: ProfileSchema, 401: str, 400: str})
+@auth.post(
+    "complete-signup", auth=None, response={200: ProfileSchema, 401: str, 400: str}
+)
 def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
     """
     Complete the signup process, must be given the same data as in begin signup, the 2fa code and the token
     received when beginning signup
     """
     jwt_data: dict = jwt_decode(data.token)
-    if jwt_data["code2fa"] != sha256((SECRET_KEY + jwt_data["salt2fa"] + data.code).encode("utf-8")).hexdigest():
+    if (
+        jwt_data["code2fa"]
+        != sha256(
+            (SECRET_KEY + jwt_data["salt2fa"] + data.code).encode("utf-8")
+        ).hexdigest()
+    ):
         return 401, "Non matching 2fa codes"
     signup_schema: SignupSchema = SignupSchema(**data.model_dump())
-    signup_data_hash_current: str = sha256(signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False).hexdigest()
+    signup_data_hash_current: str = sha256(
+        signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+    ).hexdigest()
     signup_data_hash: str | None = jwt_data.get("signup-data-hash", None)
     if signup_data_hash is None:
         return 401, "Signup data hash was empty"
@@ -80,7 +96,9 @@ def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
 
     try:
         # We should not need any validations here, do it in begin_signup
-        return 200, User.objects.create_user(**signup_schema.model_dump(), username=data.email)
+        return 200, User.objects.create_user(
+            **signup_schema.model_dump(), username=data.email
+        )
     except IntegrityError as e:
         logging.error(e)
         if "duplicate key" in str(e):
@@ -95,7 +113,9 @@ def signin(request: HttpRequest, data: SigninSchema):
     Returns a users JWT token when given a correct username and password.
     """
 
-    user: User | None = authenticate(request=request, **data.model_dump(), username=data.email)
+    user: User | None = authenticate(
+        request=request, **data.model_dump(), username=data.email
+    )
 
     if user is None:
         return 401, "Invalid email or password"
