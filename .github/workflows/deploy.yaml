@@ -1,14 +1,13 @@
-name: Deploy to Server
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - master
+      - '*'   # Trigger on all branches
 
 jobs:
   lint-typecheck:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -40,7 +39,6 @@ jobs:
   test:
     needs: lint-typecheck
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:15
@@ -83,13 +81,12 @@ jobs:
           DB_HOST: localhost
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
-
         run: (cd arkad && python manage.py test)
 
   deploy:
+    if: github.ref == 'refs/heads/master'  # Only run on the master branch
     needs: test
     runs-on: ubuntu-latest
-
     steps:
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
