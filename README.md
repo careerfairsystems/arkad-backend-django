@@ -50,3 +50,15 @@ Follow the instructions.
 It is possible to automatically update the database with new information about all companies.
 For example jobs, if they have studentsessions etc. 
 This is done by running `python manage.py jexpo_sync --file /path/to/jexpo.json`
+
+### Linting and formatting rules
+
+Migrations files are excluded from ruff formatting and are only checked to be legal by mypy.
+- app/migrations/*.py
+
+Test files are excluded from typing rules but are required to be valid code and formatting is applied.
+-   tests/*
+-   */tests.py
+
+api files are not required to have typed return values.
+- */api.py
