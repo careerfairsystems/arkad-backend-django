@@ -46,13 +46,13 @@ class ProfileSchema(ModelSchema):
 
 
 class UpdateProfileSchema(Schema):
-    first_name: str | None
-    last_name: str | None
-    programme: str | None
-    linkedin: str | None
-    master_title: str | None
-    study_year: int | None
-    food_preferences: str | None
+    first_name: str | None = None
+    last_name: str | None = None
+    programme: str | None = None
+    linkedin: str | None = None
+    master_title: str | None = None
+    study_year: int | None = None
+    food_preferences: str | None = None
 
 
 class CompanySchema(ModelSchema):

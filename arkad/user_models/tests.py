@@ -96,6 +96,7 @@ class UserRoutesTestCase(TestCase):
             "linkedin": "linkedin.com/in/test",
             "master_title": "Master",
             "study_year": 2,
+            "food_preferences": None
         }
         response = self.client.put(
             "/api/user/profile",
@@ -103,7 +104,7 @@ class UserRoutesTestCase(TestCase):
             content_type="application/json",
             **self.auth_headers,
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, response.json())
         data = response.json()
         u = User.objects.get(pk=data["id"])
         for k, v in upd_data.items():
@@ -111,13 +112,17 @@ class UserRoutesTestCase(TestCase):
             self.assertEqual(v, u.__dict__[k])
 
     def test_update_profile_fields(self):
-        data = {"first_name": "Updated", "last_name": "User"}
+        data = {
+            "first_name": "Updated",
+            "last_name": "User",
+        }
         response = self.client.patch(
             "/api/user/profile",
             data,
             content_type="application/json",
             **self.auth_headers,
         )
+        self.assertEqual(response.status_code, 200, response.json())
         u = User.objects.get(pk=response.json()["id"])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["first_name"], "Updated")
