@@ -5,77 +5,77 @@ DEGREE_CHOICES = [("Bachelor", "Bachelor"), ("Master", "Master"), ("PhD", "PhD")
 
 COMPETENCE_CHOICES = [
     ("Architecture", "Architecture"),
-    ("ArtificialIntelligence", "Artificial Intelligence"),
+    ("Artificial Intelligence", "Artificial Intelligence"),
     ("Usability", "Usability"),
     ("Applications", "Applications"),
     ("Automation", "Automation"),
     ("Computation", "Computation"),
-    ("FireSafety", "Fire Safety"),
-    ("ComputerSecurity", "Computer Security"),
+    ("Fire Safety", "Fire Safety"),
+    ("Computer Security", "Computer Security"),
     ("Design", "Design"),
-    ("EHealth", "E-Health"),
+    ("E-Health", "E-Health"),
     ("Electronics", "Electronics"),
-    ("EnergySystems", "Energy Systems"),
+    ("Energy Systems", "Energy Systems"),
     ("Law", "Law"),
     ("Finance", "Finance"),
     ("Geography", "Geography"),
     ("Sustainability", "Sustainability"),
-    ("IndustrialProcesses", "Industrial Processes"),
+    ("Industrial Processes", "Industrial Processes"),
     ("Interactivity", "Interactivity"),
     ("Chemistry", "Chemistry"),
     ("Communications", "Communications"),
     ("Construction", "Construction"),
-    ("FoodTechnology", "Food Technology"),
-    ("PharmaceuticalTechnology", "Pharmaceutical Technology"),
-    ("MathematicalModelling", "Mathematical Modelling"),
-    ("MaterialsEngineering", "Materials Engineering"),
-    ("LifeScience", "Life Science"),
+    ("Food Technology", "Food Technology"),
+    ("Pharmaceutical Technology", "Pharmaceutical Technology"),
+    ("Mathematical Modelling", "Mathematical Modelling"),
+    ("Materials Engineering", "Materials Engineering"),
+    ("Life Science", "Life Science"),
     ("Mechatronics", "Mechatronics"),
-    ("AccidentPrevention", "Accident Prevention"),
-    ("ProductDevelopment", "Product Development"),
+    ("Accident Prevention", "Accident Prevention"),
+    ("Product Development", "Product Development"),
     ("Programming", "Programming"),
     ("Planning", "Planning"),
-    ("ProjectManagement", "Project Management"),
-    ("RiskManagement", "Risk Management"),
-    ("TechnologyAndSociety", "Technology and Society"),
-    ("CivilEngineering", "Civil Engineering"),
+    ("Project Management", "Project Management"),
+    ("Risk Management", "Risk Management"),
+    ("Technology And Society", "Technology and Society"),
+    ("Civil Engineering", "Civil Engineering"),
     ("Simulations", "Simulations"),
     ("Manufacturing", "Manufacturing"),
-    ("InterdisciplinaryCompetences", "Interdisciplinary Competences"),
+    ("Interdisciplinary Competences", "Interdisciplinary Competences"),
     ("Physics", "Physics"),
 ]
 
 POSITION_CHOICES = [
     ("Thesis", "Thesis"),
-    ("TraineeEmployment", "Trainee Employment"),
+    ("Trainee Employment", "Trainee Employment"),
     ("Internship", "Internship"),
-    ("SummerJob", "Summer Job"),
-    ("ForeignOppurtunity", "Foreign Opportunity"),
-    ("PartTime", "Part Time"),
+    ("Summer Job", "Summer Job"),
+    ("Foreign Opportunity", "Foreign Opportunity"),
+    ("Part Time", "Part Time"),
 ]
 
 INDUSTRY_CHOICES = [
-    ("ElectricityEnergyPower", "Electricity Energy Power"),
+    ("Electricity Energy Power", "Electricity Energy Power"),
     ("Environment", "Environment"),
-    ("BankingFinance", "Banking Finance"),
+    ("Banking Finance", "Banking Finance"),
     ("Union", "Union"),
     ("Investment", "Investment"),
     ("Insurance", "Insurance"),
     ("Recruitment", "Recruitment"),
     ("Construction", "Construction"),
     ("Architecture", "Architecture"),
-    ("GraphicDesign", "Graphic Design"),
-    ("DataIT", "Data IT"),
-    ("FinanceConsultancy", "Finance Consultancy"),
+    ("Graphic Design", "Graphic Design"),
+    ("Data IT", "Data IT"),
+    ("Finance Consultancy", "Finance Consultancy"),
     ("Telecommunication", "Telecommunication"),
     ("Consulting", "Consulting"),
     ("Management", "Management"),
     ("Media", "Media"),
     ("Industry", "Industry"),
-    ("NuclearPower", "Nuclear Power"),
-    ("LifeScience", "Life Science"),
-    ("MedicalTechniques", "Medical Techniques"),
-    ("PropertyInfrastructure", "Property Infrastructure"),
+    ("Nuclear Power", "Nuclear Power"),
+    ("Life Science", "Life Science"),
+    ("Medical Techniques", "Medical Techniques"),
+    ("Property Infrastructure", "Property Infrastructure"),
     ("Research", "Research"),
     ("Coaching", "Coaching"),
 ]
@@ -117,6 +117,7 @@ class Company(models.Model):
         models.CharField(max_length=50, choices=DEGREE_CHOICES),
         default=list,
         blank=True,
+        help_text=f"Choose from {', '.join([e[0] for e in DEGREE_CHOICES])}",
     )  # List of degrees with enforced choices
     desired_programme = ArrayField(
         models.CharField(max_length=255), default=list, blank=True
@@ -125,14 +126,17 @@ class Company(models.Model):
         models.CharField(max_length=50, choices=COMPETENCE_CHOICES),
         default=list,
         blank=True,
+        help_text = f"Choose from {', '.join([e[0] for e in COMPETENCE_CHOICES])}",
     )  # List of competences with enforced choices
     positions = ArrayField(
         models.CharField(max_length=50, choices=POSITION_CHOICES),
         default=list,
         blank=True,
+        help_text=f"Choose from {', '.join([e[0] for e in POSITION_CHOICES])}",
     )  # List of positions with enforced choices
     industries = ArrayField(
         models.CharField(max_length=50, choices=INDUSTRY_CHOICES),
+        help_text=f"Choose from {', '.join([e[0] for e in INDUSTRY_CHOICES])}",
         default=list,
         blank=True,
     )  # List of industries with enforced choices
@@ -140,7 +144,7 @@ class Company(models.Model):
     employees_locally = models.IntegerField(default=None, null=True, blank=True)
     employees_globally = models.IntegerField(default=None, null=True, blank=True)
 
-    jobs = models.ManyToManyField(Job)
+    jobs = models.ManyToManyField(Job, blank=True)
 
     def __str__(self) -> str:
         return self.name
