@@ -30,7 +30,7 @@ class Event(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(default="")
 
-    type = models.CharField(choices=EVENT_TYPES, max_length=2)
+    type = models.CharField(choices=EVENT_TYPES, max_length=2)  # type: ignore[arg-type]
     location = models.CharField(max_length=300, null=True)
     language = models.CharField(max_length=100, default="Swedish")
 

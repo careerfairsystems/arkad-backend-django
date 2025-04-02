@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import jwt
 from django.utils import timezone
@@ -34,14 +34,14 @@ with open(PUBLIC_KEY_LOCATION, "r") as f:
     PUBLIC_KEY: str = f.read()
 
 
-def jwt_encode(payload: dict[Any, Any], expiry_minutes: int = 10) -> str:
+def jwt_encode(payload: dict[str, Any], expiry_minutes: int = 10) -> str:
     payload = payload.copy()
     payload["exp"] = timezone.now() + datetime.timedelta(minutes=expiry_minutes)
     return jwt.encode(payload, PRIVATE_SIGNING_KEY, algorithm="RS256")
 
 
-def jwt_decode(token: str) -> dict[Any, Any]:
-    return jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+def jwt_decode(token: str) -> dict[str, Any]:
+    return cast(dict[str, Any], jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"]))
 
 
 class PublicKeySchema(Schema):

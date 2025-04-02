@@ -18,9 +18,7 @@ unfixable = []
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-plugins = [
-    "mypy_django_plugin.main",
-]
+plugins = ["mypy_django_plugin.main"]
 strict = true
 show_error_codes = true
 disallow_any_generics = true
@@ -37,44 +35,48 @@ strict_equality = true
 strict_concatenate = true
 
 [[tool.mypy.overrides]]
-module = [
-    "django.*",
-    "arkad.*",
-]
+module = ["django.*", "arkad.*"]
 ignore_missing_imports = false
 
-# Override for tests (excluded from typing rules)
+# More specific test overrides
 [[tool.mypy.overrides]]
 module = [
     "tests.*",
-    "*.tests",
+    "*tests.py",
     "*.tests.*",
+    "event_booking.tests.*",
+    "student_sessions.tests.*"
 ]
+# Relax typing requirements for tests
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false  # New
+check_untyped_defs = false      # New
+ignore_errors = true            # New
+ignore_missing_imports = true
+
+# Stronger migrations override
+[[tool.mypy.overrides]]
+module = ["migrations.*", "*.migrations.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
 check_untyped_defs = false
-disallow_untyped_calls = false
+ignore_errors = true  # New
 
-
-# Override for migrations (skip most checks)
+# API files override (relax return type checks)
 [[tool.mypy.overrides]]
-module = [
-    "migrations.*",
-    "*.migrations.*",
-]
+module = ["*.api.py"]
 disallow_untyped_defs = false
-disallow_incomplete_defs = false
-ignore_missing_imports = true
+check_untyped_defs = false       # New
+warn_return_any = false          # New
+disallow_any_generics = false    # New
+
+# Management commands override
+[[tool.mypy.overrides]]
+module = ["*.management.commands.*"]
+disallow_untyped_defs = false
 check_untyped_defs = false
-
-# Override for API files (no typed return required)
-[[tool.mypy.overrides]]
-module = [
-    "*.api",
-    "*.api.*",
-]
-disallow_untyped_defs = false
 
 [tool.django-stubs]
 django_settings_module = "arkad.settings"

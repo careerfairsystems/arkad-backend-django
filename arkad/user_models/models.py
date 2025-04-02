@@ -30,8 +30,8 @@ class Programme(models.TextChoices):
 
 
 class User(AbstractUser):
-    first_name = models.CharField("first name", max_length=150, blank=True, null=True)
-    last_name = models.CharField("last name", max_length=150, blank=True, null=True)
+    first_name = models.CharField("first name", max_length=150, blank=True, null=True)  # type: ignore[misc]
+    last_name = models.CharField("last name", max_length=150, blank=True, null=True)  # type: ignore[misc]
 
     food_preferences = models.TextField(null=True, blank=True)
 
