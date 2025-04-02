@@ -42,8 +42,7 @@ ignore_missing_imports = false
 [[tool.mypy.overrides]]
 module = [
     "tests.*",
-    "*tests.py",
-    "*.tests.*",
+    "*.tests",
     "event_booking.tests.*",
     "student_sessions.tests.*"
 ]
@@ -57,20 +56,12 @@ ignore_missing_imports = true
 
 # Stronger migrations override
 [[tool.mypy.overrides]]
-module = ["migrations.*", "*.migrations.*"]
+module = ["migrations.*", "*.migrations.*", "*.api"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
 check_untyped_defs = false
 ignore_errors = true  # New
-
-# API files override (relax return type checks)
-[[tool.mypy.overrides]]
-module = ["*.api.py"]
-disallow_untyped_defs = false
-check_untyped_defs = false       # New
-warn_return_any = false          # New
-disallow_any_generics = false    # New
 
 # Management commands override
 [[tool.mypy.overrides]]
