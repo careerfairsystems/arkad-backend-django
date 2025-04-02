@@ -16,7 +16,7 @@ class AuthenticatedRequest(BaseModel):
     user: User
 
 class AuthBearer(HttpBearer):
-    def authenticate(self, request: AuthenticatedRequest, token: str) -> User:
+    def authenticate(self, request: HttpRequest, token: str) -> User:
         # Implement authentication
         decoded: dict[str, str] = jwt_decode(token)
         if "user_id" not in decoded:
@@ -42,14 +42,14 @@ api.add_router("events", event_booking_router)
 @api.exception_handler(jwt.InvalidKeyError)
 def on_invalid_token(request: AuthenticatedRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
-        request, {"detail": "Invalid token supplied"}, status=401
+        request, {"detail": "Invalid token supplied"}, status=401  # type: ignore[arg-type]
     )
 
 
 @api.exception_handler(jwt.ExpiredSignatureError)
 def on_expired_token(request: AuthenticatedRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
-        request, {"detail": "Expired token supplied"}, status=401
+        request, {"detail": "Expired token supplied"}, status=401  # type: ignore[arg-type]
     )
 
 

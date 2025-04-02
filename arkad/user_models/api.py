@@ -77,7 +77,7 @@ def complete_signup(request: AuthenticatedRequest, data: CompleteSignupSchema):
     Complete the signup process, must be given the same data as in begin signup, the 2fa code and the token
     received when beginning signup
     """
-    jwt_data: dict = jwt_decode(data.token)
+    jwt_data: dict[str, str] = jwt_decode(data.token)
     if (
         jwt_data["code2fa"]
         != sha256(
@@ -109,7 +109,7 @@ def complete_signup(request: AuthenticatedRequest, data: CompleteSignupSchema):
 
 
 @auth.post("signin", auth=None, response={401: str, 200: str})
-def signin(request: AuthenticatedRequest, data: SigninSchema):
+def signin(request: HttpRequest, data: SigninSchema):
     """
     Returns a users JWT token when given a correct username and password.
     """
@@ -138,8 +138,8 @@ def update_profile(request: AuthenticatedRequest, data: UpdateProfileSchema):
     Replaces the users profile information to the given information.
     """
     user = request.user
-    user.first_name = data.first_name
-    user.last_name = data.last_name
+    user.first_name = data.first_name  # type: ignore[assignment]
+    user.last_name = data.last_name  # type: ignore[assignment]
     user.programme = data.programme
     user.linkedin = data.linkedin
     user.master_title = data.master_title
@@ -150,7 +150,7 @@ def update_profile(request: AuthenticatedRequest, data: UpdateProfileSchema):
 
 
 @profile.patch("", response={200: ProfileSchema})
-def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]):
+def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]):  # type: ignore[type-arg]
     """
     Updates the users profile information with the given, (not null) data.
     """
@@ -163,7 +163,7 @@ def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateP
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(
-    request: AuthenticatedRequest, profile_picture: UploadedFile = File(...)
+    request: AuthenticatedRequest, profile_picture: UploadedFile = File(...)  # type: ignore[type-arg]
 ):
     """
     Update the profile picture to a new one.
@@ -187,7 +187,7 @@ def delete_profile_picture(request: AuthenticatedRequest):
 
 
 @profile.post("cv", response={200: str})
-def update_cv(request: AuthenticatedRequest, cv: UploadedFile = File(...)):
+def update_cv(request: AuthenticatedRequest, cv: UploadedFile = File(...)):  # type: ignore[type-arg]
     """
     Update the cv to a new one.
     Deletes the old cv.

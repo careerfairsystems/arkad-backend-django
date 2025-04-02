@@ -45,18 +45,14 @@ class ProfileSchema(ModelSchema):
         )
 
 
-class UpdateProfileSchema(ModelSchema):
-    class Meta:
-        model = User
-        fields = (
-            "first_name",
-            "last_name",
-            "programme",
-            "linkedin",
-            "master_title",
-            "study_year",
-            "food_preferences",
-        )
+class UpdateProfileSchema(Schema):
+    first_name: str | None
+    last_name: str | None
+    programme: str | None
+    linkedin: str | None
+    master_title: str | None
+    study_year: int | None
+    food_preferences: str | None
 
 
 class CompanySchema(ModelSchema):

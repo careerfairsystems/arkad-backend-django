@@ -58,14 +58,17 @@ def create_student_session(request: AuthenticatedRequest, session: CreateStudent
     """
     Creates a student session, user must be an exhibitor.
     """
-    data: dict = session.model_dump()
-    company_id: int = data.pop("company_id")
+    company_id: int = session.company_id
     if request.user.is_company_admin(company_id):
         try:
-            data["company"] = Company.objects.get(id=company_id)
+            return 201, StudentSession.objects.create(
+                company=Company.objects.get(id=company_id),
+                start_time=session.start_time,
+                duration=session.duration,
+                booking_close_time=session.booking_close_time,
+            )
         except Company.DoesNotExist:
             return 406, "Company not found"
-        return 201, StudentSession.objects.create(**data)
     return 401, "Insufficient permissions"
 
 
@@ -126,10 +129,10 @@ def accept_student_session(
         session.save()
 
         # Remove this interviewee from the rest of the company's lists
-
+        assert request.user.company is not None, "Should not be possible to be None"
         for s in StudentSession.objects.filter(
             company_id=request.user.company.id,
-            applications__motivation__user__id__contains=applicant_user_id,
+            applications__motivation__user__id=applicant_user_id,
         ):
             s.applications.filter(motivation__user=applicant_user_id).delete()
             s.save()

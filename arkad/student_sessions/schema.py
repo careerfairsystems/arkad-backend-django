@@ -31,7 +31,7 @@ class StudentSessionNormalUserSchema(Schema):
     start_time: datetime
     duration: int
     company_id: int
-    booking_close_time: datetime
+    booking_close_time: datetime | None
     available: bool
     id: int
 
