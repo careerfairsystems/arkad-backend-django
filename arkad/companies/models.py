@@ -117,6 +117,7 @@ class Company(models.Model):
         models.CharField(max_length=50, choices=DEGREE_CHOICES),
         default=list,
         blank=True,
+        help_text=f"Choose from {', '.join([e[0] for e in DEGREE_CHOICES])}",
     )  # List of degrees with enforced choices
     desired_programme = ArrayField(
         models.CharField(max_length=255), default=list, blank=True
@@ -125,14 +126,17 @@ class Company(models.Model):
         models.CharField(max_length=50, choices=COMPETENCE_CHOICES),
         default=list,
         blank=True,
+        help_text = f"Choose from {', '.join([e[0] for e in COMPETENCE_CHOICES])}",
     )  # List of competences with enforced choices
     positions = ArrayField(
         models.CharField(max_length=50, choices=POSITION_CHOICES),
         default=list,
         blank=True,
+        help_text=f"Choose from {', '.join([e[0] for e in POSITION_CHOICES])}",
     )  # List of positions with enforced choices
     industries = ArrayField(
         models.CharField(max_length=50, choices=INDUSTRY_CHOICES),
+        help_text=f"Choose from {', '.join([e[0] for e in INDUSTRY_CHOICES])}",
         default=list,
         blank=True,
     )  # List of industries with enforced choices
@@ -140,7 +144,7 @@ class Company(models.Model):
     employees_locally = models.IntegerField(default=None, null=True, blank=True)
     employees_globally = models.IntegerField(default=None, null=True, blank=True)
 
-    jobs = models.ManyToManyField(Job)
+    jobs = models.ManyToManyField(Job, blank=True)
 
     def __str__(self) -> str:
         return self.name
