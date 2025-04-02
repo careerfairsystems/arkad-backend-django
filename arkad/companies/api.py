@@ -8,7 +8,7 @@ from companies.schema import CompanyOut
 router = Router(tags=["Companies"])
 
 
-@router.get("/", response={200: list[CompanyOut]})
+@router.get("/", response={200: list[CompanyOut]}, auth=None)
 def get_companies(request: AuthenticatedRequest):
     """
     Returns all mostly public information about companies (days with student sessions are also included).
