@@ -13,8 +13,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+load_dotenv(verbose=True)
 
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = os.environ.get("DEBUG", "False").lower() == "True".lower()
 if not DEBUG:
     import sentry_sdk
 
@@ -25,7 +26,6 @@ if not DEBUG:
         send_default_pii=True,
     )
 
-load_dotenv(verbose=True)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,7 +33,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY: str = os.environ["DJANGO_SECRET_KEY"]
+UNSAFE_SECRET_KEY: str = "UNSAFE"
+SECRET_KEY: str = os.environ.get("DJANGO_SECRET_KEY", UNSAFE_SECRET_KEY)
+
+if not DEBUG and (SECRET_KEY == UNSAFE_SECRET_KEY):
+    raise ValueError("You must set DJANGO_SECRET_KEY to a good secret value")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 

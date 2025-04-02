@@ -26,11 +26,68 @@ jobs:
       - name: Run ruff
         run: ruff check . --fix
 
+      - name: Generate RSA key pair
+        run: |
+          mkdir -p arkad/private
+          openssl genpkey -algorithm RSA -out arkad/private/private.pem -pkeyopt rsa_keygen_bits:2048
+          openssl rsa -in arkad/private/private.pem -pubout -out arkad/private/public.pem
+
       - name: Run mypy
-        run: mypy --config-file pyproject.toml .
+        env:
+          DEBUG: True
+        run: make mypy
+
+  test:
+    needs: lint-typecheck
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: arkad_db_user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: arkad
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U user -d test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate RSA key pair
+        run: |
+          mkdir -p arkad/private
+          openssl genpkey -algorithm RSA -out arkad/private/private.pem -pkeyopt rsa_keygen_bits:2048
+          openssl rsa -in arkad/private/private.pem -pubout -out arkad/private/public.pem
+
+      - name: Run tests
+        env:
+          DEBUG: True
+          POSTGRES_PASSWORD: password
+          DB_HOST: localhost
+          DATABASE_NAME: arkad
+          DATABASE_USER: arkad_db_user
+
+        run: (cd arkad && python manage.py test)
 
   deploy:
-    needs: lint-typecheck
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
