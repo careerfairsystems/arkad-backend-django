@@ -142,5 +142,5 @@ class Company(models.Model):
 
     jobs = models.ManyToManyField(Job)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

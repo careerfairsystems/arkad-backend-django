@@ -73,8 +73,8 @@ class StudentSession(models.Model):
         )
 
     @classmethod
-    def available_sessions(cls) -> QuerySet:
+    def available_sessions(cls) -> QuerySet["StudentSession"]:
         return cls.objects.filter(cls.available_filter()).all()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.company.name}:  {self.start_time}"

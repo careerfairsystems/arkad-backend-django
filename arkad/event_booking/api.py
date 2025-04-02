@@ -25,7 +25,7 @@ def get_events(request: AuthenticatedRequest):
 
 @router.get("booked-events", response={200: list[EventSchema]})
 def get_booked_events(request: AuthenticatedRequest):
-    ts: list[Ticket] = request.user.tickets.prefetch_related("event").all()
+    ts: QuerySet[Ticket] = request.user.ticket_set.prefetch_related("event").all()
     return [t.event for t in ts]
 
 
@@ -62,12 +62,13 @@ def get_event_ticket(request: AuthenticatedRequest, event_id: int):
     """
     Returns a ticket
     """
-    tickets: QuerySet[Ticket] = request.user.tickets.prefetch_related("event").filter(
+    tickets: QuerySet[Ticket] = request.user.ticket_set.prefetch_related("event").filter(
         event_id=event_id
     )
     if not tickets.exists():
         return 401, "Unauthorized"
-    ticket: Ticket = tickets.first()  # Should only be one
+    ticket: Ticket | None = tickets.first()  # Should only be one
+    assert ticket is not None, "Should not be possible"
     return UseTicketSchema(uuid=ticket.uuid)
 
 

@@ -24,7 +24,7 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
     industries = [SWEDISH_TO_ENGLISH.get(i, i) for i in profile.industry]
 
     # The url for the image, it uses the key for the exibitors storage. Does not append a size here.
-    logo_url: str = (
+    logo_url: str | None = (
         f"https://v2cdn.jexpo.se/arkad/storage{schema.key}/{logotype.file}"
         if logotype
         else None

@@ -31,7 +31,7 @@ class Event(models.Model):
     description = models.TextField(default="")
 
     type = models.CharField(choices=EVENT_TYPES, max_length=2)
-    location = models.CharField(max_length=300)
+    location = models.CharField(max_length=300, null=True)
     language = models.CharField(max_length=100, default="Swedish")
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
@@ -52,9 +52,10 @@ class Event(models.Model):
             )
         ]
 
-    def clean(self):
+    def clean(self) -> None:
         if self.end_time <= self.start_time:
             raise ValidationError("End time must be after start time.")
+        return super().clean()
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
@@ -66,5 +67,5 @@ class Event(models.Model):
         )
 
     @classmethod
-    def available_events(cls) -> QuerySet:
+    def available_events(cls) -> QuerySet["Event"]:
         return cls.objects.filter(cls.available_filter()).all()

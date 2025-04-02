@@ -132,7 +132,7 @@ class Exhibition(BaseModel):
 
 
 class Job(BaseModel):
-    link: Optional[HttpUrl | str] = None
+    link: Optional[str] = None
     description: Optional[str] = None
     location: List[str] = Field(default_factory=list)
     type: List[str] = Field(default_factory=list)
@@ -180,9 +180,9 @@ class Profile(BaseModel):
     name: Optional[str] = None
     employeesLocal: Optional[str] = None
     employeesGlobal: Optional[str] = None
-    requests: Optional[dict] = Field(default=None, alias="$requests")
-    updated: Optional[dict] = Field(default=None, alias="$updated")
-    submitted: Optional[dict] = Field(default=None, alias="$submitted")
+    requests: Optional[dict[Any, Any]] = Field(default=None, alias="$requests")
+    updated: Optional[dict[Any, Any]] = Field(default=None, alias="$updated")
+    submitted: Optional[dict[Any, Any]] = Field(default=None, alias="$submitted")
 
 
 class CompanyHost(BaseModel):
