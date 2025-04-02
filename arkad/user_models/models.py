@@ -1,5 +1,10 @@
 from datetime import datetime, timezone, timedelta
+from typing import Any
+
 from django.contrib.auth.models import AbstractUser
+from pydantic import BaseModel, GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+
 from arkad.jwt_utils import jwt_encode
 from django.db import models
 from companies.models import Company
@@ -69,3 +74,26 @@ class User(AbstractUser):
 
     def is_company_admin(self, company_id: int) -> bool:
         return self.is_company and self.company_id == company_id
+
+
+class PydanticUser:
+    @classmethod
+    def __get_pydantic_core_schema__(
+            cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            handler(User),  # Or use handler.generate_schema(User) if recursion occurs
+        )
+
+    @classmethod
+    def validate(cls, v: Any) -> User:
+        if not isinstance(v, User):
+            raise ValueError("Expected User instance")
+        return v
+
+class AuthenticatedRequest(BaseModel):
+    user: 'User'  # Forward reference if needed
+
+    class Config:
+        arbitrary_types_allowed = True

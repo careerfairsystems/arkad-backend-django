@@ -4,7 +4,7 @@ from ninja import Router
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
-from arkad.api import AuthenticatedRequest
+from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,

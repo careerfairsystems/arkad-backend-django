@@ -3,7 +3,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from ninja import Router
 
-from arkad.api import AuthenticatedRequest
+from user_models.models import AuthenticatedRequest
 from event_booking.models import Event, Ticket
 from event_booking.schemas import (
     EventSchema,

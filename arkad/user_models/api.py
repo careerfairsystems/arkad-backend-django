@@ -10,11 +10,10 @@ from django.db import IntegrityError
 from django.http import HttpRequest
 from ninja import Router, File, UploadedFile, PatchDict
 
-from arkad.api import AuthenticatedRequest
 from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
-from user_models.models import User
+from user_models.models import User, AuthenticatedRequest
 from user_models.schema import (
     SigninSchema,
     ProfileSchema,

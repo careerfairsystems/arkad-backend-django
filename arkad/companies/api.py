@@ -1,7 +1,7 @@
 from django.http import HttpRequest
 from ninja import Router
 
-from arkad.api import AuthenticatedRequest
+from user_models.models import AuthenticatedRequest
 from companies.models import Company
 from companies.schema import CompanyOut
 
