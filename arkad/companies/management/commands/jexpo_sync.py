@@ -9,7 +9,7 @@ import os
 class Command(BaseCommand):
     help = "Synchronizes companies from an external API with the local database."
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:
         parser.add_argument(
             "--file",
             type=str,
@@ -17,7 +17,7 @@ class Command(BaseCommand):
             help="Path to the JSON file containing company data.",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
         file_path = options["file"]
         abs_path = os.path.abspath(file_path)
         self.stdout.write(f"Starting company synchronization using file: {abs_path}")

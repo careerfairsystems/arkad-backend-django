@@ -3,6 +3,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from ninja import Router
 
+from arkad.api import AuthenticatedRequest
 from event_booking.models import Event, Ticket
 from event_booking.schemas import (
     EventSchema,
@@ -15,7 +16,7 @@ router = Router(tags=["Events"])
 
 
 @router.get("", response={200: list[EventSchema]})
-def get_events(request: HttpRequest):
+def get_events(request: AuthenticatedRequest):
     """
     Returns a list of all events
     """
@@ -23,13 +24,13 @@ def get_events(request: HttpRequest):
 
 
 @router.get("booked-events", response={200: list[EventSchema]})
-def get_booked_events(request: HttpRequest):
+def get_booked_events(request: AuthenticatedRequest):
     ts: list[Ticket] = request.user.tickets.prefetch_related("event").all()
     return [t.event for t in ts]
 
 
 @router.get("{event_id}/", response={200: EventSchema, 404: str})
-def get_event(request: HttpRequest, event_id: int):
+def get_event(request: AuthenticatedRequest, event_id: int):
     """
     Returns a single event
     """
@@ -42,7 +43,7 @@ def get_event(request: HttpRequest, event_id: int):
 @router.get(
     "/{event_id}/attending", response={200: list[EventUserInformation], 401: str}
 )
-def get_users_attending_event(request: HttpRequest, event_id: int):
+def get_users_attending_event(request: AuthenticatedRequest, event_id: int):
     """
     Returns a list of names of the attending users, only if the calling user is staff
     """
@@ -57,7 +58,7 @@ def get_users_attending_event(request: HttpRequest, event_id: int):
 
 
 @router.get("get-ticket/{event_id}", response={200: UseTicketSchema, 401: str})
-def get_event_ticket(request: HttpRequest, event_id: int):
+def get_event_ticket(request: AuthenticatedRequest, event_id: int):
     """
     Returns a ticket
     """
@@ -71,7 +72,7 @@ def get_event_ticket(request: HttpRequest, event_id: int):
 
 
 @router.post("use-ticket", response={200: TicketSchema, 401: str})
-def verify_ticket(request: HttpRequest, ticket: UseTicketSchema):
+def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     """
     Returns 200 and the ticket schema which will now be used.
 
@@ -90,7 +91,7 @@ def verify_ticket(request: HttpRequest, ticket: UseTicketSchema):
 @router.post(
     "acquire-ticket/{event_id}", response={200: EventSchema, 409: str, 404: str}
 )
-def book_event(request: HttpRequest, event_id: int):
+def book_event(request: AuthenticatedRequest, event_id: int):
     """
     Book an event if it is not already fully booked
     """
@@ -116,7 +117,7 @@ def book_event(request: HttpRequest, event_id: int):
 @router.post(
     "remove-ticket/{event_id}", response={200: EventSchema, 409: str, 404: str}
 )
-def unbook_event(request: HttpRequest, event_id: int):
+def unbook_event(request: AuthenticatedRequest, event_id: int):
     """
     Unbook an event if you have a ticket.
     """

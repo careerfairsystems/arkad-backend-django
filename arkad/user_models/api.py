@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from django.http import HttpRequest
 from ninja import Router, File, UploadedFile, PatchDict
 
+from arkad.api import AuthenticatedRequest
 from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
@@ -32,7 +33,7 @@ router.add_router("profile", profile)
 
 
 @auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str})
-def begin_signup(request: HttpRequest, data: SignupSchema):
+def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
 
@@ -71,7 +72,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
 @auth.post(
     "complete-signup", auth=None, response={200: ProfileSchema, 401: str, 400: str}
 )
-def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
+def complete_signup(request: AuthenticatedRequest, data: CompleteSignupSchema):
     """
     Complete the signup process, must be given the same data as in begin signup, the 2fa code and the token
     received when beginning signup
@@ -108,7 +109,7 @@ def complete_signup(request: HttpRequest, data: CompleteSignupSchema):
 
 
 @auth.post("signin", auth=None, response={401: str, 200: str})
-def signin(request: HttpRequest, data: SigninSchema):
+def signin(request: AuthenticatedRequest, data: SigninSchema):
     """
     Returns a users JWT token when given a correct username and password.
     """
@@ -124,7 +125,7 @@ def signin(request: HttpRequest, data: SigninSchema):
 
 
 @profile.get("", response={200: ProfileSchema})
-def get_user_profile(request: HttpRequest):
+def get_user_profile(request: AuthenticatedRequest):
     """
     Returns the users profile information.
     """
@@ -132,7 +133,7 @@ def get_user_profile(request: HttpRequest):
 
 
 @profile.put("", response={200: ProfileSchema})
-def update_profile(request: HttpRequest, data: UpdateProfileSchema):
+def update_profile(request: AuthenticatedRequest, data: UpdateProfileSchema):
     """
     Replaces the users profile information to the given information.
     """
@@ -149,7 +150,7 @@ def update_profile(request: HttpRequest, data: UpdateProfileSchema):
 
 
 @profile.patch("", response={200: ProfileSchema})
-def update_profile_fields(request: HttpRequest, data: PatchDict[UpdateProfileSchema]):
+def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]):
     """
     Updates the users profile information with the given, (not null) data.
     """
@@ -162,7 +163,7 @@ def update_profile_fields(request: HttpRequest, data: PatchDict[UpdateProfileSch
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(
-    request: HttpRequest, profile_picture: UploadedFile = File(...)
+    request: AuthenticatedRequest, profile_picture: UploadedFile = File(...)
 ):
     """
     Update the profile picture to a new one.
@@ -176,7 +177,7 @@ def update_profile_picture(
 
 
 @profile.delete("profile-picture", response={200: str})
-def delete_profile_picture(request: HttpRequest):
+def delete_profile_picture(request: AuthenticatedRequest):
     """
     Returns 200 if the file was deleted. Will also return 200 if the file never existed.
     """
@@ -186,7 +187,7 @@ def delete_profile_picture(request: HttpRequest):
 
 
 @profile.post("cv", response={200: str})
-def update_cv(request: HttpRequest, cv: UploadedFile = File(...)):
+def update_cv(request: AuthenticatedRequest, cv: UploadedFile = File(...)):
     """
     Update the cv to a new one.
     Deletes the old cv.
@@ -198,7 +199,7 @@ def update_cv(request: HttpRequest, cv: UploadedFile = File(...)):
 
 
 @profile.delete("cv", response={200: str})
-def delete_cv(request: HttpRequest):
+def delete_cv(request: AuthenticatedRequest):
     """
     Returns 200 if the cv was deleted. Will also return 200 if the file never existed.
     """

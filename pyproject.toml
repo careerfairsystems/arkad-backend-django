@@ -17,7 +17,6 @@ unfixable = []
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
-
 [tool.mypy]
 plugins = [
     "mypy_django_plugin.main",
@@ -44,28 +43,38 @@ module = [
 ]
 ignore_missing_imports = false
 
-
-# Override for tests (less strict)
+# Override for tests (excluded from typing rules)
 [[tool.mypy.overrides]]
 module = [
     "tests.*",
-    "tests/*",
-    "*/tests",
-]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-ignore_missing_imports = true  # Useful if tests use fixtures or mocks
-
-# Override for migrations (skip most checks)
-[[tool.mypy.overrides]]
-module = [
-    "migrations",
-    "migrations",
+    "*.tests",
+    "*.tests.*",
 ]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
 check_untyped_defs = false
+disallow_untyped_calls = false
+
+
+# Override for migrations (skip most checks)
+[[tool.mypy.overrides]]
+module = [
+    "migrations.*",
+    "*.migrations.*",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+ignore_missing_imports = true
+check_untyped_defs = false
+
+# Override for API files (no typed return required)
+[[tool.mypy.overrides]]
+module = [
+    "*.api",
+    "*.api.*",
+]
+disallow_untyped_defs = false
 
 [tool.django-stubs]
 django_settings_module = "arkad.settings"

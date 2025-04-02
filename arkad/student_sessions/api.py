@@ -4,6 +4,7 @@ from ninja import Router
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
+from arkad.api import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
@@ -24,7 +25,7 @@ router = Router(tags=["Student Sessions"])
 
 
 @router.get("/all", response={200: StudentSessionNormalUserListSchema})
-def get_student_sessions(request: HttpRequest, only_available_sessions: bool = False):
+def get_student_sessions(request: AuthenticatedRequest, only_available_sessions: bool = False):
     """
     Returns a list of available student sessions.
 
@@ -53,7 +54,7 @@ def get_student_sessions(request: HttpRequest, only_available_sessions: bool = F
 
 
 @router.post("/exhibitor", response={406: str, 201: StudentSessionSchema, 401: str})
-def create_student_session(request: HttpRequest, session: CreateStudentSessionSchema):
+def create_student_session(request: AuthenticatedRequest, session: CreateStudentSessionSchema):
     """
     Creates a student session, user must be an exhibitor.
     """
@@ -69,7 +70,7 @@ def create_student_session(request: HttpRequest, session: CreateStudentSessionSc
 
 
 @router.get("/exhibitor/sessions", response={200: list[StudentSessionSchema], 401: str})
-def get_exhibitor_sessions(request: HttpRequest):
+def get_exhibitor_sessions(request: AuthenticatedRequest):
     if not request.user.is_company:
         return 401, "Insufficient permissions"
     return StudentSession.objects.filter(company=request.user.company).prefetch_related(
@@ -80,7 +81,7 @@ def get_exhibitor_sessions(request: HttpRequest):
 @router.get(
     "/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str}
 )
-def get_applicants(request: HttpRequest, session_id: int):
+def get_applicants(request: AuthenticatedRequest, session_id: int):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
     """
@@ -102,7 +103,7 @@ def get_applicants(request: HttpRequest, session_id: int):
 
 @router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
 def accept_student_session(
-    request: HttpRequest, session_id: int, applicant_user_id: int
+    request: AuthenticatedRequest, session_id: int, applicant_user_id: int
 ):
     """
     Used to accept a student for a student session, takes in a session_id and an applicant_user_id.
@@ -136,7 +137,7 @@ def accept_student_session(
 
 
 @router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
-def apply_for_session(request: HttpRequest, data: StudentSessionApplicationSchema):
+def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplicationSchema):
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
     """
