@@ -72,6 +72,9 @@ class User(AbstractUser):
             },
         )
 
+    def get_auth_headers(self) -> dict[str, str]:
+        return {"Authorization": self.create_jwt_token()}
+
     def is_company_admin(self, company_id: int) -> bool:
         return self.is_company and self.company_id == company_id
 

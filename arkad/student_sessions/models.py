@@ -7,7 +7,7 @@ from companies.models import Company
 
 
 class CompanyStudentSessionMotivation(models.Model):
-    motivation_text = models.TextField()
+    motivation_text = models.TextField(null=True, blank=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
