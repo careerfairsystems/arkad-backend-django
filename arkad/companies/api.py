@@ -15,6 +15,5 @@ def get_companies(request: AuthenticatedRequest):
     """
     return Company.objects.all()
 
-
 # We should probably not be able to change company information by api here, instead require Jexpo update.
 # Otherwise, we risk overwriting it.

@@ -16,7 +16,7 @@ from student_sessions.schema import (
     StudentSessionNormalUserSchema,
     CreateStudentSessionSchema,
     ApplicantSchema,
-    StudentSessionApplicationSchema,
+    StudentSessionApplicationSchema, MotivationTextUpdateSchema,
 )
 from companies.models import Company
 from user_models.schema import ProfileSchema
@@ -182,3 +182,49 @@ def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplica
         session.applications.add(application)
         session.save()
     return 200, session
+
+@router.get("/motivation", response={200: str | None})
+def get_student_session_motivation(request: AuthenticatedRequest, company_id: int):
+    """
+    Returns the motivation text for the current user.
+
+    If one does not exist or is explicitly None, None is returned
+    """
+    try:
+        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
+        return 200, motivation.motivation_text
+    except CompanyStudentSessionMotivation.DoesNotExist:
+        return 200, None
+
+
+@router.put("/motivation", response={200: str | None})
+def update_student_session_motivation(request: AuthenticatedRequest, data: MotivationTextUpdateSchema):
+    """
+    Updates the motivation text for the current user.
+
+    If one does not exist, it is created
+    """
+    try:
+        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=data.company_id)
+        motivation.motivation_text = data.motivation_text
+        motivation.save()
+        return 200, motivation.motivation_text
+    except CompanyStudentSessionMotivation.DoesNotExist:
+        motivation = CompanyStudentSessionMotivation.objects.create(user=request.user,
+                                                                    company_id=data.company_id,
+                                                                    motivation_text=data.motivation_text)
+        return 200, motivation.motivation_text
+
+@router.delete("/motivation", response={200: str, 404: str})
+def delete_student_session_motivation(request: AuthenticatedRequest, company_id: int):
+    """
+    Deletes the motivation text for the current user.
+
+    If one does not exist, a 404 is returned
+    """
+    try:
+        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
+        motivation.delete()
+        return 200, "Deleted motivation text"
+    except CompanyStudentSessionMotivation.DoesNotExist:
+        return 404, "Motivation text does not exist"

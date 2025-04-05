@@ -256,7 +256,6 @@ class StudentSessionTests(TestCase):
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
-        print(resp.json())
         self.assertEqual(200, resp.status_code)
 
         resp = self.client.post(
@@ -339,3 +338,66 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(409, resp.status_code)
+
+class StudentSessionMotivationTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="Test Company")
+
+        self.user = User.objects.create_user(
+            first_name="student",
+            last_name="student",
+            email="a@lu.com",
+            password="PASSWORD",
+            username="Company",
+            is_company=False,
+        )
+        self.client = Client()
+
+    def test_create_motivation(self):
+        motivation = CompanyStudentSessionMotivation.objects.create(
+            user=self.user, company=self.company, motivation_text="I love this company"
+        )
+        self.assertEqual(motivation.user, self.user)
+        self.assertEqual(motivation.company, self.company)
+        self.assertEqual(motivation.motivation_text, "I love this company")
+
+    def test_update_with_api(self):
+        motivation = self.client.put(
+            "/api/student-session/motivation",
+            data={"company_id": self.company.id, "motivation_text": "I love this company"},
+            content_type="application/json",
+            headers=self.user.get_auth_headers(),
+        )
+        self.assertEqual(motivation.status_code, 200)
+        self.assertEqual(motivation.json(), "I love this company")
+
+    def test_get_student_session_motivation(self):
+        _ = CompanyStudentSessionMotivation.objects.create(
+            user=self.user, company=self.company, motivation_text="I love this company"
+        )
+        resp = self.client.get(
+            "/api/student-session/motivation?company_id=" + str(self.company.id),
+            headers=self.user.get_auth_headers(),
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), "I love this company")
+
+    def test_delete_motivation_by_api(self):
+        motivation = CompanyStudentSessionMotivation.objects.create(
+            user=self.user, company=self.company, motivation_text="I love this company"
+        )
+        resp = self.client.delete(
+            "/api/student-session/motivation?company_id=" + str(self.company.id),
+            content_type="application/json",
+            headers=self.user.get_auth_headers(),
+        )
+        self.assertEqual(resp.status_code, 200, resp.json())
+        self.assertFalse(CompanyStudentSessionMotivation.objects.filter(id=motivation.id).exists())
+
+    def test_get_non_existing_motivation(self):
+        resp = self.client.get(
+            "/api/student-session/motivation?company_id=" + str(self.company.id),
+            headers=self.user.get_auth_headers(),
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), None)
