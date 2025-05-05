@@ -11,19 +11,21 @@ You must use Python 3.13 to run this project as we are using some very new typin
    - On Windows: `venv\Scripts\activate` (If using windows please use WSL, otherwise make commands will not work)
    - On Linux/Mac: `source venv/bin/activate`
 4. Install the required packages: `pip install -r requirements.txt`
-5. Create a public/private keypair for JWT signing and add them to arkad/private
+5. cd to the arkad folder.
+   - This is where the django project is located.
+6. Create a public/private keypair for JWT signing and add them to arkad/private
    - With the names public.pem, private.pem
    - This can be done with:
      ```shell
      openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
      openssl rsa -in private.pem -pubout -out public.pem
      ```
-6. Copy `example.env` to `.env` (Both are in arkad folder)
+7. Copy `example.env` to `.env` (Both are in arkad folder)
    - This contains the default environment variables.
-7. Start the Postgres database if not running it locally.
+8. Start the Postgres database if not running it locally.
    - `docker compose up` (from the project root)
-8. Run the server: `python manage.py runserver`
-9. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+9. Run the server: `python manage.py runserver`
+10. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend
 
@@ -90,4 +92,4 @@ Test files are excluded from typing rules but are required to be valid code and 
 api files are not required to have typed return values.
 - */api.py
 
-Run the linting by standing at project root and writing `make lint`
+Run the linting by standing in arkad and writing `make lint`

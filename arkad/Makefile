@@ -1,12 +1,12 @@
 .PHONY: install check ruff mypy mypy-strict mypy-server clean dev lint
 
 # Project configuration
-PROJECT_DIR = arkad
-CONFIG_FILE = ../pyproject.toml
+PROJECT_DIR = .
+CONFIG_FILE = pyproject.toml
 
 # Installation
 install:
-	pip install -r requirements.txt
+	pip install -r ../requirements.txt
 
 # Development server
 dev:
