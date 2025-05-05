@@ -23,7 +23,7 @@ You must use Python 3.13 to run this project as we are using some very new typin
 7. Copy `example.env` to `.env` (Both are in arkad folder)
    - This contains the default environment variables.
 8. Start the Postgres database if not running it locally.
-   - `docker compose up` (from the project root)
+   - `docker compose up` (from the arkad folder)
 9. Create migrations: `python manage.py makemigrations`
 10. Migrate the database: `python manage.py migrate`
 11. Run the server: `python manage.py runserver`
