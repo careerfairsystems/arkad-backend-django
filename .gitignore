@@ -10,3 +10,4 @@ arkad/media/
 secrets.sh
 arkad/private
 arkad/config
+.DS_Store
