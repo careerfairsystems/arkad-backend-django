@@ -37,7 +37,7 @@ class Command(BaseCommand):
 
             with transaction.atomic():
                 for schema in exhibitors:
-                    company, created = update_or_create_company(CamelCaseSchema)
+                    company, created = update_or_create_company(schema)
                     if company:
                         self.stdout.write(
                             f"{'Created' if created else 'Updated'} company: {company.name}"
