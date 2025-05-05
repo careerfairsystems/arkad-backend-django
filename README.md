@@ -93,3 +93,12 @@ api files are not required to have typed return values.
 - */api.py
 
 Run the linting by standing in arkad and writing `make lint`
+
+### Run tests
+
+Run tests using `python manage.py test`
+
+### CI
+
+When pushing linting and tests will be run automatically.
+And when a new commit is added to master it is auto deployed.
