@@ -1,3 +1,30 @@
+# Get started with Python
+
+## Python version
+You must use Python 3.13 to run this project as we are using some very new typing features.
+
+## First install steps
+
+1. Install Python 3.13
+2. Create a virtual environment (venv) `python3.13 -m venv venv` 
+3. Activate the virtual environment
+   - On Windows: `venv\Scripts\activate` (If using windows please use WSL, otherwise make commands will not work)
+   - On Linux/Mac: `source venv/bin/activate`
+4. Install the required packages: `pip install -r requirements.txt`
+5. Create a public/private keypair for JWT signing and add them to arkad/private
+   - With the names public.pem, private.pem
+   - This can be done with:
+     ```shell
+     openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+     openssl rsa -in private.pem -pubout -out public.pem
+     ```
+6. Copy `example.env` to `.env` (Both are in arkad folder)
+   - This contains the default environment variables.
+7. Start the Postgres database if not running it locally.
+   - `docker compose up` (from the project root)
+8. Run the server: `python manage.py runserver`
+9. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+
 # Arkad backend
 
 This backend uses django and postgres as the database
@@ -17,12 +44,12 @@ openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 openssl rsa -in private.pem -pubout -out public.pem
 ```
 
-You can then run jwt_utils in arkad if you want to test the setup.
+You can then run jwt_utils in arkad if you want to test the setup (If runserver works this is already done).
 
 ### Required environment variables
 
 Required environment variables are:
-- SECRET_KEY (Set this to a long secret value), Used for signing JWT and sessions.
+- SECRET_KEY (Set this to a long secret value)
 - DEBUG (Must be set to "False" in production)
 - POSTGRES_PASSWORD (The postgres database password for the user arkad_db_user)
 
@@ -62,3 +89,5 @@ Test files are excluded from typing rules but are required to be valid code and 
 
 api files are not required to have typed return values.
 - */api.py
+
+Run the linting by standing at project root and writing `make lint`
