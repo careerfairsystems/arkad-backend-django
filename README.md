@@ -13,19 +13,21 @@ You must use Python 3.13 to run this project as we are using some very new typin
 4. Install the required packages: `pip install -r requirements.txt`
 5. cd to the arkad folder.
    - This is where the django project is located.
-6. Create a public/private keypair for JWT signing and add them to arkad/private
-   - With the names public.pem, private.pem
+6. Create a public/private keypair for JWT signing
+   - With the names public.pem, private.pem, they should be in arkad/private folder
    - This can be done with:
      ```shell
-     openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
-     openssl rsa -in private.pem -pubout -out public.pem
+     openssl genpkey -algorithm RSA -out private/private.pem -pkeyopt rsa_keygen_bits:2048
+     openssl rsa -in private/private.pem -pubout -out public.pem
      ```
 7. Copy `example.env` to `.env` (Both are in arkad folder)
    - This contains the default environment variables.
 8. Start the Postgres database if not running it locally.
    - `docker compose up` (from the project root)
-9. Run the server: `python manage.py runserver`
-10. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+9. Create migrations: `python manage.py makemigrations`
+10. Migrate the database: `python manage.py migrate`
+11. Run the server: `python manage.py runserver`
+12. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend
 
