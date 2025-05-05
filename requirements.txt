@@ -10,7 +10,7 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 constantly==23.10.4
 cryptography==44.0.1
-Django==5.1.6
+Django==5.2
 django-cors-headers==4.7.0
 django-ninja==1.3.0
 django-stubs==5.1.3
