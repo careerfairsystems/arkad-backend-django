@@ -34,7 +34,7 @@ jobs:
       - name: Run mypy
         env:
           DEBUG: True
-        run: make mypy
+        run: cd arkad && make mypy
 
   test:
     needs: lint-typecheck
