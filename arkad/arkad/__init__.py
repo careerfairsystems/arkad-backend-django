@@ -1,4 +1,4 @@
-from typing import override
+from typing import override, Any
 
 import ninja
 from ninja import Schema as NinjaSchema
@@ -19,7 +19,7 @@ class Router(ninja.Router):
     """
 
     @override
-    def add_api_operation(self, *args, by_alias: bool = True, **kwargs):
+    def add_api_operation(self, *args: Any, by_alias: bool = True, **kwargs: Any) -> None:
         if "by_alias" in kwargs and not kwargs["by_alias"]:
             raise ValueError("By_alias should not be set in add_api_operation")
         kwargs["by_alias"] = True
