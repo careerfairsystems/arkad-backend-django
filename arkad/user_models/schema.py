@@ -1,6 +1,4 @@
-from ninja import Schema, ModelSchema
-from user_models.models import User
-from companies.models import Company
+from arkad import Schema
 
 
 class SigninSchema(Schema):
@@ -24,26 +22,21 @@ class CompleteSignupSchema(Schema):
     email: str
 
 
-class ProfileSchema(ModelSchema):
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "email",
-            "first_name",
-            "last_name",
-            "is_student",
-            "cv",
-            "profile_picture",
-            "programme",
-            "linkedin",
-            "master_title",
-            "study_year",
-            "is_active",
-            "is_staff",
-            "food_preferences",
-        )
-
+class ProfileSchema(Schema):
+    id: int | None = None
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    is_student: bool | None = None
+    cv: str | None = None
+    profile_picture: str | None = None
+    programme: str | None = None
+    linkedin: str | None = None
+    master_title: str | None = None
+    study_year: int | None = None
+    is_active: bool | None = None
+    is_staff: bool | None = None
+    food_preferences: str | None = None
 
 class UpdateProfileSchema(Schema):
     first_name: str | None = None
@@ -55,7 +48,7 @@ class UpdateProfileSchema(Schema):
     food_preferences: str | None = None
 
 
-class CompanySchema(ModelSchema):
-    class Meta:
-        model = Company
-        fields = ("id", "name", "description")
+class CompanySchema(Schema):
+    id: int
+    name: str
+    description: str | None = None

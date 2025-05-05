@@ -1,8 +1,7 @@
 from django.db import transaction
 from django.db.models import QuerySet
-from django.http import HttpRequest
-from ninja import Router
 
+from arkad import Router
 from user_models.models import AuthenticatedRequest
 from event_booking.models import Event, Ticket
 from event_booking.schemas import (

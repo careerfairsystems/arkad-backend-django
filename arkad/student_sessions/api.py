@@ -1,9 +1,9 @@
 from django.db import transaction
 from django.http import HttpRequest
-from ninja import Router
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
+from arkad import Router
 from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,

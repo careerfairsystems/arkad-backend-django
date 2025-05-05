@@ -1,7 +1,6 @@
 from datetime import datetime
 from uuid import UUID
-
-from ninja import Schema
+from arkad import Schema
 
 
 class EventSchema(Schema):

@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-
-from ninja import Schema
-
+from arkad import Schema
 from user_models.schema import ProfileSchema
 
 

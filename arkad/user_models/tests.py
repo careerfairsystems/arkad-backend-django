@@ -89,27 +89,50 @@ class UserRoutesTestCase(TestCase):
         self.assertEqual(response.json()["email"], "testuser@example.com")
 
     def test_update_profile(self):
-        upd_data = {
-            "first_name": "New",
-            "last_name": "Name",
+        upd_data_camel_case = {
+            "firstName": "New",
+            "lastName": "Name",
             "programme": "CS",
             "linkedin": "linkedin.com/in/test",
-            "master_title": "Master",
-            "study_year": 2,
-            "food_preferences": None
+            "masterTitle": "Master",
+            "studyYear": 2,
+            "foodPreferences": None
         }
         response = self.client.put(
             "/api/user/profile",
-            upd_data,
+            upd_data_camel_case,
             content_type="application/json",
             **self.auth_headers,
         )
         self.assertEqual(response.status_code, 200, response.json())
         data = response.json()
         u = User.objects.get(pk=data["id"])
-        for k, v in upd_data.items():
-            self.assertEqual(data[k], v)
-            self.assertEqual(v, u.__dict__[k])
+        # Check so that user was updated correctly
+        self.assertEqual(data["firstName"], u.first_name)
+        self.assertEqual(data["lastName"], u.last_name)
+        self.assertEqual(data["programme"], u.programme)
+        self.assertEqual(data["linkedin"], u.linkedin)
+        self.assertEqual(data["masterTitle"], u.master_title)
+        self.assertEqual(data["studyYear"], u.study_year)
+        self.assertEqual(data["foodPreferences"], u.food_preferences)
+
+        # Now test same as above but with snake case instead. Should do the same thing,
+        # Test by changing the first and lastname
+
+        response = self.client.put(
+            "/api/user/profile",
+            {
+                "first_name": "snake",
+                "last_name": "case",
+            }, content_type="application/json",
+            **self.auth_headers)
+        self.assertEqual(response.status_code, 200, response.json())
+        data = response.json()
+        u = User.objects.get(pk=data["id"])
+        # Check so that user was updated correctly
+        self.assertEqual(data["firstName"], u.first_name)
+        self.assertEqual(data["lastName"], u.last_name)
+
 
     def test_update_profile_fields(self):
         data = {
@@ -125,8 +148,8 @@ class UserRoutesTestCase(TestCase):
         self.assertEqual(response.status_code, 200, response.json())
         u = User.objects.get(pk=response.json()["id"])
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["first_name"], "Updated")
-        self.assertEqual(response.json()["last_name"], "User")
+        self.assertEqual(response.json()["firstName"], "Updated")
+        self.assertEqual(response.json()["lastName"], "User")
         self.assertEqual(u.first_name, "Updated")
         self.assertEqual(u.last_name, "User")
 
@@ -211,4 +234,4 @@ class AuthenticationTestCase(TestCase):
         resp = self.client.get("/api/get-public-key")
         self.assertEqual(200, resp.status_code)
         self.maxDiff = None
-        self.assertEqual(PUBLIC_KEY, resp.json()["public_key"])
+        self.assertEqual(PUBLIC_KEY, resp.json()["publicKey"])

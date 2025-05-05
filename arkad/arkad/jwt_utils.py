@@ -5,8 +5,7 @@ from typing import Any, cast
 
 import jwt
 from django.utils import timezone
-from ninja import Schema
-
+from arkad import Schema
 from arkad.settings import BASE_DIR
 
 PRIVATE_SIGNING_KEY_LOCATION: Path = BASE_DIR / "private" / "private.pem"
@@ -46,6 +45,7 @@ def jwt_decode(token: str) -> dict[str, Any]:
 
 class PublicKeySchema(Schema):
     public_key: str
+
 
 
 if __name__ == "__main__":

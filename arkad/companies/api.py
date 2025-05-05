@@ -1,6 +1,4 @@
-from django.http import HttpRequest
-from ninja import Router
-
+from arkad import Router
 from user_models.models import AuthenticatedRequest
 from companies.models import Company
 from companies.schema import CompanyOut

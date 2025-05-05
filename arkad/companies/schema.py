@@ -1,5 +1,6 @@
-from ninja import Schema
 from typing import List, Optional
+
+from arkad import Schema
 
 
 class JobSchema(Schema):

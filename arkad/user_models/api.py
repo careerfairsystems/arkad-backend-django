@@ -8,8 +8,9 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpRequest
-from ninja import Router, File, UploadedFile, PatchDict
+from ninja import File, UploadedFile, PatchDict
 
+from arkad import Router
 from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
