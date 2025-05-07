@@ -15,15 +15,13 @@ RUN apt-get update \
 RUN pip install --no-cache-dir --upgrade pip
 
 # Copy requirements file
-COPY ../requirements.txt .
+
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /app
-
-COPY ../requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/arkad
 

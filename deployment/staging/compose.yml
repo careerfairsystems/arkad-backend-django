@@ -18,7 +18,7 @@ services:
 
   web:
     restart: unless-stopped
-    build: ../../
+    build: ../../arkad
     command: sh -c "
       python manage.py collectstatic --no-input &&
       python manage.py migrate &&
