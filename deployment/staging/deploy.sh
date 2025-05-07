@@ -24,6 +24,8 @@ git pull
 LAST_COMMIT_HASH=$(git rev-parse HEAD)
 COMMIT_MESSAGE=$(git log -1 --pretty=%B)
 
+cd arkad
+
 # Build and start containers
 echo "Building Docker images..."
 docker compose build
