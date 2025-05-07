@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from arkad import Schema
+from arkad.customized_django_ninja import Schema
 
 
 class JobSchema(Schema):

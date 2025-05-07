@@ -1,4 +1,4 @@
-from arkad import Schema
+from arkad.customized_django_ninja import Schema
 
 
 class SigninSchema(Schema):

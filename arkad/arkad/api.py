@@ -7,7 +7,7 @@ from ninja.security import HttpBearer
 import jwt
 from ninja.throttling import BaseThrottle
 
-from arkad import Router
+from arkad.customized_django_ninja import Router
 from arkad.jwt_utils import jwt_decode, PUBLIC_KEY, PublicKeySchema
 from user_models.models import User, AuthenticatedRequest
 from user_models.api import router as user_router

@@ -1,4 +1,4 @@
-from arkad import Router
+from arkad.customized_django_ninja import Router
 from user_models.models import AuthenticatedRequest
 from companies.models import Company
 from companies.schema import CompanyOut

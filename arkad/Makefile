@@ -46,6 +46,7 @@ clean:
 		dmypy stop; \
 	fi
 
+
 # Combined checks
 check: ruff mypy
 lint: mypy

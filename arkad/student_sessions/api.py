@@ -3,7 +3,7 @@ from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
-from arkad import Router
+from arkad.customized_django_ninja import Router
 from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,

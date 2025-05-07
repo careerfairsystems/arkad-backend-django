@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import jwt
 from django.utils import timezone
-from arkad import Schema
+from arkad.customized_django_ninja import Schema
 from arkad.settings import BASE_DIR
 
 PRIVATE_SIGNING_KEY_LOCATION: Path = BASE_DIR / "private" / "private.pem"
