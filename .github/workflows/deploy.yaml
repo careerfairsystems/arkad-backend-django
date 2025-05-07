@@ -76,6 +76,13 @@ jobs:
 
       - name: Test Gunicorn startup
         working-directory: arkad
+        env:
+          DEBUG: False
+          POSTGRES_PASSWORD: password
+          DB_HOST: localhost
+          DATABASE_NAME: arkad
+          DATABASE_USER: arkad_db_user
+          DJANGO_SECRET_KEY: INSECURETESTSECRETKEY
         run: |
           gunicorn arkad.wsgi:application --bind 127.0.0.1:8000 --timeout 5 &
           PID=$!
