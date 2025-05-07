@@ -74,6 +74,14 @@ jobs:
           openssl genpkey -algorithm RSA -out arkad/private/private.pem -pkeyopt rsa_keygen_bits:2048
           openssl rsa -in arkad/private/private.pem -pubout -out arkad/private/public.pem
 
+      - name: Test Gunicorn startup
+        working-directory: arkad
+        run: |
+          gunicorn arkad.wsgi:application --bind 127.0.0.1:8000 --timeout 5 &
+          PID=$!
+          sleep 5
+          kill $PID
+
       - name: Run tests
         env:
           DEBUG: True
