@@ -1,6 +1,5 @@
 from arkad.customized_django_ninja import Schema
 
-
 class SigninSchema(Schema):
     email: str
     password: str
@@ -46,6 +45,10 @@ class UpdateProfileSchema(Schema):
     master_title: str | None = None
     study_year: int | None = None
     food_preferences: str | None = None
+
+
+class ResetPasswordSchema(Schema):
+    email: str
 
 
 class CompanySchema(Schema):

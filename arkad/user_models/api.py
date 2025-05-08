@@ -21,6 +21,7 @@ from user_models.schema import (
     SignupSchema,
     UpdateProfileSchema,
     CompleteSignupSchema,
+    ResetPasswordSchema,
 )
 from hashlib import sha256
 
@@ -122,6 +123,15 @@ def signin(request: HttpRequest, data: SigninSchema):
         return 401, "Invalid email or password"
     login(request, user)
     return 200, user.create_jwt_token()
+
+
+@auth.post("reset-password", auth=None, response={200: str})
+def reset_password(request:HttpRequest, data:ResetPasswordSchema):
+    """
+    Just for testing purposes atm. Only returns response 200.
+    """
+
+    return 200, "Ok"
 
 
 @profile.get("", response={200: ProfileSchema})
