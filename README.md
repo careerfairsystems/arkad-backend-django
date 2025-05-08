@@ -19,7 +19,7 @@ You must use Python 3.13 to run this project as we are using some very new typin
      ```shell
      mkdir private
      openssl genpkey -algorithm RSA -out private/private.pem -pkeyopt rsa_keygen_bits:2048
-     openssl rsa -in private/private.pem -pubout -out public.pem
+     openssl rsa -in private/private.pem -pubout -out private/public.pem
      ```
 7. Copy `example.env` to `.env` (Both are in arkad folder)
    - This contains the default environment variables.
@@ -37,19 +37,6 @@ This backend uses django and postgres as the database
 ## API
 
 The API is documented at /api/docs
-
-## Private/Public keys
-
-To run the server locally the user must manually create a RS256 public/private keypair and add them in arkad/private,
-With the names public.pem, private.pem
-
-This can be done with:
-```shell
-openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
-openssl rsa -in private.pem -pubout -out public.pem
-```
-
-You can then run jwt_utils in arkad if you want to test the setup (If runserver works this is already done).
 
 ### Required environment variables
 
