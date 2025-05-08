@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "student_sessions",
     "event_booking",
     "corsheaders",
+    "email_app"
 ]
 
 MIDDLEWARE = [
