@@ -20,7 +20,7 @@ if not DEBUG:
     import sentry_sdk
 
     sentry_sdk.init(
-        dsn="https://177fe492b27e4d5d3f7b812e188b64fb@o1031864.ingest.us.sentry.io/4509039927033856",
+        dsn="https://85c34378971f7dad916b93c671328f7c@o4506696085340160.ingest.us.sentry.io/4509287400996869",
         # Add data like request headers and IP for users,
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
