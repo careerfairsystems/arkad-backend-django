@@ -1,3 +1,4 @@
+
 """
 URL configuration for arkad project.
 
@@ -16,11 +17,11 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
-from .api import api
+from django.urls import path
+from email_app.views import test_view
+
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("email/", include("email_app.urls")),
-    path("api/", api.urls)
+    path("test/",test_view, name="test_view"),
 ]
+
