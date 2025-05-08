@@ -10,7 +10,7 @@ You must use Python 3.13 to run this project as we are using some very new typin
 3. Activate the virtual environment
    - On Windows: `venv\Scripts\activate` (If using windows please use WSL, otherwise make commands will not work)
    - On Linux/Mac: `source venv/bin/activate`
-4. cd to the arkad folder.
+4. cd to the arkad folder `cd arkad`.
    - This is where the django project is located.
 5. Install the required packages: `pip install -r requirements.txt`
 6. Create a public/private keypair for JWT signing
