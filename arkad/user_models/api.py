@@ -4,6 +4,7 @@ import os
 import secrets
 
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
@@ -135,10 +136,24 @@ def signin(request: HttpRequest, data: SigninSchema):
 @auth.post("reset-password", auth=None, response={200: str})
 def reset_password(request:HttpRequest, data:ResetPasswordSchema):
     """
-    Just for testing purposes atm. Only returns response 200.
+    Sends an email with a link to reset password. Always returns 200 (or 500).
     """
+    form = PasswordResetForm(data={"email": data.email})
 
-    return 200, "Ok"
+   # The line below should replace the href link to reset the password in the email
+   # {{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}"
+
+    if form.is_valid():
+        form.save(
+            request=request,
+            use_https=request.is_secure(),
+            from_email="Arkad No Reply <no-reply@arkadtlth.se>",  
+            email_template_name="registration/password_reset_email.html",
+            subject_template_name="registration/password_reset_subject.txt",
+            html_email_template_name="email_app/reset_email.html"
+        )
+    
+    return 200, "OK" 
 
 
 @profile.get("", response={200: ProfileSchema})
