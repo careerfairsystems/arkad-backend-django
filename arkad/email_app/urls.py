@@ -18,10 +18,11 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from email_app.views import test_view
+from email_app.views import test_reset, test_sign_up
 
 
 urlpatterns = [
-    path("test/",test_view, name="test_view"),
+    path("test/reset",test_reset, name="test_reset"),
+    path("test/sign_up", test_sign_up, name="test_sign_up")
 ]
 
