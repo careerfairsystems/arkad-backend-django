@@ -13,8 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
-from django.core.mail import send_mail
 from dotenv import load_dotenv
+
 load_dotenv(verbose=True)
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "True".lower()
@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     "student_sessions",
     "event_booking",
     "corsheaders",
-    "email_app"
+    "email_app",
 ]
 
 MIDDLEWARE = [
@@ -163,8 +163,8 @@ AUTH_USER_MODEL = "user_models.User"
 
 
 AWS_SES_REGION_NAME = "eu-north-1"
-EMAIL_BACKEND = 'django_ses.SESBackend'
-AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
+EMAIL_BACKEND = "django_ses.SESBackend"
+AWS_SES_REGION_ENDPOINT = f"email.{AWS_SES_REGION_NAME}.amazonaws.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = "Arkad No Reply <no-reply@arkadtlth.se>"

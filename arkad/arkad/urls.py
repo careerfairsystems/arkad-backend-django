@@ -16,17 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from .api import api
-from settings import DEBUG
+from .settings import DEBUG
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-<<<<<<< Updated upstream
-    path("api/", api.urls),
-=======
-    path("api/", api.urls)
->>>>>>> Stashed changes
-]
+
+urlpatterns = [path("admin/", admin.site.urls), path("api/", api.urls)]
 if DEBUG:
-    urlpatterns.append(path("email/", include("email_app.urls")),)
+    urlpatterns.append(
+        path("email/", include("email_app.urls")),
+    )
