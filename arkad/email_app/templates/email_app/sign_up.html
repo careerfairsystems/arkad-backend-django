@@ -1,128 +1,20 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ARKAD Nyhetsbrev</title>
-  <style type="text/css">
-    /* Reset och grundinställningar */
-    body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
-    table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
-    img { -ms-interpolation-mode:bicubic; border:0; height:auto; line-height:100%; outline:none; text-decoration:none; }
-    body { margin:0; padding:0; width:100% !important; height:100% !important; background-color:#f4f4f4; font-family:'Open Sans', Arial, sans-serif; }
-    a { color:inherit; text-decoration:none; }
-    /* Container */
-    .email-container { width:100%; max-width:600px; margin:0 auto; background-color:#ffffff; }
-    /* Header */
-    .email-header { background-color:#000000; text-align:center; padding:20px; }
-    .email-header img { max-width:150px; height:auto; display:block; margin:0 auto; }
-    /* Hero */
-    .email-hero {
-      background-image:url('https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/97f5e874-adf7-444e-9909-acc13c047833/background_home.png');
-      background-size:cover;
-      background-position:center;
-      position:relative;
-      text-align:center;
-      color:#ffffff;
-    }
-    .email-hero .overlay {
-      background-color:rgba(0,0,0,0.6);
-      padding:60px 20px;
-    }
-    .email-hero h1 {
-      font-size:32px;
-      margin:0 0 10px;
-      letter-spacing:2px;
-    }
-    .email-hero h4 {
-      font-size:18px;
-      margin:0 0 20px;
-      font-weight:normal;
-      opacity:0.9;
-    }
-    .digit-box {
-        display: inline-block;
-        width: 30px; height: 50px;
-        background-color: black;
-        color: white;
-        line-height: 50px;
-        text-align: center;
-        font-family: Arial;
-        font-size: 32px;
-        font-weight:bold;
-        margin: 0 4px;
-    }
- 
-    /* Footer */
-    .email-footer { background-color: #19A1DB; color:#e6e6e6; text-align:center; padding:20px; font-size:12px; }
-    .email-footer a { color:#ffffff; margin:0 5px; font-size:14px; display:inline-block; }
-    .social-icons img { width:24px; height:24px; margin:0 5px; vertical-align:middle; }
-    /* Responsivt */
-    @media screen and (max-width:480px) {
-      .email-hero .overlay { padding:40px 10px; }
-      .email-hero h1 { font-size:24px; }
-      .email-hero h4 { font-size:16px; }
-      .btn { display:block; width:80%; margin:10px auto; }
-    }
-  </style>
-</head>
-<body>
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-    <tr>
-      <td align="center">
-        <!-- Main container -->
-        <table class="email-container" cellpadding="0" cellspacing="0" role="presentation">
-          <tr>
-            <td>
-              <!-- Header -->
-              <div class="email-header">
-                <a href="https://www.arkadtlth.se">
-                  <img src="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/ca982652-b78f-49aa-a865-3371d4e6ba0f/ARKAD_logo.png" alt="ARKAD logotyp">
-                </a>
-              </div>
-              <!-- Hero -->
-              <div class="email-hero">
-                <div class="overlay">
-                  <h1>Welcome to ARKAD!</h1>
-                  <h4>Confirm your email with the code below</h4>
-                  <div style="text-align:center; margin:20px 0;">
-                    <span class="digit-box">0</span>
-                    <span class="digit-box">1</span>
-                    <span class="digit-box">2</span>
-                    <span class="digit-box">3</span>
-                    <span class="digit-box">4</span>
-                    <span class="digit-box">5</span>
-                  </div>
-                  <p style="font-style:italic; margin:0 0 10px; font-size:13px;"><br>If you didn't request this email, you can safely ignore it.</p>
-                </div>
-              </div>
-       
-              <!-- Footer -->
-              <div class="email-footer">
-                <p>Följ oss på:</p>
-                <div class="social-icons">
-                  <a href="https://www.facebook.com/TLTH.ARKAD" target="_blank">
-                    <img src="https://simpleicons.org/icons/facebook.svg" alt="Facebook">
-                  </a>
-                  <a href="https://www.instagram.com/arkadtlth/" target="_blank">
-                    <img src="https://simpleicons.org/icons/instagram.svg" alt="Instagram">
-                  </a>
-                  <a href="https://www.linkedin.com/company/arkadtlth" target="_blank">
-                    <img src="https://simpleicon.com/wp-content/uploads/linkedin_1.png" alt="LinkedIn">
-                  </a>
-                </div>
-                <p style="margin:15px 0 5px;">
-                  ARKAD Career Fair<br>
-                  Kårhuset, Sölvegatan 22A, Lund<br>
-                  <a href="mailto:arkad@tlth.se">arkad@tlth.se</a> | +46 (0)704 187927
-                </p>
-                <p style="opacity:0.6;">&copy; 2025 ARKAD, Lunds Tekniska Högskola</p>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
+
+{% extends "email_app/base.html" %}
+
+{% block content %}
+  <div class="email-hero">
+    <div class="overlay">
+      <h1>Welcome to ARKAD!</h1>
+      <h4>Confirm your email with the code below</h4>
+      <div style="text-align:center; margin:20px 0;">
+        <span class="digit-box">0</span>
+        <span class="digit-box">1</span>
+        <span class="digit-box">2</span>
+        <span class="digit-box">3</span>
+        <span class="digit-box">4</span>
+        <span class="digit-box">5</span>
+      </div>
+      <p style="font-style:italic; margin:0 0 10px; font-size:13px;"><br>If you didn't request this email, you can safely ignore it.</p>
+    </div>
+  </div>
+{% endblock %}
