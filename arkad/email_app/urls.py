@@ -1,4 +1,3 @@
-
 """
 URL configuration for arkad project.
 
@@ -16,13 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.contrib import admin
 from django.urls import path
 from email_app.views import test_reset, test_sign_up
 
 
 urlpatterns = [
-    path("test/reset",test_reset, name="test_reset"),
-    path("test/sign_up", test_sign_up, name="test_sign_up")
+    path("test/reset", test_reset, name="test_reset"),
+    path("test/sign_up", test_sign_up, name="test_sign_up"),
 ]
-

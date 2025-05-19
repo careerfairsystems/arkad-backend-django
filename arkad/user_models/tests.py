@@ -96,7 +96,7 @@ class UserRoutesTestCase(TestCase):
             "linkedin": "linkedin.com/in/test",
             "masterTitle": "Master",
             "studyYear": 2,
-            "foodPreferences": None
+            "foodPreferences": None,
         }
         response = self.client.put(
             "/api/user/profile",
@@ -124,15 +124,16 @@ class UserRoutesTestCase(TestCase):
             {
                 "first_name": "snake",
                 "last_name": "case",
-            }, content_type="application/json",
-            **self.auth_headers)
+            },
+            content_type="application/json",
+            **self.auth_headers,
+        )
         self.assertEqual(response.status_code, 200, response.json())
         data = response.json()
         u = User.objects.get(pk=data["id"])
         # Check so that user was updated correctly
         self.assertEqual(data["firstName"], u.first_name)
         self.assertEqual(data["lastName"], u.last_name)
-
 
     def test_update_profile_fields(self):
         data = {

@@ -38,6 +38,7 @@ class ProfileSchema(Schema):
     is_staff: bool | None = None
     food_preferences: str | None = None
 
+
 class UpdateProfileSchema(Schema):
     first_name: str | None = None
     last_name: str | None = None

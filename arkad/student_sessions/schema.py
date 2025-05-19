@@ -48,6 +48,7 @@ class StudentSessionApplicationSchema(Schema):
     motivation_text: str | None = None
     session_id: int
 
+
 class MotivationTextUpdateSchema(Schema):
     motivation_text: str | None
     company_id: int

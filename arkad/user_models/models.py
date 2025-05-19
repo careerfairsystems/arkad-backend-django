@@ -82,7 +82,7 @@ class User(AbstractUser):
 class PydanticUser:
     @classmethod
     def __get_pydantic_core_schema__(
-            cls, source_type: Any, handler: GetCoreSchemaHandler
+        cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         return core_schema.no_info_after_validator_function(
             cls.validate,
@@ -95,8 +95,9 @@ class PydanticUser:
             raise ValueError("Expected User instance")
         return v
 
+
 class AuthenticatedRequest(BaseModel):
-    user: 'User'  # Forward reference if needed
+    user: "User"  # Forward reference if needed
 
     class Config:
         arbitrary_types_allowed = True

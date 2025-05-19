@@ -22,5 +22,5 @@ from .api import api
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("email/", include("email_app.urls")),
-    path("api/", api.urls)
+    path("api/", api.urls),
 ]
