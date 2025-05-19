@@ -79,6 +79,16 @@ class StudentSessionTests(TestCase):
         session.save()
         return session
 
+    def test_get_sessions_noauth(self):
+        resp = self.client.get(
+            "/api/student-session/all?only_available_sessions=true",
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp2 = self.client.get(
+            "/api/student-session/all",
+        )
+        self.assertEqual(resp2.status_code, 200)
+
     def test_get_available_sessions(self):
         s1 = self._create_session(self.company_user1)
         s2 = self._create_session(self.company_user2)
@@ -94,6 +104,11 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
+        resp2 = self.client.get(
+            "/api/student-session/all",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp2.status_code, 200)
         data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
 
