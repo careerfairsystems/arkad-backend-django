@@ -6,12 +6,12 @@ from django.utils import timezone
 from companies.models import Company
 from student_sessions.models import (
     StudentSession,
-    CompanyStudentSessionMotivation,
+    CompanyStudentSessionApplicationInformation,
     StudentSessionApplication,
 )
 from student_sessions.schema import (
     CreateStudentSessionSchema,
-    StudentSessionSchema,
+    TimeslotSchema,
     StudentSessionNormalUserListSchema,
     StudentSessionApplicationSchema,
 )
@@ -149,7 +149,7 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.company_user2),
         )
         self.assertEqual(200, other_company.status_code)
-        data = [StudentSessionSchema(**s) for s in other_company.json()]
+        data = [TimeslotSchema(**s) for s in other_company.json()]
         self.assertEqual(len(data), 0)
 
         correct_company = self.client.get(
@@ -157,13 +157,13 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(200, other_company.status_code)
-        data = [StudentSessionSchema(**s) for s in correct_company.json()]
+        data = [TimeslotSchema(**s) for s in correct_company.json()]
         self.assertEqual(len(data), len(sessions))
 
     def test_get_applicants(self):
         session = self._create_session(self.company_user1)
         for s in self.student_users:
-            motivation = CompanyStudentSessionMotivation.objects.create(
+            motivation = CompanyStudentSessionApplicationInformation.objects.create(
                 motivation_text="asd", company=session.company, user=s
             )
             application = StudentSessionApplication.objects.create(
@@ -209,7 +209,7 @@ class StudentSessionTests(TestCase):
         session = self._create_session(self.company_user1)
         session2 = self._create_session(self.company_user1)
         for s in self.student_users:
-            motivation = CompanyStudentSessionMotivation.objects.create(
+            motivation = CompanyStudentSessionApplicationInformation.objects.create(
                 motivation_text="asd", company=session.company, user=s
             )
             application = StudentSessionApplication.objects.create(
@@ -358,7 +358,7 @@ class StudentSessionMotivationTests(TestCase):
         self.client = Client()
 
     def test_create_motivation(self):
-        motivation = CompanyStudentSessionMotivation.objects.create(
+        motivation = CompanyStudentSessionApplicationInformation.objects.create(
             user=self.user, company=self.company, motivation_text="I love this company"
         )
         self.assertEqual(motivation.user, self.user)
@@ -376,7 +376,7 @@ class StudentSessionMotivationTests(TestCase):
         self.assertEqual(motivation.json(), "I love this company")
 
     def test_get_student_session_motivation(self):
-        _ = CompanyStudentSessionMotivation.objects.create(
+        _ = CompanyStudentSessionApplicationInformation.objects.create(
             user=self.user, company=self.company, motivation_text="I love this company"
         )
         resp = self.client.get(
@@ -387,7 +387,7 @@ class StudentSessionMotivationTests(TestCase):
         self.assertEqual(resp.json(), "I love this company")
 
     def test_delete_motivation_by_api(self):
-        motivation = CompanyStudentSessionMotivation.objects.create(
+        motivation = CompanyStudentSessionApplicationInformation.objects.create(
             user=self.user, company=self.company, motivation_text="I love this company"
         )
         resp = self.client.delete(
@@ -396,7 +396,7 @@ class StudentSessionMotivationTests(TestCase):
             headers=self.user.get_auth_headers(),
         )
         self.assertEqual(resp.status_code, 200, resp.json())
-        self.assertFalse(CompanyStudentSessionMotivation.objects.filter(id=motivation.id).exists())
+        self.assertFalse(CompanyStudentSessionApplicationInformation.objects.filter(id=motivation.id).exists())
 
     def test_get_non_existing_motivation(self):
         resp = self.client.get(

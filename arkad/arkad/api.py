@@ -82,6 +82,19 @@ def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
         request, {"detail": "Expired token supplied"}, status=401
     )
 
+@api.exception_handler(jwt.InvalidAlgorithmError)
+def on_invalid_algorithm(request: HttpRequest, exc: Exception) -> HttpResponse:
+    return api.create_response(
+        request, {"detail": "Invalid token"}, status=401
+    )
+
+@api.exception_handler(jwt.InvalidTokenError)
+def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
+    return api.create_response(
+        request, {"detail": "Invalid token"}, status=401
+    )
+
+
 
 @api.get(
     "get-public-key", response={200: PublicKeySchema}, auth=None, tags=["Cryptography"]

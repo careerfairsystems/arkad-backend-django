@@ -1,43 +1,79 @@
 from django.db import models
-from django.db.models import Q, QuerySet, UniqueConstraint
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
+from arkad.email_utils import send_mail
 from user_models.models import User
 from companies.models import Company
 
 
-class CompanyStudentSessionMotivation(models.Model):
+class StudentSessionApplication(models.Model):
+    student_session = models.ForeignKey(
+        "StudentSession",
+        on_delete=models.CASCADE,
+        null=False
+        )
+
+
+    timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    cv = models.FileField("Users cv", upload_to="application/cv", null=True, blank=True)
+    status = models.CharField(
+        max_length=10,
+        choices=[
+            ("pending", "Pending"),
+            ("accepted", "Accepted"),
+            ("rejected", "Rejected"),
+        ],
+        default="pending",
+    )
 
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=["company", "user"], name="unique_student_session_motivation"
+                fields=[
+                    "company",
+                    "user"
+                ], name="unique_student_session_motivation"
             )
         ]
 
+    def __str__(self) -> str:
+        return f"Application by {self.user} to {self.company.name}"
 
-class StudentSessionApplication(models.Model):
-    motivation = models.ForeignKey(
-        CompanyStudentSessionMotivation, on_delete=models.CASCADE
-    )
+    def accept(self) -> None:
+        self.status = "accepted"
 
+        self.email_user("Application accepted",
+                             "Your application has been accepted, enter the app and select a timeslot\n"
+                             "They may run out at any time.\n")
+        self.save()
 
-class StudentSession(models.Model):
-    interviewee = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="interviewee",
-    )
-    company = models.ForeignKey(
-        Company,
+    def is_accepted(self) -> bool:
+        return self.status == "accepted"
+    def is_rejected(self) -> bool:
+        return self.status == "rejected"
+    def is_pending(self) -> bool:
+        return self.status == "pending"
+
+    def email_user(self, subject, message, from_email=None, **kwargs):
+        send_mail(
+            recipient_email=self.user.email, subject=subject, body_text=message, body_html=message,
+        )
+{
+  "password": "testuser123",
+  "email": "lu2166li-s@student.lu.se"
+}
+
+class StudentSessionTimeslot(models.Model):
+    selected = models.OneToOneField(StudentSessionApplication, on_delete=models.SET_NULL, null=True, blank=True)
+    student_session = models.ForeignKey(
+        "StudentSession",
         on_delete=models.CASCADE,
         null=False,
-        related_name="company_representative",
+        related_name="timeslots",
     )
 
     start_time = models.DateTimeField(null=False)
@@ -45,36 +81,29 @@ class StudentSession(models.Model):
         default=30, help_text="Duration of the student session in minutes"
     )
 
+    time_booked = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"Timeslot {self.start_time} - {self.duration} minutes"
+
+
+class StudentSession(models.Model):
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=False,
+        related_name="company_representative",
+    )
+
     booking_close_time = models.DateTimeField(null=True, blank=True)
 
-    applications = models.ManyToManyField(to=StudentSessionApplication)
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(
-                name="No duplicated start time", fields=("start_time", "company")
-            ),
-            UniqueConstraint(
-                name="A single user may only book one session per company",
-                fields=("interviewee", "company"),
-            ),
-        ]
-
-    @property
-    def available(self) -> bool:
-        return self.interviewee is None
 
     @staticmethod
     def available_filter() -> Q:
         return Q(
-            interviewee=None,
             start_time__gte=timezone.now(),
             booking_close_time__gte=timezone.now(),
         )
 
-    @classmethod
-    def available_sessions(cls) -> QuerySet["StudentSession"]:
-        return cls.objects.filter(cls.available_filter()).all()
-
     def __str__(self) -> str:
-        return f"{self.company.name}:  {self.start_time}"
+        return f"ID {self.id}: {self.company.name}"

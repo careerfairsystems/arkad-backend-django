@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
+from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode
 from django.db import models
 from companies.models import Company

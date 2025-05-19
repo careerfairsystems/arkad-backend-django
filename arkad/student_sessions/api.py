@@ -1,4 +1,8 @@
-from django.db import transaction
+import logging
+
+from django.db import transaction, IntegrityError
+from django.db.models.fields.files import FieldFile
+from django.utils import timezone
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
@@ -7,44 +11,44 @@ from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
-    CompanyStudentSessionMotivation,
+    StudentSessionTimeslot
 )
 from student_sessions.schema import (
-    StudentSessionSchema,
+    TimeslotSchema,
     StudentSessionNormalUserListSchema,
     StudentSessionNormalUserSchema,
     CreateStudentSessionSchema,
     ApplicantSchema,
-    StudentSessionApplicationSchema, MotivationTextUpdateSchema,
+    StudentSessionApplicationSchema,
 )
-from companies.models import Company
 from user_models.schema import ProfileSchema
 
 router = Router(tags=["Student Sessions"])
 
+def exhibitor_check(request: AuthenticatedRequest) -> tuple[StudentSession | None, tuple[int, str] | None]:
+    if not request.user.is_company:
+        return None, (401, "Insufficient permissions")
+    try:
+        return StudentSession.objects.get(company_id=request.user.company_id), None
+    except StudentSession.DoesNotExist:
+        return None, (406, "Your company does not have a student session, contact your Arkad representative for help")
+
+
 
 @router.get("/all", response={200: StudentSessionNormalUserListSchema}, auth=None)
-def get_student_sessions(request: AuthenticatedRequest, only_available_sessions: bool = False):
+def get_student_sessions(request: AuthenticatedRequest):
     """
     Returns a list of available student sessions.
-
-    Set only_available_sessions to True to only return available sessions.
     """
-    sessions: list[StudentSession]
-    if only_available_sessions:
-        sessions = list(StudentSession.available_sessions())
-    else:
-        sessions = list(StudentSession.objects.all())
+    sessions: list[StudentSession] = list(StudentSession.objects.all())
 
     return StudentSessionNormalUserListSchema(
         student_sessions=[
             StudentSessionNormalUserSchema(
-                start_time=s.start_time,
-                duration=s.duration,
                 company_id=s.company_id,
                 booking_close_time=s.booking_close_time,
                 id=s.id,
-                available=s.interviewee is None,
+                available=s.booking_close_time > timezone.now() if s.booking_close_time else True,
             )
             for s in sessions
         ],
@@ -52,91 +56,138 @@ def get_student_sessions(request: AuthenticatedRequest, only_available_sessions:
     )
 
 
-@router.post("/exhibitor", response={406: str, 201: StudentSessionSchema, 401: str})
-def create_student_session(request: AuthenticatedRequest, session: CreateStudentSessionSchema):
+@router.post("/exhibitor", response={406: str, 201: TimeslotSchema, 401: str})
+def create_student_session(request: AuthenticatedRequest, data: CreateStudentSessionSchema):
     """
     Creates a student session, user must be an exhibitor.
     """
-    if request.user.is_company:
-        try:
-            return 201, StudentSession.objects.create(
-                company=request.user.company,
-                start_time=session.start_time,
-                duration=session.duration,
-                booking_close_time=session.booking_close_time,
-            )
-        except Company.DoesNotExist:
-            return 406, "Company not found"
-    return 401, "Insufficient permissions"
+    session: StudentSession | None
+    error: tuple[int, str] | None
+    session, error = exhibitor_check(request)
+    if error is not None:
+        return error
 
-
-@router.get("/exhibitor/sessions", response={200: list[StudentSessionSchema], 401: str})
-def get_exhibitor_sessions(request: AuthenticatedRequest):
-    if not request.user.is_company:
-        return 401, "Insufficient permissions"
-    return StudentSession.objects.filter(company=request.user.company).prefetch_related(
-        "interviewee"
+    time_slot = StudentSessionTimeslot.objects.create(
+        start_time=data.start_time,
+        duration=data.duration,
     )
+    session.timeslots.add(time_slot)
+    session.save()
+    return 201, time_slot
+
+
+@router.get("/exhibitor/sessions", response={200: list[TimeslotSchema], 401: str, 406: str})
+def get_exhibitor_sessions(request: AuthenticatedRequest):
+    session: StudentSession | None
+    error: tuple[int, str] | None
+    session, error = exhibitor_check(request)
+    if error is not None:
+        return error
+    return session.timeslots.prefetch_related("selected").all()
 
 
 @router.get(
     "/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str}
 )
-def get_applicants(request: AuthenticatedRequest, session_id: int):
+def get_applicants(request: AuthenticatedRequest):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
     """
-    if not request.user.is_company:
-        return 401, "Insufficient permissions"
-    try:
-        session: StudentSession = StudentSession.objects.get(id=session_id, company=request.user.company)
-    except StudentSession.DoesNotExist:
-        return 404, "Student session not found"
+    session: StudentSession | None
+    error: tuple[int, str] | None
+    session, error = exhibitor_check(request)
+    if error is not None:
+        return error
 
-    return 200, [
-        ApplicantSchema(
-            user=ProfileSchema.from_orm(a.motivation.user),
-            motivation_text=a.motivation.motivation_text,
+    result: list[ApplicantSchema] = []
+    applications = StudentSessionApplication.objects.prefetch_related("user").filter(student_session=session).all()
+    for a in applications:
+        cv: FieldFile | None = a.cv or a.user.cv
+        result.append(
+            ApplicantSchema(
+                user=ProfileSchema.from_orm(a.user),
+                motivation_text=a.motivation_text,
+                cv=cv.url if cv else None,
+            )
         )
-        for a in session.applications.prefetch_related("motivation").all()
-    ]
+    return 200, result
 
 
 @router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
 def accept_student_session(
-    request: AuthenticatedRequest, session_id: int, applicant_user_id: int
+    request: AuthenticatedRequest, applicant_user_id: int
 ):
     """
-    Used to accept a student for a student session, takes in a session_id and an applicant_user_id.
+    Used to accept a student for a student session, takes in an applicant_user_id.
+
+    This will email the user and allow them to select one of the available timeslots connected to this
+    student session.
     """
-    if not request.user.is_company:
-        return 401, "Insufficient permissions"
-    with transaction.atomic():
-        try:
-            session: StudentSession = StudentSession.objects.select_for_update().get(
-                id=session_id, interviewee=None, company=request.user.company
-            )
-        except StudentSession.DoesNotExist:
-            return (
-                401,
-                "Either this timeslot does not exist or an applicant has already been accepted",
-            )
+    session: StudentSession | None
+    error: tuple[int, str] | None
+    session, error = exhibitor_check(request)
+    if error is not None:
+        return error
+    try:
+        applicant = StudentSessionApplication.objects.get(student_session=session, user_id=applicant_user_id)
+        applicant.accept()  # Sends
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Applicant not found"
+    return 200, "Applicant accepted"
 
-        session.interviewee_id = applicant_user_id
-        session.save()
+@router.get("/timeslots", response={200: list[TimeslotSchema], 401: str, 404: str})
+def get_student_session_timeslots(request: AuthenticatedRequest, session_id: int):
+    """
+    Returns a list of timeslots for a student session.
+    Only viewable if accepted
+    """
+    try:
+        application: StudentSessionApplication = StudentSessionApplication.objects.get(user=request.user, student_session_id=session_id)
+        if not application.is_accepted():
+            return 401, "You are not accepted to this session"
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Application not found"
 
-        # Remove this interviewee from the rest of the company's lists
-        assert request.user.company is not None, "Should not be possible to be None"
-        for s in StudentSession.objects.filter(
-            company_id=request.user.company.id,
-            applications__motivation__user__id=applicant_user_id,
-        ):
-            s.applications.filter(motivation__user=applicant_user_id).delete()
-            s.save()
-        return 200, "Accepted user"
+
+    timeslots = StudentSessionTimeslot.objects.filter(student_session_id=session_id).all()
+
+    return 200, [
+        TimeslotSchema(
+            id=timeslot.id,
+            start_time=timeslot.start_time,
+            duration=timeslot.duration,
+            selected=ApplicantSchema.from_orm(timeslot.selected) if timeslot.selected else None,
+        )
+        for timeslot in timeslots
+    ]
+
+@router.post("/accept", response={200: str, 409: str, 401: str, 404: str})
+def confirm_student_session(
+        request: AuthenticatedRequest, session_id: int, timeslot_id: int
+):
+    """
+    Accept a timeslot from some student sessions
+    """
+
+    try:
+        applicant = StudentSessionApplication.objects.get(student_session_id=session_id, user_id=request.user.id)
+        if not applicant.is_accepted():
+            return 409, "Applicant not accepted"
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Application not found"
+
+    try:
+        with transaction.atomic():
+            timeslot: StudentSessionTimeslot = StudentSessionTimeslot.objects.select_for_update().get(id=timeslot_id, selected=None)
+            timeslot.selected = applicant
+            timeslot.time_booked = timezone.now()
+            timeslot.save()
+            return 200, "Student session confirmed"
+    except StudentSessionTimeslot.DoesNotExist:
+        return 404, "Timeslot not found or already taken"
 
 
-@router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
+@router.post("/apply", response={404: str, 409: str, 200: str})
 def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplicationSchema):
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
@@ -153,75 +204,47 @@ def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplica
     except ValidationError as e:
         return 409, str(e.errors())
 
-    with transaction.atomic():
-        try:
-            session: StudentSession = StudentSession.objects.select_for_update().get(
-                id=data.session_id, interviewee=None
-            )
-        except StudentSession.DoesNotExist:
-            return 404, "Session not found or already booked"
-
-        # User already has a booked session with the same company
-        if StudentSession.objects.filter(
-            interviewee_id=request.user.id, company_id=session.company_id
-        ).exists():
-            return 409, "User already booked"
-
-        motivation = CompanyStudentSessionMotivation.objects.get_or_create(
-            user=request.user, company=session.company
-        )[0]
-        if data.motivation_text is not None:
-            motivation.motivation_text = data.motivation_text
-            motivation.save()
-        application: StudentSessionApplication = (
-            StudentSessionApplication.objects.create(motivation=motivation)
+    try:
+        session: StudentSession = StudentSession.objects.get(
+            id=data.session_id, booking_close_time__gte=timezone.now()
         )
-        session.applications.add(application)
-        session.save()
-    return 200, session
+    except StudentSession.DoesNotExist:
+        return 404, "Session not found, or booking has closed"
 
-@router.get("/motivation", response={200: str | None})
-def get_student_session_motivation(request: AuthenticatedRequest, company_id: int):
+    if data.update_profile:
+        request.user.programme = data.programme
+        request.user.linkedin = data.linkedin
+        request.user.master_title = data.master_title
+        request.user.study_year = data.study_year
+        request.user.save()
+
+    try:
+        StudentSessionApplication.objects.create(
+            user=request.user,
+            company=session.company,
+            student_session=session,
+            motivation_text=data.motivation_text,
+            cv=data.cv,
+        )
+    except IntegrityError as e:
+        logging.exception(e)
+        return 409, "You have already applied to this session"
+
+    return 200, "You have now applied to the session"
+
+@router.get("/application", response={200: StudentSessionApplicationSchema | None})
+def get_student_session_application(request: AuthenticatedRequest, company_id: int):
     """
     Returns the motivation text for the current user.
 
     If one does not exist or is explicitly None, None is returned
     """
     try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
-        return 200, motivation.motivation_text
-    except CompanyStudentSessionMotivation.DoesNotExist:
+        application = StudentSessionApplication.objects.get(user=request.user, company_id=company_id)
+        return 200, StudentSessionApplicationSchema(
+            motivation_text=application.motivation_text,
+            cv=application.cv.url if application.cv else (request.user.cv.url if request.user.cv else None),
+            session_id=application.student_session_id
+        )
+    except StudentSessionApplication.DoesNotExist:
         return 200, None
-
-
-@router.put("/motivation", response={200: str | None})
-def update_student_session_motivation(request: AuthenticatedRequest, data: MotivationTextUpdateSchema):
-    """
-    Updates the motivation text for the current user.
-
-    If one does not exist, it is created
-    """
-    try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=data.company_id)
-        motivation.motivation_text = data.motivation_text
-        motivation.save()
-        return 200, motivation.motivation_text
-    except CompanyStudentSessionMotivation.DoesNotExist:
-        motivation = CompanyStudentSessionMotivation.objects.create(user=request.user,
-                                                                    company_id=data.company_id,
-                                                                    motivation_text=data.motivation_text)
-        return 200, motivation.motivation_text
-
-@router.delete("/motivation", response={200: str, 404: str})
-def delete_student_session_motivation(request: AuthenticatedRequest, company_id: int):
-    """
-    Deletes the motivation text for the current user.
-
-    If one does not exist, a 404 is returned
-    """
-    try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
-        motivation.delete()
-        return 200, "Deleted motivation text"
-    except CompanyStudentSessionMotivation.DoesNotExist:
-        return 404, "Motivation text does not exist"
