@@ -27,7 +27,6 @@ class StudentSessionTests(TestCase):
             email="a@company.com",
             password="PASSWORD",
             username="Company",
-            is_company=True,
             company=Company.objects.create(name="Orkla"),
         )
         self.company_user2 = User.objects.create_user(
@@ -36,7 +35,6 @@ class StudentSessionTests(TestCase):
             email="a@company.com",
             password="PASSWORD",
             username="Company2",
-            is_company=True,
             company=Company.objects.create(name="Axis"),
         )
 
@@ -51,7 +49,6 @@ class StudentSessionTests(TestCase):
                     password="PASSWORD",
                     username="Student" + str(i),
                     is_student=True,
-                    is_company=False,
                 )
             )
         self.client = Client()
@@ -61,9 +58,8 @@ class StudentSessionTests(TestCase):
         return {"Authorization": user.create_jwt_token()}
 
     @staticmethod
-    def _session_schema_example(company, **kwargs):
+    def _session_schema_example(**kwargs):
         defaults = dict(
-            company_id=company.company_id,
             start_time=timezone.now() + datetime.timedelta(hours=1),
             duration=30,
             booking_close_time=timezone.now() + datetime.timedelta(minutes=10),
@@ -72,9 +68,10 @@ class StudentSessionTests(TestCase):
         return CreateStudentSessionSchema(**defaults)
 
     @classmethod
-    def _create_session(cls, company, **kwargs):
+    def _create_session(cls, user: User, **kwargs):
         session = StudentSession.objects.create(
-            **cls._session_schema_example(company=company, **kwargs).model_dump()
+            **cls._session_schema_example(**kwargs).model_dump(),
+            company=user.company
         )
         session.save()
         return session
@@ -120,7 +117,7 @@ class StudentSessionTests(TestCase):
     def test_create_student_session(self):
         resp = self.client.post(
             "/api/student-session/exhibitor",
-            data=self._session_schema_example(self.company_user1).model_dump(),
+            data=self._session_schema_example().model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.company_user1),
         )
@@ -129,14 +126,7 @@ class StudentSessionTests(TestCase):
     def test_permission_create_student_session(self):
         resp = self.client.post(
             "/api/student-session/exhibitor",
-            data=self._session_schema_example(self.company_user2).model_dump(),
-            content_type="application/json",
-            headers=self._get_auth_headers(self.company_user1),
-        )
-        self.assertEqual(resp.status_code, 401)
-        resp = self.client.post(
-            "/api/student-session/exhibitor",
-            data=self._session_schema_example(self.company_user2).model_dump(),
+            data=self._session_schema_example().model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
@@ -191,12 +181,13 @@ class StudentSessionTests(TestCase):
             ).status_code,
         )
         self.assertEqual(
-            401,
+            404,
             self.client.get(
                 "/api/student-session/exhibitor/applicants?session_id="
                 + str(session.id),
                 headers=self._get_auth_headers(self.company_user2),
             ).status_code,
+            "Should return 404 as the session is owned by another company"
         )
         self.assertEqual(
             404,
@@ -242,7 +233,7 @@ class StudentSessionTests(TestCase):
         self.assertEqual(401, resp.status_code)
 
         resp = self.client.post(url, headers=self._get_auth_headers(self.company_user2))
-        self.assertEqual(401, resp.status_code)
+        self.assertEqual(401, resp.status_code, "Should not work as it is the wrong company")
 
         resp = self.client.post(url, headers=self._get_auth_headers(self.company_user1))
         self.assertEqual(200, resp.status_code)
@@ -256,7 +247,7 @@ class StudentSessionTests(TestCase):
             f"?session_id={session.id}&applicant_user_id={self.student_users[-2].id}"
         )
         resp = self.client.post(url, headers=self._get_auth_headers(self.company_user1))
-        self.assertEqual(404, resp.status_code)
+        self.assertEqual(401, resp.status_code, resp.content)
 
     def test_apply_for_sessions(self):
         session1 = self._create_session(self.company_user1)
@@ -292,7 +283,6 @@ class StudentSessionTests(TestCase):
             password="PASSWORD",
             username="Student12312",
             is_student=True,
-            is_company=False,
         )
         resp = self.client.post(
             url,
@@ -364,7 +354,6 @@ class StudentSessionMotivationTests(TestCase):
             email="a@lu.com",
             password="PASSWORD",
             username="Company",
-            is_company=False,
         )
         self.client = Client()
 

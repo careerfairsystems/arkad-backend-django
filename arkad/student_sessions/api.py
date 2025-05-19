@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
@@ -58,11 +57,10 @@ def create_student_session(request: AuthenticatedRequest, session: CreateStudent
     """
     Creates a student session, user must be an exhibitor.
     """
-    company_id: int = session.company_id
-    if request.user.is_company_admin(company_id):
+    if request.user.is_company:
         try:
             return 201, StudentSession.objects.create(
-                company=Company.objects.get(id=company_id),
+                company=request.user.company,
                 start_time=session.start_time,
                 duration=session.duration,
                 booking_close_time=session.booking_close_time,
@@ -88,13 +86,13 @@ def get_applicants(request: AuthenticatedRequest, session_id: int):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
     """
+    if not request.user.is_company:
+        return 401, "Insufficient permissions"
     try:
-        session: StudentSession = StudentSession.objects.get(id=session_id)
+        session: StudentSession = StudentSession.objects.get(id=session_id, company=request.user.company)
     except StudentSession.DoesNotExist:
         return 404, "Student session not found"
 
-    if not request.user.is_company_admin(session.company_id):
-        return 401, "Insufficient permissions"
     return 200, [
         ApplicantSchema(
             user=ProfileSchema.from_orm(a.motivation.user),
@@ -111,19 +109,18 @@ def accept_student_session(
     """
     Used to accept a student for a student session, takes in a session_id and an applicant_user_id.
     """
+    if not request.user.is_company:
+        return 401, "Insufficient permissions"
     with transaction.atomic():
         try:
             session: StudentSession = StudentSession.objects.select_for_update().get(
-                id=session_id, interviewee=None
+                id=session_id, interviewee=None, company=request.user.company
             )
         except StudentSession.DoesNotExist:
             return (
-                404,
+                401,
                 "Either this timeslot does not exist or an applicant has already been accepted",
             )
-
-        if not request.user.is_company_admin(session.company_id):
-            return 401, "Insufficient permissions"
 
         session.interviewee_id = applicant_user_id
         session.save()

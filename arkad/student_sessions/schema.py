@@ -7,7 +7,6 @@ from user_models.schema import ProfileSchema
 class StudentSessionSchema(Schema):
     start_time: datetime
     duration: int
-    company_id: int
     interviewee: Optional[ProfileSchema] = None
     booking_close_time: datetime
     id: int
@@ -17,7 +16,6 @@ class CreateStudentSessionSchema(Schema):
     start_time: datetime
     duration: int
     booking_close_time: datetime
-    company_id: int
 
 
 class StudentSessionListSchema(Schema):
@@ -45,6 +43,19 @@ class ApplicantSchema(Schema):
 
 
 class StudentSessionApplicationSchema(Schema):
+    class ProfileSchema(Schema):
+        # If update_profile update user data
+        # Keep this separate per application otherwise or both cases.
+        cv: str | None = None
+        profile_picture: str | None = None
+        programme: str | None = None
+        linkedin: str | None = None
+        master_title: str | None = None
+        study_year: int | None = None
+        update_profile: bool
+
+
+
     motivation_text: str | None = None
     session_id: int
 
