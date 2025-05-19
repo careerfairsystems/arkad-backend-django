@@ -6,12 +6,13 @@ import secrets
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import HttpRequest
 from ninja import File, UploadedFile, PatchDict
 
+from arkad import settings
 from arkad.customized_django_ninja import Router
-from email_app.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
 from user_models.models import User, AuthenticatedRequest
@@ -21,6 +22,7 @@ from user_models.schema import (
     SignupSchema,
     UpdateProfileSchema,
     CompleteSignupSchema,
+    ResetPasswordSchema,
 )
 from hashlib import sha256
 
@@ -55,7 +57,13 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     code = ("0" * (6 - len(code)) + code)[:6]
     salt: str = generate_salt()
     # Send 2fa code
-    send_mail(data.email, code, code, code)  # TODO: Make this nice
+    send_mail(
+        subject=code,
+        message=f"Your 2fa code is {code}",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[data.email],
+        html_message=code,
+    )  # TODO: Make this nice
     return 200, jwt_encode(
         {
             "code2fa": sha256(
@@ -122,6 +130,15 @@ def signin(request: HttpRequest, data: SigninSchema):
         return 401, "Invalid email or password"
     login(request, user)
     return 200, user.create_jwt_token()
+
+
+@auth.post("reset-password", auth=None, response={200: str})
+def reset_password(request: HttpRequest, data: ResetPasswordSchema):
+    """
+    Just for testing purposes atm. Only returns response 200.
+    """
+
+    return 200, "Ok"
 
 
 @profile.get("", response={200: ProfileSchema})

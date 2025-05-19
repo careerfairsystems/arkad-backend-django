@@ -49,6 +49,10 @@ class UpdateProfileSchema(Schema):
     food_preferences: str | None = None
 
 
+class ResetPasswordSchema(Schema):
+    email: str
+
+
 class CompanySchema(Schema):
     id: int
     name: str
