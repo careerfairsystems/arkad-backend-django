@@ -19,9 +19,9 @@ class Router(ninja.Router):
     """
 
     @override
-    def add_api_operation(
+    def add_api_operation(  # type: ignore[override]
         self, *args: Any, by_alias: bool = True, **kwargs: Any
-    ) -> None:  # type: ignore[override]
+    ) -> None:
         if "by_alias" in kwargs and not kwargs["by_alias"]:
             raise ValueError("By_alias should not be set in add_api_operation")
         kwargs["by_alias"] = True
