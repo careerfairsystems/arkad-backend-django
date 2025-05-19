@@ -33,6 +33,13 @@ class Programme(models.TextChoices):
     TEKNISK_FYSIK = "Teknisk Fysik"
     BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
 
+class Favourites(models.Model):
+    time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    company = models.ForeignKey(Company, blank=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.time} lades {self.company} till"
+
 
 class User(AbstractUser):
     first_name = models.CharField("first name", max_length=150, blank=True, null=True)  # type: ignore[misc]
@@ -57,6 +64,7 @@ class User(AbstractUser):
     linkedin = models.URLField(blank=True, null=True)
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
+    favourites = models.ManyToManyField(Favourites, blank=True)
 
     def __str__(self) -> str:
         name: str = (self.first_name or "") + " " + (self.last_name or "")
