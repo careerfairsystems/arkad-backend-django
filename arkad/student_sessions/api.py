@@ -254,7 +254,7 @@ def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplica
 
     return 200, "You have now applied to the session"
 
-@router.get("/application", response={200: StudentSessionApplicationSchema | None})
+@router.get("/application", response={200: StudentSessionApplicationSchema, 404: str})
 def get_student_session_application(request: AuthenticatedRequest, company_id: int):
     """
     Returns the motivation text for the current user.
@@ -269,4 +269,4 @@ def get_student_session_application(request: AuthenticatedRequest, company_id: i
             session_id=application.student_session_id
         )
     except StudentSessionApplication.DoesNotExist:
-        return 200, "Application not found"
+        return 404, "Application not found"
