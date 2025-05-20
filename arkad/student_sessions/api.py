@@ -186,6 +186,27 @@ def confirm_student_session(
     except StudentSessionTimeslot.DoesNotExist:
         return 404, "Timeslot not found or already taken"
 
+@router.post("/unbook", response={200: str, 401: str, 404: str})
+def unbook_student_session(request: AuthenticatedRequest, session_id: int):
+    """
+    Unbook a timeslot from some student sessions
+    """
+
+    try:
+        application = StudentSessionApplication.objects.get(student_session_id=session_id, user_id=request.user.id)
+        if not application.is_accepted():
+            return 409, "Applicant not accepted"
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Application not found"
+
+    try:
+        timeslot: StudentSessionTimeslot = StudentSessionTimeslot.objects.get(selected=application)
+        timeslot.selected = None
+        timeslot.time_booked = None
+        timeslot.save()
+        return 200, "Student session unbooked"
+    except StudentSessionTimeslot.DoesNotExist:
+        return 404, "Timeslot not found or already taken"
 
 @router.post("/apply", response={404: str, 409: str, 200: str})
 def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplicationSchema):
