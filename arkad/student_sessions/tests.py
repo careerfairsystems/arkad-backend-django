@@ -6,8 +6,8 @@ from django.utils import timezone
 from companies.models import Company
 from student_sessions.models import (
     StudentSession,
-    CompanyStudentSessionApplicationInformation,
     StudentSessionApplication,
+    StudentSessionTimeslot
 )
 from student_sessions.schema import (
     CreateStudentSessionSchema,

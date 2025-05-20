@@ -70,6 +70,7 @@ def create_student_session(request: AuthenticatedRequest, data: CreateStudentSes
     time_slot = StudentSessionTimeslot.objects.create(
         start_time=data.start_time,
         duration=data.duration,
+        student_session=StudentSession.objects.get(company_id=request.user.company_id),
     )
     session.timeslots.add(time_slot)
     session.save()
@@ -268,4 +269,4 @@ def get_student_session_application(request: AuthenticatedRequest, company_id: i
             session_id=application.student_session_id
         )
     except StudentSessionApplication.DoesNotExist:
-        return 200, None
+        return 200, "Application not found"
