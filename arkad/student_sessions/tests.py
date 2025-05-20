@@ -394,3 +394,143 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.student_users[0])
         )
         self.assertEqual(resp.status_code, 404, resp.content)
+
+    def test_application_updates_profile(self):
+        """Test that student's profile is updated when update_profile=True"""
+        session = self._create_student_session(self.company_user1.company)
+
+        student = self.student_users[0]
+        # Set initial values to verify update
+        student.programme = "Initial"
+        student.study_year = 1
+        student.linkedin = "linkedin.com/in/old"
+        student.master_title = "Old Title"
+        student.save()
+
+        application_data = {
+            "session_id": session.id,
+            "motivation_text": "Profile update test",
+            "update_profile": True,
+            "programme": "New Programme",
+            "study_year": 3,
+            "linkedin": "linkedin.com/in/new",
+            "master_title": "New Master Title"
+        }
+
+        resp = self.client.post(
+            "/api/student-session/apply",
+            data=application_data,
+            content_type="application/json",
+            headers=self._get_auth_headers(student)
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # Refresh profile from DB
+        student.refresh_from_db()
+        self.assertEqual(student.programme, "New Programme")
+        self.assertEqual(student.study_year, 3)
+        self.assertEqual(student.linkedin, "linkedin.com/in/new")
+        self.assertEqual(student.master_title, "New Master Title")
+
+    def test_get_application_by_unauthorized_user(self):
+        """Test that a user cannot retrieve another user's application"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create application for student 0
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            company=session.company,
+            student_session=session,
+            motivation_text="Test motivation"
+        )
+
+        # Attempt to retrieve application as student 1
+        resp = self.client.get(
+            f"/api/student-session/application?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[1])
+        )
+        self.assertEqual(resp.status_code, 404)
+
+
+    def test_unbook_timeslot_by_another_student(self):
+        """Test that a student cannot unbook a timeslot they did not book"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept application for student 0
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            company=session.company,
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted"
+        )
+
+        # Create timeslot and assign it to student 0
+        timeslot = self._create_timeslot(session)
+        timeslot.selected = application
+        timeslot.time_booked = timezone.now()
+        timeslot.save()
+
+        # Attempt to unbook timeslot as student 1
+        resp = self.client.post(
+            f"/api/student-session/unbook?session_id={session.id}",
+            headers=self._get_auth_headers(self.student_users[1])
+        )
+        self.assertEqual(resp.status_code, 404)  # Forbidden due to not owning the booking
+
+    def test_timeslot_selection_by_another_company(self):
+        """Test that a company cannot select timeslot for a session it does not own"""
+        session = self._create_student_session(self.company_user1.company)
+        timeslot = self._create_timeslot(session)
+
+        # Attempt to select timeslot as another company
+        resp = self.client.post(
+            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            headers=self._get_auth_headers(self.company_user2)
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_timeslot_selection_by_non_accepted_student(self):
+        """Test that non-accepted students cannot select timeslots"""
+        session = self._create_student_session(self.company_user1.company)
+        timeslot = self._create_timeslot(session)
+
+        # Create application with 'pending' status
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            company=session.company,
+            student_session=session,
+            motivation_text="Please accept me",
+            status="pending"
+        )
+
+        # Attempt to select timeslot
+        resp = self.client.post(
+            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(resp.status_code, 409)
+
+    def test_booking_after_close_time(self):
+        """Test that booking is not allowed after booking_close_time"""
+        session = self._create_student_session(self.company_user1.company)
+        session.booking_close_time = timezone.now() - datetime.timedelta(hours=1)
+        session.save()
+
+        application_data = {
+            "session_id": session.id,
+            "motivation_text": "Late application",
+            "update_profile": True,
+            "programme": "Computer Science",
+            "study_year": 3,
+            "linkedin": "linkedin.com/in/student0",
+            "master_title": "Software Engineering"
+        }
+
+        resp = self.client.post(
+            "/api/student-session/apply",
+            data=application_data,
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0])
+        )
+        self.assertEqual(resp.status_code, 404)
