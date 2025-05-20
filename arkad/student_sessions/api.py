@@ -249,7 +249,6 @@ def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplica
             cv=data.cv,
         )
     except IntegrityError as e:
-        logging.exception(e)
         return 409, "You have already applied to this session"
 
     return 200, "You have now applied to the session"
