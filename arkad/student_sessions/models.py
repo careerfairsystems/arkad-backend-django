@@ -42,7 +42,7 @@ class StudentSessionApplication(models.Model):
     def accept(self) -> None:
         self.status = "accepted"
 
-        self.email_user(  # type: ignore[no-untyped-call]
+        self.email_user(
             "Application accepted",
             "Your application has been accepted, enter the app and select a timeslot\n"
             "They may run out at any time.\n",
