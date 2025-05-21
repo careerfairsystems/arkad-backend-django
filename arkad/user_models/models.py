@@ -5,7 +5,6 @@ from django.contrib.auth.models import AbstractUser
 from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
-from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode
 from django.db import models
 from companies.models import Company
@@ -62,7 +61,6 @@ class User(AbstractUser):
     def is_company(self) -> bool:
         return self.company is not None
 
-
     def __str__(self) -> str:
         name: str = (self.first_name or "") + " " + (self.last_name or "")
         if self.first_name is None and self.last_name is None:
@@ -84,7 +82,7 @@ class User(AbstractUser):
 class PydanticUser:
     @classmethod
     def __get_pydantic_core_schema__(
-            cls, source_type: Any, handler: GetCoreSchemaHandler
+        cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         return core_schema.no_info_after_validator_function(
             cls.validate,
@@ -97,8 +95,9 @@ class PydanticUser:
             raise ValueError("Expected User instance")
         return v
 
+
 class AuthenticatedRequest(BaseModel):
-    user: 'User'  # Forward reference if needed
+    user: "User"  # Forward reference if needed
 
     class Config:
         arbitrary_types_allowed = True

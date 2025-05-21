@@ -29,6 +29,7 @@ class AuthBearer(HttpBearer):
         request.user = user
         return user
 
+
 class CustomNinjaAPI(NinjaAPI):
     @override
     def add_router(
@@ -57,11 +58,12 @@ class CustomNinjaAPI(NinjaAPI):
             parent_router=parent_router,
         )
 
+
 api = CustomNinjaAPI(
     title="Arkad API",
     docs=Swagger(settings={"persistAuthorization": True}),
     auth=AuthBearer(),
-    default_router=Router()
+    default_router=Router(),
 )
 api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
@@ -70,6 +72,7 @@ api.add_router("events", event_booking_router)
 
 
 @api.exception_handler(jwt.InvalidKeyError)
+@api.exception_handler(jwt.InvalidTokenError)
 def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
         request, {"detail": "Invalid token supplied"}, status=401
@@ -82,18 +85,10 @@ def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
         request, {"detail": "Expired token supplied"}, status=401
     )
 
+
 @api.exception_handler(jwt.InvalidAlgorithmError)
 def on_invalid_algorithm(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(
-        request, {"detail": "Invalid token"}, status=401
-    )
-
-@api.exception_handler(jwt.InvalidTokenError)
-def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
-    return api.create_response(
-        request, {"detail": "Invalid token"}, status=401
-    )
-
+    return api.create_response(request, {"detail": "Invalid token"}, status=401)
 
 
 @api.get(

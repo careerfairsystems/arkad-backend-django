@@ -3,6 +3,7 @@ from typing import List, Optional
 from arkad.customized_django_ninja import Schema
 from user_models.schema import ProfileSchema
 
+
 class StudentSessionApplicationSchema(Schema):
     cv: str | None = None
     profile_picture: str | None = None
@@ -14,10 +15,12 @@ class StudentSessionApplicationSchema(Schema):
     update_profile: bool | None = None
     session_id: int
 
+
 class ApplicantSchema(Schema):
     user: ProfileSchema
     cv: str | None = None
     motivation_text: str
+
 
 class TimeslotSchema(Schema):
     start_time: datetime
@@ -47,6 +50,7 @@ class StudentSessionNormalUserSchema(Schema):
 class StudentSessionNormalUserListSchema(Schema):
     student_sessions: List[StudentSessionNormalUserSchema]
     numElements: int
+
 
 class MotivationTextUpdateSchema(Schema):
     motivation_text: str | None

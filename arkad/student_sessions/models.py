@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
@@ -9,11 +11,8 @@ from companies.models import Company
 
 class StudentSessionApplication(models.Model):
     student_session = models.ForeignKey(
-        "StudentSession",
-        on_delete=models.CASCADE,
-        null=False
-        )
-
+        "StudentSession", on_delete=models.CASCADE, null=False
+    )
 
     timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
@@ -33,10 +32,7 @@ class StudentSessionApplication(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=[
-                    "company",
-                    "user"
-                ], name="unique_student_session_motivation"
+                fields=["company", "user"], name="unique_student_session_motivation"
             )
         ]
 
@@ -46,29 +42,35 @@ class StudentSessionApplication(models.Model):
     def accept(self) -> None:
         self.status = "accepted"
 
-        self.email_user("Application accepted",
-                             "Your application has been accepted, enter the app and select a timeslot\n"
-                             "They may run out at any time.\n")
+        self.email_user(  # type: ignore[no-untyped-call]
+            "Application accepted",
+            "Your application has been accepted, enter the app and select a timeslot\n"
+            "They may run out at any time.\n",
+        )
         self.save()
 
     def is_accepted(self) -> bool:
         return self.status == "accepted"
+
     def is_rejected(self) -> bool:
         return self.status == "rejected"
+
     def is_pending(self) -> bool:
         return self.status == "pending"
 
-    def email_user(self, subject, message, from_email=None, **kwargs):
+    def email_user(self, subject: str, message: str, **kwargs: Any) -> None:
         send_mail(
-            recipient_email=self.user.email, subject=subject, body_text=message, body_html=message,
+            recipient_email=self.user.email,
+            subject=subject,
+            body_text=message,
+            body_html=message,
         )
-{
-  "password": "testuser123",
-  "email": "lu2166li-s@student.lu.se"
-}
+
 
 class StudentSessionTimeslot(models.Model):
-    selected = models.OneToOneField(StudentSessionApplication, on_delete=models.SET_NULL, null=True, blank=True)
+    selected = models.OneToOneField(
+        StudentSessionApplication, on_delete=models.SET_NULL, null=True, blank=True
+    )
     student_session = models.ForeignKey(
         "StudentSession",
         on_delete=models.CASCADE,
@@ -96,7 +98,6 @@ class StudentSession(models.Model):
     )
 
     booking_close_time = models.DateTimeField(null=True, blank=True)
-
 
     @staticmethod
     def available_filter() -> Q:

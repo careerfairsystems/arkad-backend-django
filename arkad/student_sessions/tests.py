@@ -7,13 +7,11 @@ from companies.models import Company
 from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
-    StudentSessionTimeslot
+    StudentSessionTimeslot,
 )
 from student_sessions.schema import (
     CreateStudentSessionSchema,
-    TimeslotSchema,
     StudentSessionNormalUserListSchema,
-    StudentSessionApplicationSchema,
 )
 from user_models.models import User
 
@@ -61,7 +59,7 @@ class StudentSessionTests(TestCase):
         """Create a student session with a company"""
         return StudentSession.objects.create(
             company=company,
-            booking_close_time=timezone.now() + datetime.timedelta(days=1)
+            booking_close_time=timezone.now() + datetime.timedelta(days=1),
         )
 
     @staticmethod
@@ -69,12 +67,11 @@ class StudentSessionTests(TestCase):
         """Create a timeslot for a student session"""
         defaults = {
             "start_time": timezone.now() + datetime.timedelta(hours=1),
-            "duration": 30
+            "duration": 30,
         }
         defaults.update(kwargs)
         return StudentSessionTimeslot.objects.create(
-            student_session=student_session,
-            **defaults
+            student_session=student_session, **defaults
         )
 
     def test_get_sessions_noauth(self):
@@ -90,13 +87,12 @@ class StudentSessionTests(TestCase):
 
     def test_exhibitor_create_timeslot(self):
         """Test that exhibitors can create timeslots"""
-        session = self._create_student_session(self.company_user1.company)
+        _ = self._create_student_session(self.company_user1.company)
 
         session_data = CreateStudentSessionSchema(
             start_time=timezone.now() + datetime.timedelta(hours=10),
             duration=30,
             booking_close_time=timezone.now() + datetime.timedelta(hours=1),
-
         ).model_dump()
 
         # Test with incorrect permissions - should get 422 for validation error
@@ -104,7 +100,7 @@ class StudentSessionTests(TestCase):
             "/api/student-session/exhibitor",
             data=session_data,
             content_type="application/json",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 401)  # Updated from 401 to 422
 
@@ -113,7 +109,7 @@ class StudentSessionTests(TestCase):
             "/api/student-session/exhibitor",
             data=session_data,
             content_type="application/json",
-            headers=self._get_auth_headers(self.company_user1)
+            headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 201, resp.content)
 
@@ -129,21 +125,21 @@ class StudentSessionTests(TestCase):
         # Test with student user (should fail)
         resp = self.client.get(
             "/api/student-session/exhibitor/sessions",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 401)
 
         # Test with wrong company user
         resp = self.client.get(
             "/api/student-session/exhibitor/sessions",
-            headers=self._get_auth_headers(self.company_user2)
+            headers=self._get_auth_headers(self.company_user2),
         )
         self.assertEqual(resp.status_code, 406, resp.content)
 
         # Test with correct company user
         resp = self.client.get(
             "/api/student-session/exhibitor/sessions",
-            headers=self._get_auth_headers(self.company_user1)
+            headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 200)
         timeslots = resp.json()
@@ -160,31 +156,33 @@ class StudentSessionTests(TestCase):
             "programme": "Computer Science",
             "study_year": 3,
             "linkedin": "linkedin.com/in/student0",
-            "master_title": "Software Engineering"
+            "master_title": "Software Engineering",
         }
 
         resp = self.client.post(
             "/api/student-session/apply",
             data=application_data,
             content_type="application/json",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
 
         # Check application was created
         applications = StudentSessionApplication.objects.filter(
-            user=self.student_users[0],
-            student_session=session
+            user=self.student_users[0], student_session=session
         )
         self.assertEqual(applications.count(), 1)
-        self.assertEqual(applications.first().motivation_text, "I would love to meet with your company")
+        self.assertEqual(
+            applications.first().motivation_text,
+            "I would love to meet with your company",
+        )
 
         # Test duplicate application
         resp = self.client.post(
             "/api/student-session/apply",
             data=application_data,
             content_type="application/json",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 409)  # Should get conflict error
 
@@ -198,13 +196,13 @@ class StudentSessionTests(TestCase):
                 user=self.student_users[i],
                 company=session.company,
                 student_session=session,
-                motivation_text=f"Test motivation {i}"
+                motivation_text=f"Test motivation {i}",
             )
 
         # Test with wrong user
         resp = self.client.get(
             "/api/student-session/exhibitor/applicants",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 401)
 
@@ -213,7 +211,7 @@ class StudentSessionTests(TestCase):
         try:
             resp = self.client.get(
                 "/api/student-session/exhibitor/applicants",
-                headers=self._get_auth_headers(self.company_user2)
+                headers=self._get_auth_headers(self.company_user2),
             )
             self.assertEqual(resp.status_code, 406)
         except Exception as e:
@@ -226,7 +224,7 @@ class StudentSessionTests(TestCase):
         # Test with correct company
         resp = self.client.get(
             "/api/student-session/exhibitor/applicants",
-            headers=self._get_auth_headers(self.company_user1)
+            headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -242,13 +240,13 @@ class StudentSessionTests(TestCase):
             user=self.student_users[0],
             company=session.company,
             student_session=session,
-            motivation_text="Please accept me"
+            motivation_text="Please accept me",
         )
 
         # Test accepting with wrong user
         resp = self.client.post(
             f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
-            headers=self._get_auth_headers(self.student_users[1])
+            headers=self._get_auth_headers(self.student_users[1]),
         )
         self.assertEqual(resp.status_code, 401)
 
@@ -257,7 +255,7 @@ class StudentSessionTests(TestCase):
         try:
             resp = self.client.post(
                 f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
-                headers=self._get_auth_headers(self.company_user2)
+                headers=self._get_auth_headers(self.company_user2),
             )
             self.assertEqual(resp.status_code, 406)
         except Exception as e:
@@ -270,7 +268,7 @@ class StudentSessionTests(TestCase):
         # Test accepting with correct company
         resp = self.client.post(
             f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
-            headers=self._get_auth_headers(self.company_user1)
+            headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -289,13 +287,13 @@ class StudentSessionTests(TestCase):
             company=session.company,
             student_session=session,
             motivation_text="Please accept me",
-            status="accepted"  # Pre-accept for test
+            status="accepted",  # Pre-accept for test
         )
 
         # Test viewing timeslots
         resp = self.client.get(
             f"/api/student-session/timeslots?session_id={session.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 1)
@@ -303,7 +301,7 @@ class StudentSessionTests(TestCase):
         # Test selecting timeslot
         resp = self.client.post(
             f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -313,17 +311,17 @@ class StudentSessionTests(TestCase):
         self.assertIsNotNone(timeslot.time_booked)
 
         # Test with another student who should not be able to select the same timeslot
-        application2 = StudentSessionApplication.objects.create(
+        _ = StudentSessionApplication.objects.create(
             user=self.student_users[1],
             company=session.company,
             student_session=session,
             motivation_text="Please accept me too",
-            status="accepted"
+            status="accepted",
         )
 
         resp = self.client.post(
             f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
-            headers=self._get_auth_headers(self.student_users[1])
+            headers=self._get_auth_headers(self.student_users[1]),
         )
         self.assertEqual(resp.status_code, 404)  # Timeslot not found or already taken
 
@@ -337,7 +335,7 @@ class StudentSessionTests(TestCase):
             company=session.company,
             student_session=session,
             motivation_text="Please accept me",
-            status="accepted"
+            status="accepted",
         )
 
         # Create timeslot and assign it to the student
@@ -349,7 +347,7 @@ class StudentSessionTests(TestCase):
         # Test unbooking
         resp = self.client.post(
             f"/api/student-session/unbook?session_id={session.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -363,17 +361,17 @@ class StudentSessionTests(TestCase):
         session = self._create_student_session(self.company_user1.company)
 
         # Create application
-        application = StudentSessionApplication.objects.create(
+        _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
             company=session.company,
             student_session=session,
-            motivation_text="Test motivation"
+            motivation_text="Test motivation",
         )
 
         # Test getting application
         resp = self.client.get(
             f"/api/student-session/application?company_id={session.company.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -391,7 +389,7 @@ class StudentSessionTests(TestCase):
 
         resp = self.client.get(
             f"/api/student-session/application?company_id={company.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 404, resp.content)
 
@@ -414,14 +412,14 @@ class StudentSessionTests(TestCase):
             "programme": "New Programme",
             "study_year": 3,
             "linkedin": "linkedin.com/in/new",
-            "master_title": "New Master Title"
+            "master_title": "New Master Title",
         }
 
         resp = self.client.post(
             "/api/student-session/apply",
             data=application_data,
             content_type="application/json",
-            headers=self._get_auth_headers(student)
+            headers=self._get_auth_headers(student),
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -437,20 +435,19 @@ class StudentSessionTests(TestCase):
         session = self._create_student_session(self.company_user1.company)
 
         # Create application for student 0
-        application = StudentSessionApplication.objects.create(
+        _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
             company=session.company,
             student_session=session,
-            motivation_text="Test motivation"
+            motivation_text="Test motivation",
         )
 
         # Attempt to retrieve application as student 1
         resp = self.client.get(
             f"/api/student-session/application?company_id={session.company.id}",
-            headers=self._get_auth_headers(self.student_users[1])
+            headers=self._get_auth_headers(self.student_users[1]),
         )
         self.assertEqual(resp.status_code, 404)
-
 
     def test_unbook_timeslot_by_another_student(self):
         """Test that a student cannot unbook a timeslot they did not book"""
@@ -462,7 +459,7 @@ class StudentSessionTests(TestCase):
             company=session.company,
             student_session=session,
             motivation_text="Please accept me",
-            status="accepted"
+            status="accepted",
         )
 
         # Create timeslot and assign it to student 0
@@ -474,9 +471,11 @@ class StudentSessionTests(TestCase):
         # Attempt to unbook timeslot as student 1
         resp = self.client.post(
             f"/api/student-session/unbook?session_id={session.id}",
-            headers=self._get_auth_headers(self.student_users[1])
+            headers=self._get_auth_headers(self.student_users[1]),
         )
-        self.assertEqual(resp.status_code, 404)  # Forbidden due to not owning the booking
+        self.assertEqual(
+            resp.status_code, 404
+        )  # Forbidden due to not owning the booking
 
     def test_timeslot_selection_by_another_company(self):
         """Test that a company cannot select timeslot for a session it does not own"""
@@ -486,7 +485,7 @@ class StudentSessionTests(TestCase):
         # Attempt to select timeslot as another company
         resp = self.client.post(
             f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
-            headers=self._get_auth_headers(self.company_user2)
+            headers=self._get_auth_headers(self.company_user2),
         )
         self.assertEqual(resp.status_code, 404)
 
@@ -496,18 +495,18 @@ class StudentSessionTests(TestCase):
         timeslot = self._create_timeslot(session)
 
         # Create application with 'pending' status
-        application = StudentSessionApplication.objects.create(
+        _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
             company=session.company,
             student_session=session,
             motivation_text="Please accept me",
-            status="pending"
+            status="pending",
         )
 
         # Attempt to select timeslot
         resp = self.client.post(
             f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 409)
 
@@ -524,13 +523,13 @@ class StudentSessionTests(TestCase):
             "programme": "Computer Science",
             "study_year": 3,
             "linkedin": "linkedin.com/in/student0",
-            "master_title": "Software Engineering"
+            "master_title": "Software Engineering",
         }
 
         resp = self.client.post(
             "/api/student-session/apply",
             data=application_data,
             content_type="application/json",
-            headers=self._get_auth_headers(self.student_users[0])
+            headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 404)

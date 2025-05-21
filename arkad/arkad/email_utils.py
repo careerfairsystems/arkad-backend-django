@@ -13,7 +13,9 @@ CHARSET: str = "UTF-8"  # The character encoding for the email.
 client = boto3.client("ses", region_name=AWS_REGION)
 
 
-def send_mail(recipient_email: str, body_html: str, body_text: str, subject: str) -> None:
+def send_mail(
+    recipient_email: str, body_html: str, body_text: str, subject: str
+) -> None:
     try:
         client.send_email(
             Destination={
@@ -48,7 +50,6 @@ def send_mail(recipient_email: str, body_html: str, body_text: str, subject: str
         else:
             logging.error("An error occurred while sending the email.")
             raise e
-
 
 
 if __name__ == "__main__":
