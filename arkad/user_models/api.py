@@ -3,13 +3,17 @@ import logging
 import os
 import secrets
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, get_user_model
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import HttpRequest
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from ninja import File, UploadedFile, PatchDict
 
 from arkad import settings
@@ -138,22 +142,42 @@ def reset_password(request:HttpRequest, data:ResetPasswordSchema):
     """
     Sends an email with a link to reset password. Always returns 200 (or 500).
     """
+
     form = PasswordResetForm(data={"email": data.email})
 
-   # The line below should replace the href link to reset the password in the email
-   # {{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}"
-
     if form.is_valid():
-        form.save(
-            request=request,
-            use_https=request.is_secure(),
-            from_email="Arkad No Reply <no-reply@arkadtlth.se>",  
-            email_template_name="registration/password_reset_email.html",
-            subject_template_name="registration/password_reset_subject.txt",
-            html_email_template_name="email_app/reset_email.html"
-        )
-    
-    return 200, "OK" 
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=data.email)
+
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            relative_url = reverse('password_reset_confirm', kwargs={
+                'uidb64': uidb64,
+                'token': token
+            })
+
+            reset_link = request.build_absolute_uri(relative_url)
+
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                from_email="Arkad No Reply <no-reply@arkadtlth.se>",
+                email_template_name="registration/password_reset_email.html",
+                subject_template_name="registration/password_reset_subject.txt",
+                html_email_template_name="email_app/reset_email.html",
+                extra_email_context={
+                    "reset_link": reset_link
+                }
+            )
+
+        except User.DoesNotExist:
+            pass  
+
+    return 200, "OK"
+
 
 
 @profile.get("", response={200: ProfileSchema})
