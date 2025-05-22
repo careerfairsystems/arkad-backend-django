@@ -24,7 +24,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("email/", include("email_app.urls")),
     path("api/", api.urls),
-    path("user/", include("user_models.urls"))
+    path("user/", include("user_models.urls")),
 ]
 
 if DEBUG:

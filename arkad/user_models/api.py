@@ -154,10 +154,9 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
 
-            relative_url = reverse('password_reset_confirm', kwargs={
-                'uidb64': uidb64,
-                'token': token
-            })
+            relative_url = reverse(
+                "password_reset_confirm", kwargs={"uidb64": uidb64, "token": token}
+            )
 
             reset_link = request.build_absolute_uri(relative_url)
 
@@ -168,16 +167,13 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 email_template_name="registration/password_reset_email.html",
                 subject_template_name="registration/password_reset_subject.txt",
                 html_email_template_name="email_app/reset.html",
-                extra_email_context={
-                    "reset_link": reset_link
-                }
+                extra_email_context={"reset_link": reset_link},
             )
 
         except User.DoesNotExist:
-            pass  
+            pass
 
     return 200, "OK"
-
 
 
 @profile.get("", response={200: ProfileSchema})
