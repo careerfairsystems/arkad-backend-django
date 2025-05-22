@@ -167,7 +167,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 from_email="Arkad No Reply <no-reply@arkadtlth.se>",
                 email_template_name="registration/password_reset_email.html",
                 subject_template_name="registration/password_reset_subject.txt",
-                html_email_template_name="email_app/reset_email.html",
+                html_email_template_name="email_app/reset.html",
                 extra_email_context={
                     "reset_link": reset_link
                 }
