@@ -44,7 +44,8 @@ module = [
     "tests.*",
     "*.tests",
     "event_booking.tests.*",
-    "student_sessions.tests.*"
+    "student_sessions.tests.*",
+    "email_app.views"
 ]
 # Relax typing requirements for tests
 disallow_untyped_defs = false

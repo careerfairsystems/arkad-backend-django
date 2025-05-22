@@ -67,7 +67,7 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
         message=f"Your 2fa code is {code}",
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[data.email],
-        html_message=code
+        html_message=code,
     )  # TODO: Make this nice
     return 200, jwt_encode(
         {
@@ -138,7 +138,7 @@ def signin(request: HttpRequest, data: SigninSchema):
 
 
 @auth.post("reset-password", auth=None, response={200: str})
-def reset_password(request:HttpRequest, data:ResetPasswordSchema):
+def reset_password(request: HttpRequest, data: ResetPasswordSchema):
     """
     Sends an email with a link to reset password. Always returns 200 (or 500).
     """
@@ -206,7 +206,9 @@ def update_profile(request: AuthenticatedRequest, data: UpdateProfileSchema):
 
 
 @profile.patch("", response={200: ProfileSchema})
-def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]):  # type: ignore[type-arg]
+def update_profile_fields(
+    request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]
+):  # type: ignore[type-arg]
     """
     Updates the users profile information with the given, (not null) data.
     """
@@ -219,7 +221,8 @@ def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateP
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(
-    request: AuthenticatedRequest, profile_picture: UploadedFile = File(...)  # type: ignore[type-arg]
+    request: AuthenticatedRequest,
+    profile_picture: UploadedFile = File(...),  # type: ignore[type-arg]
 ):
     """
     Update the profile picture to a new one.

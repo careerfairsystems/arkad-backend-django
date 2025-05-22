@@ -47,7 +47,6 @@ class PublicKeySchema(Schema):
     public_key: str
 
 
-
 if __name__ == "__main__":
     # Verify that the setup works correctly:
     message: str = "Hello World!"

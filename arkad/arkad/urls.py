@@ -18,10 +18,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from .api import api
+from .settings import DEBUG
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("email/", include("email_app.urls")),
     path("api/", api.urls),
-    path("user/", include("user_models.urls"))
 ]
+
+if DEBUG:
+    urlpatterns.append(
+        path("email/", include("email_app.urls")),
+    )
