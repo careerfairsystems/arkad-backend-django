@@ -3,6 +3,7 @@ from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from pydantic import BaseModel
 from pydantic_core import ValidationError
+from ninja import File, UploadedFile
 
 from arkad.customized_django_ninja import Router
 from user_models.models import AuthenticatedRequest
@@ -151,14 +152,14 @@ def accept_student_session(request: AuthenticatedRequest, applicant_user_id: int
 
 
 @router.get("/timeslots", response={200: list[TimeslotSchema], 401: str, 404: str})
-def get_student_session_timeslots(request: AuthenticatedRequest, session_id: int):
+def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int):
     """
     Returns a list of timeslots for a student session.
     Only viewable if accepted
     """
     try:
         application: StudentSessionApplication = StudentSessionApplication.objects.get(
-            user=request.user, student_session_id=session_id
+            user=request.user, student_session__company_id=company_id
         )
         if not application.is_accepted():
             return 401, "You are not accepted to this session"
@@ -166,7 +167,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, session_id: int
         return 404, "Application not found"
 
     timeslots = StudentSessionTimeslot.objects.filter(
-        student_session_id=session_id
+        student_session__company_id=company_id
     ).all()
 
     return 200, [
@@ -184,7 +185,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, session_id: int
 
 @router.post("/accept", response={200: str, 409: str, 401: str, 404: str})
 def confirm_student_session(
-    request: AuthenticatedRequest, session_id: int, timeslot_id: int
+    request: AuthenticatedRequest, company_id: int, timeslot_id: int
 ):
     """
     Accept a timeslot from some student sessions
@@ -192,7 +193,7 @@ def confirm_student_session(
 
     try:
         applicant = StudentSessionApplication.objects.get(
-            student_session_id=session_id, user_id=request.user.id
+            student_session__company_id=company_id, user_id=request.user.id
         )
         if not applicant.is_accepted():
             return 409, "Applicant not accepted"
@@ -215,14 +216,14 @@ def confirm_student_session(
 
 
 @router.post("/unbook", response={200: str, 401: str, 404: str})
-def unbook_student_session(request: AuthenticatedRequest, session_id: int):
+def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     """
     Unbook a timeslot from some student sessions
     """
 
     try:
         application = StudentSessionApplication.objects.get(
-            student_session_id=session_id, user_id=request.user.id
+            student_session__company_id=company_id, user_id=request.user.id
         )
         if not application.is_accepted():
             return 409, "Applicant not accepted"
@@ -262,7 +263,7 @@ def apply_for_session(
 
     try:
         session: StudentSession = StudentSession.objects.get(
-            id=data.session_id, booking_close_time__gte=timezone.now()
+            company_id=data.company_id, booking_close_time__gte=timezone.now()
         )
     except StudentSession.DoesNotExist:
         return 404, "Session not found, or booking has closed"
@@ -277,7 +278,6 @@ def apply_for_session(
     try:
         StudentSessionApplication.objects.create(
             user=request.user,
-            company=session.company,
             student_session=session,
             motivation_text=data.motivation_text,
             cv=data.cv,
@@ -288,6 +288,22 @@ def apply_for_session(
     return 200, "You have now applied to the session"
 
 
+@router.post("cv", response={200: str})
+def update_cv_for_session(
+    request: AuthenticatedRequest, company_id: int, cv: UploadedFile = File(...)
+):  # type: ignore[type-arg]
+    """
+    Sets the CV for the user for some companies student sessions.
+    """
+
+    application: StudentSessionApplication = StudentSessionApplication.objects.get(
+        user_id=request.user.id, student_session__company_id=company_id
+    )
+    application.cv = cv
+    application.save()
+    return 200, "CV updated"
+
+
 @router.get("/application", response={200: StudentSessionApplicationSchema, 404: str})
 def get_student_session_application(request: AuthenticatedRequest, company_id: int):
     """
@@ -296,15 +312,13 @@ def get_student_session_application(request: AuthenticatedRequest, company_id: i
     If one does not exist or is explicitly None, None is returned
     """
     try:
-        application = StudentSessionApplication.objects.get(
-            user=request.user, company_id=company_id
-        )
+        application = StudentSessionApplication.objects.get(user=request.user)
         return 200, StudentSessionApplicationSchema(
             motivation_text=application.motivation_text,
             cv=application.cv.url
             if application.cv
             else (request.user.cv.url if request.user.cv else None),
-            session_id=application.student_session_id,
+            company_id=company_id,
         )
     except StudentSessionApplication.DoesNotExist:
         return 404, "Application not found"

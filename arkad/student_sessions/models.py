@@ -16,7 +16,6 @@ class StudentSessionApplication(models.Model):
 
     timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cv = models.FileField("Users cv", upload_to="application/cv", null=True, blank=True)
     status = models.CharField(
@@ -32,12 +31,13 @@ class StudentSessionApplication(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=["company", "user"], name="unique_student_session_motivation"
+                fields=["student_session", "user"],
+                name="unique_student_session_motivation",
             )
         ]
 
     def __str__(self) -> str:
-        return f"Application by {self.user} to {self.company.name}"
+        return f"Application by {self.user} to {self.student_session.company.name}"
 
     def accept(self) -> None:
         self.status = "accepted"
@@ -85,12 +85,20 @@ class StudentSessionTimeslot(models.Model):
 
     time_booked = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["student_session", "start_time"],
+                name="unique_student_session_timeslot",
+            )
+        ]
+
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
 
 class StudentSession(models.Model):
-    company = models.ForeignKey(
+    company = models.OneToOneField(
         Company,
         on_delete=models.CASCADE,
         null=False,

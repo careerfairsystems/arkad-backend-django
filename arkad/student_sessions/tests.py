@@ -150,7 +150,7 @@ class StudentSessionTests(TestCase):
         session = self._create_student_session(self.company_user1.company)
 
         application_data = {
-            "session_id": session.id,
+            "company_id": session.company.id,
             "motivation_text": "I would love to meet with your company",
             "update_profile": True,
             "programme": "Computer Science",
@@ -194,7 +194,6 @@ class StudentSessionTests(TestCase):
         for i in range(3):
             StudentSessionApplication.objects.create(
                 user=self.student_users[i],
-                company=session.company,
                 student_session=session,
                 motivation_text=f"Test motivation {i}",
             )
@@ -238,7 +237,6 @@ class StudentSessionTests(TestCase):
         # Create application
         application = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me",
         )
@@ -284,7 +282,6 @@ class StudentSessionTests(TestCase):
         # Create and accept application
         application = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me",
             status="accepted",  # Pre-accept for test
@@ -292,7 +289,7 @@ class StudentSessionTests(TestCase):
 
         # Test viewing timeslots
         resp = self.client.get(
-            f"/api/student-session/timeslots?session_id={session.id}",
+            f"/api/student-session/timeslots?company_id={session.company.id}",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
@@ -300,7 +297,7 @@ class StudentSessionTests(TestCase):
 
         # Test selecting timeslot
         resp = self.client.post(
-            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
@@ -313,14 +310,13 @@ class StudentSessionTests(TestCase):
         # Test with another student who should not be able to select the same timeslot
         _ = StudentSessionApplication.objects.create(
             user=self.student_users[1],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me too",
             status="accepted",
         )
 
         resp = self.client.post(
-            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
             headers=self._get_auth_headers(self.student_users[1]),
         )
         self.assertEqual(resp.status_code, 404)  # Timeslot not found or already taken
@@ -332,7 +328,6 @@ class StudentSessionTests(TestCase):
         # Create and accept application
         application = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me",
             status="accepted",
@@ -346,7 +341,7 @@ class StudentSessionTests(TestCase):
 
         # Test unbooking
         resp = self.client.post(
-            f"/api/student-session/unbook?session_id={session.id}",
+            f"/api/student-session/unbook?company_id={session.company.id}",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 200)
@@ -363,7 +358,6 @@ class StudentSessionTests(TestCase):
         # Create application
         _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Test motivation",
         )
@@ -378,7 +372,9 @@ class StudentSessionTests(TestCase):
         data = resp.json()
         self.assertIsNotNone(data, data)
         # Update test to match actual schema returned by API
-        self.assertEqual(data.get("sessionId", None), session.id, f"{data}: data")
+        self.assertEqual(
+            data.get("companyId", None), session.company_id, f"{data}: data"
+        )
         # Use get() to avoid KeyError, as the application schema may have changed
         # and motivation_text may be in a different place or named differently
         self.assertEqual(data.get("motivationText"), "Test motivation")
@@ -406,7 +402,7 @@ class StudentSessionTests(TestCase):
         student.save()
 
         application_data = {
-            "session_id": session.id,
+            "company_id": session.company.id,
             "motivation_text": "Profile update test",
             "update_profile": True,
             "programme": "New Programme",
@@ -421,7 +417,7 @@ class StudentSessionTests(TestCase):
             content_type="application/json",
             headers=self._get_auth_headers(student),
         )
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 200, resp.content)
 
         # Refresh profile from DB
         student.refresh_from_db()
@@ -437,7 +433,6 @@ class StudentSessionTests(TestCase):
         # Create application for student 0
         _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Test motivation",
         )
@@ -456,7 +451,6 @@ class StudentSessionTests(TestCase):
         # Create and accept application for student 0
         application = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me",
             status="accepted",
@@ -470,7 +464,7 @@ class StudentSessionTests(TestCase):
 
         # Attempt to unbook timeslot as student 1
         resp = self.client.post(
-            f"/api/student-session/unbook?session_id={session.id}",
+            f"/api/student-session/unbook?company_id={session.company.id}",
             headers=self._get_auth_headers(self.student_users[1]),
         )
         self.assertEqual(
@@ -484,10 +478,10 @@ class StudentSessionTests(TestCase):
 
         # Attempt to select timeslot as another company
         resp = self.client.post(
-            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
             headers=self._get_auth_headers(self.company_user2),
         )
-        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.status_code, 404, resp.content)
 
     def test_timeslot_selection_by_non_accepted_student(self):
         """Test that non-accepted students cannot select timeslots"""
@@ -497,7 +491,6 @@ class StudentSessionTests(TestCase):
         # Create application with 'pending' status
         _ = StudentSessionApplication.objects.create(
             user=self.student_users[0],
-            company=session.company,
             student_session=session,
             motivation_text="Please accept me",
             status="pending",
@@ -505,7 +498,7 @@ class StudentSessionTests(TestCase):
 
         # Attempt to select timeslot
         resp = self.client.post(
-            f"/api/student-session/accept?session_id={session.id}&timeslot_id={timeslot.id}",
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 409)
@@ -517,7 +510,7 @@ class StudentSessionTests(TestCase):
         session.save()
 
         application_data = {
-            "session_id": session.id,
+            "companyId": session.company.id,
             "motivation_text": "Late application",
             "update_profile": True,
             "programme": "Computer Science",

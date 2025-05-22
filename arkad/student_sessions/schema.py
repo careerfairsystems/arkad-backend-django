@@ -13,7 +13,7 @@ class StudentSessionApplicationSchema(Schema):
     study_year: int | None = None
     motivation_text: str | None = None
     update_profile: bool | None = None
-    session_id: int
+    company_id: int
 
 
 class ApplicantSchema(Schema):
