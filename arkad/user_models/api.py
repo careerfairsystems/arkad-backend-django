@@ -14,7 +14,7 @@ from arkad.customized_django_ninja import Router
 from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
-from user_models.models import User, AuthenticatedRequest
+from user_models.models import User, AuthenticatedRequest, Favourites
 from user_models.schema import (
     SigninSchema,
     ProfileSchema,
@@ -24,6 +24,8 @@ from user_models.schema import (
     ResetPasswordSchema,
 )
 from hashlib import sha256
+from companies.models import Company
+
 
 
 auth = Router(tags=["Authentication"])
@@ -216,3 +218,29 @@ def delete_cv(request: AuthenticatedRequest):
     request.user.cv.delete()
     request.user.save()
     return 200, "CV deleted"
+
+
+
+
+@profile.post("favourite", response={200: str, 400:str})
+def add_favourite(request: AuthenticatedRequest, company_id: int):  # type: ignore[type-arg]
+    """
+     Returns 200 if a company is added as a favourite
+     Returns 400 if duplicate
+    """
+
+    try:
+        company = Company.objects.get(id=company_id)
+        fave = Favourites.objects.create(company = company, user = request.user)
+        return 200, "favourite added"
+    except IntegrityError as e:
+        logging.error(e)
+        if "duplicate key" in str(e):
+            return 400, "Company already exists"
+        
+
+#se om man likeat ett företag
+
+
+
+

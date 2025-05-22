@@ -59,3 +59,4 @@ class CompanyOut(Schema):
     employees_locally: Optional[int] = None
     employees_globally: Optional[int] = None
     jobs: List[JobSchema] = []
+    is_favourite: Optional[bool] = None

@@ -33,12 +33,6 @@ class Programme(models.TextChoices):
     TEKNISK_FYSIK = "Teknisk Fysik"
     BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
 
-class Favourites(models.Model):
-    time = models.DateTimeField(auto_now=False, auto_now_add=True)
-    company = models.ForeignKey(Company, blank=True, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.time} lades {self.company} till"
 
 
 class User(AbstractUser):
@@ -64,7 +58,6 @@ class User(AbstractUser):
     linkedin = models.URLField(blank=True, null=True)
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
-    favourites = models.ManyToManyField(Favourites, blank=True)
 
     def __str__(self) -> str:
         name: str = (self.first_name or "") + " " + (self.last_name or "")
@@ -85,6 +78,19 @@ class User(AbstractUser):
 
     def is_company_admin(self, company_id: int) -> bool:
         return self.is_company and self.company_id == company_id
+
+
+class Favourites(models.Model):
+    time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    company = models.ForeignKey(Company, blank=True, on_delete=models.CASCADE)
+    user= models.ForeignKey(User, blank=True, on_delete=models.CASCADE)
+    class Meta:
+        # Enforce that a student can enroll in a course only once
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'company'], name='unique_user_company_pair')
+        ]
+    def __str__(self):
+        return f"{self.time} lades {self.company} till"
 
 
 class PydanticUser:
