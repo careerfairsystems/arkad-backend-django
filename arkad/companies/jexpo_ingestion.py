@@ -14,8 +14,8 @@ class FileBase(BaseModel):
     size: Optional[int] = None
     name: Optional[str] = None
     type: Optional[str] = None
-    file: Optional[str] = Field(None, alias="$file")  
-    key: Optional[str] = Field(None, alias="$$key")  
+    file: Optional[str] = Field(None, alias="$file")
+    key: Optional[str] = Field(None, alias="$$key")
 
 
 # Nested schemas
@@ -186,27 +186,27 @@ class Profile(BaseModel):
 
 
 class CompanyHost(BaseModel):
-    key: Optional[str] = Field(None, alias="$key")  
+    key: Optional[str] = Field(None, alias="$key")
     utc: Optional[datetime] = None
 
 
 class StudentSession(BaseModel):
     sessions: Optional[str] = None  # e.g., "none"
-    requests: Optional[bool] = Field(None, alias="$requests")  
-    updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")  
-    submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")  
+    requests: Optional[bool] = Field(None, alias="$requests")
+    updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
+    submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")
     sessions_why: Optional[str] = None
 
 
 # Main schema
 class ExhibitorSchema(BaseModel):
     # Some are left out
-    index: List[str] = Field(default_factory=list, alias="$index")  
+    index: List[str] = Field(default_factory=list, alias="$index")
     print_contract: Optional[PrintContract] = None
     archives: List[str] = Field(default_factory=list)
     tickets: Optional[Tickets] = None
     prereg: Optional[Prereg] = None
-    requests: Optional[bool] = Field(None, alias="$requests")  
+    requests: Optional[bool] = Field(None, alias="$requests")
     inventory: Optional[Inventory] = None
     billing: Optional[Billing] = None
     current: Optional[bool] = None
@@ -233,5 +233,5 @@ class ExhibitorSchema(BaseModel):
     companyHosts: List[CompanyHost] = Field(default_factory=list)
     studentsession: Optional[StudentSession] = None
     status: Optional[str] = None
-    rev: Optional[datetime] = Field(None, alias="$rev")  
-    key: Optional[str] = Field(None, alias="$key")  
+    rev: Optional[datetime] = Field(None, alias="$rev")
+    key: Optional[str] = Field(None, alias="$key")

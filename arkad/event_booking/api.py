@@ -61,9 +61,9 @@ def get_event_ticket(request: AuthenticatedRequest, event_id: int):
     """
     Returns a ticket
     """
-    tickets: QuerySet[Ticket] = request.user.ticket_set.prefetch_related("event").filter(
-        event_id=event_id
-    )
+    tickets: QuerySet[Ticket] = request.user.ticket_set.prefetch_related(
+        "event"
+    ).filter(event_id=event_id)
     if not tickets.exists():
         return 401, "Unauthorized"
     ticket: Ticket | None = tickets.first()  # Should only be one

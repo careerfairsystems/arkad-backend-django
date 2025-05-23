@@ -6,25 +6,25 @@ You must use Python 3.13 to run this project as we are using some very new typin
 ## First install steps
 
 1. Install Python 3.13
-2. Create a virtual environment (venv) `python3.13 -m venv venv` 
+2. Create a virtual environment (venv) `python3.13 -m venv venv`
 3. Activate the virtual environment
-   - On Windows: `venv\Scripts\activate` (If using windows please use WSL, otherwise make commands will not work)
-   - On Linux/Mac: `source venv/bin/activate`
+    - On Windows: `venv\Scripts\activate` (If using windows please use WSL, otherwise make commands will not work)
+    - On Linux/Mac: `source venv/bin/activate`
 4. cd to the arkad folder `cd arkad`.
-   - This is where the django project is located.
+    - This is where the django project is located.
 5. Install the required packages: `pip install -r requirements.txt`
 6. Create a public/private keypair for JWT signing
-   - With the names public.pem, private.pem, they should be in arkad/private folder
-   - This can be done with:
-     ```shell
-     mkdir private
-     openssl genpkey -algorithm RSA -out private/private.pem -pkeyopt rsa_keygen_bits:2048
-     openssl rsa -in private/private.pem -pubout -out private/public.pem
-     ```
+    - With the names public.pem, private.pem, they should be in arkad/private folder
+    - This can be done with:
+      ```shell
+      mkdir private
+      openssl genpkey -algorithm RSA -out private/private.pem -pkeyopt rsa_keygen_bits:2048
+      openssl rsa -in private/private.pem -pubout -out private/public.pem
+      ```
 7. Copy `example.env` to `.env` (Both are in arkad folder)
-   - This contains the default environment variables.
+    - This contains the default environment variables.
 8. Start the Postgres database if not running it locally.
-   - `docker compose up` (from the arkad folder)
+    - `docker compose up` (from the arkad folder)
 9. Create migrations: `python manage.py makemigrations`
 10. Migrate the database: `python manage.py migrate`
 11. Run the server: `python manage.py runserver`
@@ -67,7 +67,7 @@ Follow the instructions.
 ### Update company information
 
 It is possible to automatically update the database with new information about all companies.
-For example jobs, if they have studentsessions etc. 
+For example jobs, if they have studentsessions etc.
 This is done by running `python manage.py jexpo_sync --file /path/to/jexpo.json`
 
 ### Linting and formatting rules

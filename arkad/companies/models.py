@@ -126,7 +126,7 @@ class Company(models.Model):
         models.CharField(max_length=50, choices=COMPETENCE_CHOICES),
         default=list,
         blank=True,
-        help_text = f"Choose from {', '.join([e[0] for e in COMPETENCE_CHOICES])}",
+        help_text=f"Choose from {', '.join([e[0] for e in COMPETENCE_CHOICES])}",
     )  # List of competences with enforced choices
     positions = ArrayField(
         models.CharField(max_length=50, choices=POSITION_CHOICES),
