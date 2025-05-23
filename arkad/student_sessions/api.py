@@ -100,7 +100,7 @@ def get_exhibitor_sessions(request: AuthenticatedRequest):
 @router.get(
     "/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str}
 )
-def get_applicants(request: AuthenticatedRequest):
+def get_student_session_applicants(request: AuthenticatedRequest):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
     """
