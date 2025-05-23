@@ -21,22 +21,32 @@ from student_sessions.schema import (
     StudentSessionApplicationSchema,
 )
 from user_models.schema import ProfileSchema
+from functools import wraps
+from typing import Callable
 
 router = Router(tags=["Student Sessions"])
 
 
-def exhibitor_check(
-    request: AuthenticatedRequest,
-) -> tuple[StudentSession | None, tuple[int, str] | None]:
-    if not request.user.is_company:
-        return None, (401, "Insufficient permissions")
-    try:
-        return StudentSession.objects.get(company_id=request.user.company_id), None
-    except StudentSession.DoesNotExist:
-        return None, (
-            406,
-            "Your company does not have a student session, contact your Arkad representative for help",
-        )
+class AuthenticatedRequestSession(AuthenticatedRequest):
+    student_session: StudentSession
+
+
+def exhibitor_check(func: Callable):
+    @wraps(func)
+    def wrapper(request: AuthenticatedRequestSession, *args, **kwargs):
+        if not request.user.is_company:
+            return 401, "Insufficient permissions"
+        try:
+            session = StudentSession.objects.get(company_id=request.user.company_id)
+        except StudentSession.DoesNotExist:
+            return (
+                406,
+                "Your company does not have a student session, contact your Arkad representative for help",
+            )
+        request.student_session = session
+        return func(request, *args, **kwargs)
+
+    return wrapper
 
 
 @router.get("/all", response={200: StudentSessionNormalUserListSchema}, auth=None)
@@ -63,17 +73,14 @@ def get_student_sessions(request: AuthenticatedRequest):
 
 
 @router.post("/exhibitor", response={406: str, 201: TimeslotSchema, 401: str})
+@exhibitor_check
 def create_student_session(
-    request: AuthenticatedRequest, data: CreateStudentSessionSchema
+    request: AuthenticatedRequestSession, data: CreateStudentSessionSchema
 ):
     """
     Creates a student session, user must be an exhibitor.
     """
-    session: StudentSession | None
-    error: tuple[int, str] | None
-    session, error = exhibitor_check(request)
-    if error is not None:
-        return error
+    session: StudentSession = request.student_session
 
     time_slot = StudentSessionTimeslot.objects.create(
         start_time=data.start_time,
@@ -88,27 +95,21 @@ def create_student_session(
 @router.get(
     "/exhibitor/sessions", response={200: list[TimeslotSchema], 401: str, 406: str}
 )
-def get_exhibitor_sessions(request: AuthenticatedRequest):
-    session: StudentSession | None
-    error: tuple[int, str] | None
-    session, error = exhibitor_check(request)
-    if error is not None:
-        return error
+@exhibitor_check
+def get_exhibitor_sessions(request: AuthenticatedRequestSession):
+    session: StudentSession = request.student_session
     return session.timeslots.prefetch_related("selected").all()
 
 
 @router.get(
     "/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str}
 )
-def get_student_session_applicants(request: AuthenticatedRequest):
+@exhibitor_check
+def get_student_session_applicants(request: AuthenticatedRequestSession):
     """
     Returns a list of the applicants to a company's student-session, used when the company wants to select applicants.
     """
-    session: StudentSession | None
-    error: tuple[int, str] | None
-    session, error = exhibitor_check(request)
-    if error is not None:
-        return error
+    session: StudentSession = request.student_session
 
     result: list[ApplicantSchema] = []
     applications = (
@@ -129,18 +130,17 @@ def get_student_session_applicants(request: AuthenticatedRequest):
 
 
 @router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
-def accept_student_session(request: AuthenticatedRequest, applicant_user_id: int):
+@exhibitor_check
+def accept_student_session(
+    request: AuthenticatedRequestSession, applicant_user_id: int
+):
     """
     Used to accept a student for a student session, takes in an applicant_user_id.
 
     This will email the user and allow them to select one of the available timeslots connected to this
     student session.
     """
-    session: StudentSession | None
-    error: tuple[int, str] | None
-    session, error = exhibitor_check(request)
-    if error is not None:
-        return error
+    session: StudentSession = request.student_session
     try:
         applicant = StudentSessionApplication.objects.get(
             student_session=session, user_id=applicant_user_id
