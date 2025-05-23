@@ -34,6 +34,9 @@ class AuthenticatedRequestSession(AuthenticatedRequest):
 def exhibitor_check(func: Callable):
     @wraps(func)
     def wrapper(request: AuthenticatedRequestSession, *args, **kwargs):
+        # Saying the request above is a lie, it is still a AuthenticatedRequest
+        # Usure why we get away with it, but it makes the linter believe it is of that type when set on request.
+
         if not request.user.is_company:
             return 401, "Insufficient permissions"
         try:
