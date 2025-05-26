@@ -83,7 +83,7 @@ class User(AbstractUser):
 class Favourites(models.Model):
     time = models.DateTimeField(auto_now=False, auto_now_add=True)
     company = models.ForeignKey(Company, blank=True, on_delete=models.CASCADE)
-    user= models.ForeignKey(User, blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, blank=True, on_delete=models.CASCADE)
     class Meta:
         # Enforce that a student can enroll in a course only once
         constraints = [
