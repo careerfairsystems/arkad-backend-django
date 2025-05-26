@@ -3,15 +3,21 @@ import logging
 import os
 import secrets
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import HttpRequest
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from ninja import File, UploadedFile, PatchDict
 
+from arkad import settings
 from arkad.customized_django_ninja import Router
-from arkad.email_utils import send_mail
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
 from user_models.models import User, AuthenticatedRequest
@@ -56,7 +62,13 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     code = ("0" * (6 - len(code)) + code)[:6]
     salt: str = generate_salt()
     # Send 2fa code
-    send_mail(data.email, code, code, code)  # TODO: Make this nice
+    send_mail(
+        subject=code,
+        message=f"Your 2fa code is {code}",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[data.email],
+        html_message=code,
+    )  # TODO: Make this nice
     return 200, jwt_encode(
         {
             "code2fa": sha256(
@@ -126,12 +138,42 @@ def signin(request: HttpRequest, data: SigninSchema):
 
 
 @auth.post("reset-password", auth=None, response={200: str})
-def reset_password(request:HttpRequest, data:ResetPasswordSchema):
+def reset_password(request: HttpRequest, data: ResetPasswordSchema):
     """
-    Just for testing purposes atm. Only returns response 200.
+    Sends an email with a link to reset password. Always returns 200 (or 500).
     """
 
-    return 200, "Ok"
+    form = PasswordResetForm(data={"email": data.email})
+
+    if form.is_valid():
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(email=data.email)
+
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            relative_url = reverse(
+                "password_reset_confirm", kwargs={"uidb64": uidb64, "token": token}
+            )
+
+            reset_link = request.build_absolute_uri(relative_url)
+
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                from_email="Arkad No Reply <no-reply@arkadtlth.se>",
+                email_template_name="registration/password_reset_email.html",
+                subject_template_name="registration/password_reset_subject.txt",
+                html_email_template_name="email_app/reset.html",
+                extra_email_context={"reset_link": reset_link},
+            )
+
+        except User.DoesNotExist:
+            pass
+
+    return 200, "OK"
 
 
 @profile.get("", response={200: ProfileSchema})
@@ -160,7 +202,9 @@ def update_profile(request: AuthenticatedRequest, data: UpdateProfileSchema):
 
 
 @profile.patch("", response={200: ProfileSchema})
-def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]):  # type: ignore[type-arg]
+def update_profile_fields(
+    request: AuthenticatedRequest, data: PatchDict[UpdateProfileSchema]
+):  # type: ignore[type-arg]
     """
     Updates the users profile information with the given, (not null) data.
     """
@@ -173,7 +217,8 @@ def update_profile_fields(request: AuthenticatedRequest, data: PatchDict[UpdateP
 
 @profile.post("profile-picture", response={200: str})
 def update_profile_picture(
-    request: AuthenticatedRequest, profile_picture: UploadedFile = File(...)  # type: ignore[type-arg]
+    request: AuthenticatedRequest,
+    profile_picture: UploadedFile = File(...),  # type: ignore[type-arg]
 ):
     """
     Update the profile picture to a new one.

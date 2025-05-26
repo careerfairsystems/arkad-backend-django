@@ -29,6 +29,7 @@ class AuthBearer(HttpBearer):
         request.user = user
         return user
 
+
 class CustomNinjaAPI(NinjaAPI):
     @override
     def add_router(
@@ -57,11 +58,12 @@ class CustomNinjaAPI(NinjaAPI):
             parent_router=parent_router,
         )
 
+
 api = CustomNinjaAPI(
     title="Arkad API",
     docs=Swagger(settings={"persistAuthorization": True}),
     auth=AuthBearer(),
-    default_router=Router()
+    default_router=Router(),
 )
 api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)

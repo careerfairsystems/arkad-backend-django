@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.http import HttpRequest
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
@@ -16,7 +15,8 @@ from student_sessions.schema import (
     StudentSessionNormalUserSchema,
     CreateStudentSessionSchema,
     ApplicantSchema,
-    StudentSessionApplicationSchema, MotivationTextUpdateSchema,
+    StudentSessionApplicationSchema,
+    MotivationTextUpdateSchema,
 )
 from companies.models import Company
 from user_models.schema import ProfileSchema
@@ -25,7 +25,9 @@ router = Router(tags=["Student Sessions"])
 
 
 @router.get("/all", response={200: StudentSessionNormalUserListSchema}, auth=None)
-def get_student_sessions(request: AuthenticatedRequest, only_available_sessions: bool = False):
+def get_student_sessions(
+    request: AuthenticatedRequest, only_available_sessions: bool = False
+):
     """
     Returns a list of available student sessions.
 
@@ -54,7 +56,9 @@ def get_student_sessions(request: AuthenticatedRequest, only_available_sessions:
 
 
 @router.post("/exhibitor", response={406: str, 201: StudentSessionSchema, 401: str})
-def create_student_session(request: AuthenticatedRequest, session: CreateStudentSessionSchema):
+def create_student_session(
+    request: AuthenticatedRequest, session: CreateStudentSessionSchema
+):
     """
     Creates a student session, user must be an exhibitor.
     """
@@ -140,7 +144,9 @@ def accept_student_session(
 
 
 @router.post("/apply", response={404: str, 409: str, 200: StudentSessionSchema})
-def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplicationSchema):
+def apply_for_session(
+    request: AuthenticatedRequest, data: StudentSessionApplicationSchema
+):
     """
     Used to apply to a student session, takes in the session id and signs up the current user.
     """
@@ -183,6 +189,7 @@ def apply_for_session(request: AuthenticatedRequest, data: StudentSessionApplica
         session.save()
     return 200, session
 
+
 @router.get("/motivation", response={200: str | None})
 def get_student_session_motivation(request: AuthenticatedRequest, company_id: int):
     """
@@ -191,29 +198,38 @@ def get_student_session_motivation(request: AuthenticatedRequest, company_id: in
     If one does not exist or is explicitly None, None is returned
     """
     try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
+        motivation = CompanyStudentSessionMotivation.objects.get(
+            user=request.user, company_id=company_id
+        )
         return 200, motivation.motivation_text
     except CompanyStudentSessionMotivation.DoesNotExist:
         return 200, None
 
 
 @router.put("/motivation", response={200: str | None})
-def update_student_session_motivation(request: AuthenticatedRequest, data: MotivationTextUpdateSchema):
+def update_student_session_motivation(
+    request: AuthenticatedRequest, data: MotivationTextUpdateSchema
+):
     """
     Updates the motivation text for the current user.
 
     If one does not exist, it is created
     """
     try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=data.company_id)
+        motivation = CompanyStudentSessionMotivation.objects.get(
+            user=request.user, company_id=data.company_id
+        )
         motivation.motivation_text = data.motivation_text
         motivation.save()
         return 200, motivation.motivation_text
     except CompanyStudentSessionMotivation.DoesNotExist:
-        motivation = CompanyStudentSessionMotivation.objects.create(user=request.user,
-                                                                    company_id=data.company_id,
-                                                                    motivation_text=data.motivation_text)
+        motivation = CompanyStudentSessionMotivation.objects.create(
+            user=request.user,
+            company_id=data.company_id,
+            motivation_text=data.motivation_text,
+        )
         return 200, motivation.motivation_text
+
 
 @router.delete("/motivation", response={200: str, 404: str})
 def delete_student_session_motivation(request: AuthenticatedRequest, company_id: int):
@@ -223,7 +239,9 @@ def delete_student_session_motivation(request: AuthenticatedRequest, company_id:
     If one does not exist, a 404 is returned
     """
     try:
-        motivation = CompanyStudentSessionMotivation.objects.get(user=request.user, company_id=company_id)
+        motivation = CompanyStudentSessionMotivation.objects.get(
+            user=request.user, company_id=company_id
+        )
         motivation.delete()
         return 200, "Deleted motivation text"
     except CompanyStudentSessionMotivation.DoesNotExist:

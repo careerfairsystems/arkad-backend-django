@@ -354,6 +354,7 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(409, resp.status_code)
 
+
 class StudentSessionMotivationTests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(name="Test Company")
@@ -379,7 +380,10 @@ class StudentSessionMotivationTests(TestCase):
     def test_update_with_api(self):
         motivation = self.client.put(
             "/api/student-session/motivation",
-            data={"company_id": self.company.id, "motivation_text": "I love this company"},
+            data={
+                "company_id": self.company.id,
+                "motivation_text": "I love this company",
+            },
             content_type="application/json",
             headers=self.user.get_auth_headers(),
         )
@@ -407,7 +411,9 @@ class StudentSessionMotivationTests(TestCase):
             headers=self.user.get_auth_headers(),
         )
         self.assertEqual(resp.status_code, 200, resp.json())
-        self.assertFalse(CompanyStudentSessionMotivation.objects.filter(id=motivation.id).exists())
+        self.assertFalse(
+            CompanyStudentSessionMotivation.objects.filter(id=motivation.id).exists()
+        )
 
     def test_get_non_existing_motivation(self):
         resp = self.client.get(

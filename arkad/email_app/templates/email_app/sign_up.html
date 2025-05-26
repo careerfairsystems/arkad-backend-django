@@ -1,0 +1,20 @@
+
+{% extends "email_app/base.html" %}
+
+{% block content %}
+  <div class="email-hero">
+    <div class="overlay">
+      <h1>Welcome to ARKAD!</h1>
+      <h4>Confirm your email with the code below</h4>
+      <div style="text-align:center; margin:20px 0;">
+        <span class="digit-box">{{digits.0}}</span>
+        <span class="digit-box">{{digits.1}}</span>
+        <span class="digit-box">{{digits.2}}</span>
+        <span class="digit-box">{{digits.3}}</span>
+        <span class="digit-box">{{digits.4}}</span>
+        <span class="digit-box">{{digits.5}}</span>
+      </div>
+      <p style="font-style:italic; margin:0 0 10px; font-size:13px;"><br>If you didn't request this email, you can safely ignore it.</p>
+    </div>
+  </div>
+{% endblock %}
