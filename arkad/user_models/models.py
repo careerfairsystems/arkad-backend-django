@@ -40,7 +40,6 @@ class User(AbstractUser):
 
     food_preferences = models.TextField(null=True, blank=True)
 
-    is_company = models.BooleanField(default=False)
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, default=None, null=True, blank=True
     )
@@ -58,6 +57,10 @@ class User(AbstractUser):
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
 
+    @property
+    def is_company(self) -> bool:
+        return self.company is not None
+
     def __str__(self) -> str:
         name: str = (self.first_name or "") + " " + (self.last_name or "")
         if self.first_name is None and self.last_name is None:
@@ -74,9 +77,6 @@ class User(AbstractUser):
 
     def get_auth_headers(self) -> dict[str, str]:
         return {"Authorization": self.create_jwt_token()}
-
-    def is_company_admin(self, company_id: int) -> bool:
-        return self.is_company and self.company_id == company_id
 
 
 class PydanticUser:
