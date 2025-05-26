@@ -1,4 +1,3 @@
-from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from django.contrib.auth.models import AbstractUser
@@ -67,12 +66,12 @@ class User(AbstractUser):
             return self.email
         return name
 
-    def create_jwt_token(self, expiry_hours: int = 96) -> str:
+    def create_jwt_token(self, expiry_days: int = 30) -> str:
         return "Bearer " + jwt_encode(
             {
-                "exp": datetime.now(tz=timezone.utc) + timedelta(hours=expiry_hours),
                 "user_id": self.id,
             },
+            expiry_minutes=expiry_days * 24 * 60,
         )
 
     def get_auth_headers(self) -> dict[str, str]:
