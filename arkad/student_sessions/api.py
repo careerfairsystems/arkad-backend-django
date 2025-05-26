@@ -18,11 +18,11 @@ from student_sessions.schema import (
     StudentSessionNormalUserSchema,
     CreateStudentSessionSchema,
     ApplicantSchema,
-    StudentSessionApplicationSchema,
+    StudentSessionApplicationSchema, UpdateStudentSessionApplicantStatus,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
-from typing import Callable
+from typing import Callable, LiteralString
 
 router = Router(tags=["Student Sessions"])
 
@@ -132,13 +132,13 @@ def get_student_session_applicants(request: AuthenticatedRequestSession):
     return 200, result
 
 
-@router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
+@router.post("/exhibitor/update-application-status", response={200: str, 409: str, 401: str, 404: str})
 @exhibitor_check
-def accept_student_session(
-    request: AuthenticatedRequestSession, applicant_user_id: int
+def update_student_session_application_status(
+    request: AuthenticatedRequestSession, data: UpdateStudentSessionApplicantStatus
 ):
     """
-    Used to accept a student for a student session, takes in an applicant_user_id.
+    Used to accept a student for a student session, takes in an applicantUserId.
 
     This will email the user and allow them to select one of the available timeslots connected to this
     student session.
@@ -146,31 +146,18 @@ def accept_student_session(
     session: StudentSession = request.student_session
     try:
         applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=applicant_user_id
+            student_session=session, user_id=data.applicant_user_id
         )
-        applicant.accept()  # Sends
-    except StudentSessionApplication.DoesNotExist:
-        return 404, "Applicant not found"
-    return 200, "Applicant accepted"
+        if not applicant.is_pending():
+            return 409, "Applicant status has been set and can not be modified"
 
-
-@router.post("/exhibitor/deny", response={200: str, 409: str, 401: str, 404: str})
-@exhibitor_check
-def accept_student_session(
-        request: AuthenticatedRequestSession, applicant_user_id: int
-):
-    """
-    Used to accept a student for a student session, takes in an applicant_user_id.
-
-    This will email the user and allow them to select one of the available timeslots connected to this
-    student session.
-    """
-    session: StudentSession = request.student_session
-    try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=applicant_user_id
-        )
-        applicant.deny()  # Sends
+        match data.status:
+            case "accepted":
+                applicant.accept()
+            case "rejected":
+                applicant.deny()
+            case _:
+                return 409, "Invalid status provided"
     except StudentSessionApplication.DoesNotExist:
         return 404, "Applicant not found"
     return 200, "Applicant accepted"

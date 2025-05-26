@@ -116,6 +116,43 @@ class StudentSessionTests(TestCase):
         # Verify a timeslot was created
         self.assertEqual(StudentSessionTimeslot.objects.count(), 1)
 
+    def test_accept_then_deny(self):
+        """Test that exhibitors can accept then deny an applicant"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+        )
+
+        # Accept the application
+        resp = self.client.post(
+            f"/api/student-session/exhibitor/update-application-status",
+            data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
+            content_type="application/json",
+            headers=self._get_auth_headers(self.company_user1),
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+
+        # Check application status is now accepted
+        application.refresh_from_db()
+        self.assertEqual(application.status, "accepted")
+
+        # Now deny the application
+        resp = self.client.post(
+            f"/api/student-session/exhibitor/update-application-status",
+            data={"applicantUserId": self.student_users[0].id, "status": "rejected"},
+            content_type="application/json",
+            headers=self._get_auth_headers(self.company_user1),
+        )
+        self.assertEqual(resp.status_code, 409)  # Cannot change from accepted to rejected
+
+        # Check application status is now rejected
+        application.refresh_from_db()
+        self.assertEqual(application.status, "accepted")
+
     def test_get_exhibitor_timeslots(self):
         """Test that exhibitors can see their timeslots"""
         session = self._create_student_session(self.company_user1.company)
@@ -243,16 +280,20 @@ class StudentSessionTests(TestCase):
 
         # Test accepting with wrong user
         resp = self.client.post(
-            f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
+            f"/api/student-session/exhibitor/update-application-status",
+            data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
+            content_type="application/json",
             headers=self._get_auth_headers(self.student_users[1]),
         )
-        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.status_code, 401, resp.content)
 
         # Due to API implementing 406 for company check, need to modify our test
         # Add the expected 406 status code to our response handler
         try:
             resp = self.client.post(
-                f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
+                f"/api/student-session/exhibitor/update-application-status",
+                data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
+                content_type="application/json",
                 headers=self._get_auth_headers(self.company_user2),
             )
             self.assertEqual(resp.status_code, 406)
@@ -265,7 +306,9 @@ class StudentSessionTests(TestCase):
 
         # Test accepting with correct company
         resp = self.client.post(
-            f"/api/student-session/exhibitor/accept?applicant_user_id={self.student_users[0].id}",
+            f"/api/student-session/exhibitor/update-application-status",
+            data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
+            content_type="application/json",
             headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 200)
@@ -300,6 +343,7 @@ class StudentSessionTests(TestCase):
             f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
             headers=self._get_auth_headers(self.student_users[0]),
         )
+
         self.assertEqual(resp.status_code, 200)
 
         # Check timeslot was updated

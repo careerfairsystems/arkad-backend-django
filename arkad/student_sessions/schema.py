@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Literal
 from arkad.customized_django_ninja import Schema
 from user_models.schema import ProfileSchema
 
@@ -55,3 +55,7 @@ class StudentSessionNormalUserListSchema(Schema):
 class MotivationTextUpdateSchema(Schema):
     motivation_text: str | None
     company_id: int
+
+class UpdateStudentSessionApplicantStatus(Schema):
+    applicant_user_id: int
+    status: Literal["accepted", "rejected"]
