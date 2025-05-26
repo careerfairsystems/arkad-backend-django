@@ -65,11 +65,9 @@ def get_student_sessions(request: AuthenticatedRequest):
                 company_id=s.company_id,
                 booking_close_time=s.booking_close_time,
                 id=s.id,
-                available=s.booking_close_time > timezone.now()
-                if s.booking_close_time
-                else True,
+                available=True
             )
-            for s in sessions
+            for s in sessions if s.booking_close_time is None or s.booking_close_time > timezone.now()
         ],
         numElements=len(sessions),
     )
@@ -187,9 +185,6 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
             id=timeslot.id,
             start_time=timeslot.start_time,
             duration=timeslot.duration,
-            selected=ApplicantSchema.from_orm(timeslot.selected)
-            if timeslot.selected
-            else None,
         )
         for timeslot in timeslots
     ]
