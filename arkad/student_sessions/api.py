@@ -1,4 +1,5 @@
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from pydantic import BaseModel
@@ -19,10 +20,12 @@ from student_sessions.schema import (
     CreateStudentSessionSchema,
     ApplicantSchema,
     StudentSessionApplicationSchema,
+    UpdateStudentSessionApplicantStatus,
+    StudentSessionApplicationOutSchema,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
-from typing import Callable
+from typing import Callable, Literal
 
 router = Router(tags=["Student Sessions"])
 
@@ -56,8 +59,26 @@ def exhibitor_check(func: Callable):
 def get_student_sessions(request: AuthenticatedRequest):
     """
     Returns a list of available student sessions.
+
+    If the user is authenticated, it will also include their application status for each session.
     """
-    sessions: list[StudentSession] = list(StudentSession.objects.all())
+    sessions: list[StudentSession] = list(
+        StudentSession.objects.filter(
+            Q(booking_close_time__isnull=True)
+            | Q(booking_close_time__gt=timezone.now())
+        ).all()
+    )
+    id_to_session: dict[int, StudentSession] = {s.id: s for s in sessions}
+    my_applications_statuses: dict[int, Literal["accepted", "pending", "rejected"]] = (
+        dict()
+    )
+    if request.user.is_authenticated:
+        applications = StudentSessionApplication.objects.filter(user=request.user).all()
+        for application in applications:
+            if application.student_session_id in id_to_session:
+                my_applications_statuses[application.student_session_id] = (
+                    application.status
+                )
 
     return StudentSessionNormalUserListSchema(
         student_sessions=[
@@ -65,9 +86,8 @@ def get_student_sessions(request: AuthenticatedRequest):
                 company_id=s.company_id,
                 booking_close_time=s.booking_close_time,
                 id=s.id,
-                available=s.booking_close_time > timezone.now()
-                if s.booking_close_time
-                else True,
+                available=True,
+                user_status=my_applications_statuses.get(s.id, None),
             )
             for s in sessions
         ],
@@ -132,13 +152,16 @@ def get_student_session_applicants(request: AuthenticatedRequestSession):
     return 200, result
 
 
-@router.post("/exhibitor/accept", response={200: str, 409: str, 401: str, 404: str})
+@router.post(
+    "/exhibitor/update-application-status",
+    response={200: str, 409: str, 401: str, 404: str},
+)
 @exhibitor_check
-def accept_student_session(
-    request: AuthenticatedRequestSession, applicant_user_id: int
+def update_student_session_application_status(
+    request: AuthenticatedRequestSession, data: UpdateStudentSessionApplicantStatus
 ):
     """
-    Used to accept a student for a student session, takes in an applicant_user_id.
+    Used to accept a student for a student session, takes in an applicantUserId.
 
     This will email the user and allow them to select one of the available timeslots connected to this
     student session.
@@ -146,31 +169,18 @@ def accept_student_session(
     session: StudentSession = request.student_session
     try:
         applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=applicant_user_id
+            student_session=session, user_id=data.applicant_user_id
         )
-        applicant.accept()  # Sends
-    except StudentSessionApplication.DoesNotExist:
-        return 404, "Applicant not found"
-    return 200, "Applicant accepted"
+        if not applicant.is_pending():
+            return 409, "Applicant status has been set and can not be modified"
 
-
-@router.post("/exhibitor/deny", response={200: str, 409: str, 401: str, 404: str})
-@exhibitor_check
-def accept_student_session(
-        request: AuthenticatedRequestSession, applicant_user_id: int
-):
-    """
-    Used to accept a student for a student session, takes in an applicant_user_id.
-
-    This will email the user and allow them to select one of the available timeslots connected to this
-    student session.
-    """
-    session: StudentSession = request.student_session
-    try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=applicant_user_id
-        )
-        applicant.deny()  # Sends
+        match data.status:
+            case "accepted":
+                applicant.accept()
+            case "rejected":
+                applicant.deny()
+            case _:
+                return 409, "Invalid status provided"
     except StudentSessionApplication.DoesNotExist:
         return 404, "Applicant not found"
     return 200, "Applicant accepted"
@@ -192,7 +202,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
         return 404, "Application not found"
 
     timeslots = StudentSessionTimeslot.objects.filter(
-        student_session__company_id=company_id
+        student_session__company_id=company_id, selected=None
     ).all()
 
     return 200, [
@@ -200,9 +210,6 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
             id=timeslot.id,
             start_time=timeslot.start_time,
             duration=timeslot.duration,
-            selected=ApplicantSchema.from_orm(timeslot.selected)
-            if timeslot.selected
-            else None,
         )
         for timeslot in timeslots
     ]
@@ -305,7 +312,6 @@ def apply_for_session(
             user=request.user,
             student_session=session,
             motivation_text=data.motivation_text,
-            cv=data.cv,
         )
     except IntegrityError:
         return 409, "You have already applied to this session"
@@ -329,7 +335,9 @@ def update_cv_for_session(
     return 200, "CV updated"
 
 
-@router.get("/application", response={200: StudentSessionApplicationSchema, 404: str})
+@router.get(
+    "/application", response={200: StudentSessionApplicationOutSchema, 404: str}
+)
 def get_student_session_application(request: AuthenticatedRequest, company_id: int):
     """
     Returns the motivation text for the current user.
@@ -338,7 +346,7 @@ def get_student_session_application(request: AuthenticatedRequest, company_id: i
     """
     try:
         application = StudentSessionApplication.objects.get(user=request.user)
-        return 200, StudentSessionApplicationSchema(
+        return 200, StudentSessionApplicationOutSchema(
             motivation_text=application.motivation_text,
             cv=application.cv.url
             if application.cv

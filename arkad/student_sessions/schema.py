@@ -1,18 +1,22 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal
 from arkad.customized_django_ninja import Schema
 from user_models.schema import ProfileSchema
 
 
 class StudentSessionApplicationSchema(Schema):
-    cv: str | None = None
-    profile_picture: str | None = None
     programme: str | None = None
     linkedin: str | None = None
     master_title: str | None = None
     study_year: int | None = None
     motivation_text: str | None = None
     update_profile: bool | None = None
+    company_id: int
+
+
+class StudentSessionApplicationOutSchema(Schema):
+    motivation_text: str | None = None
+    cv: str | None = None
     company_id: int
 
 
@@ -25,7 +29,6 @@ class ApplicantSchema(Schema):
 class TimeslotSchema(Schema):
     start_time: datetime
     duration: int
-    selected: Optional[StudentSessionApplicationSchema] = None
     id: int
 
 
@@ -44,6 +47,7 @@ class StudentSessionNormalUserSchema(Schema):
     company_id: int
     booking_close_time: datetime | None
     available: bool
+    user_status: Literal["accepted", "rejected", "pending"] | None = None
     id: int
 
 
@@ -55,3 +59,8 @@ class StudentSessionNormalUserListSchema(Schema):
 class MotivationTextUpdateSchema(Schema):
     motivation_text: str | None
     company_id: int
+
+
+class UpdateStudentSessionApplicantStatus(Schema):
+    applicant_user_id: int
+    status: Literal["accepted", "rejected"]

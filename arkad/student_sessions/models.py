@@ -1,10 +1,7 @@
-from typing import Any
-
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
-from arkad.email_utils import send_mail
 from user_models.models import User
 from companies.models import Company
 
@@ -42,18 +39,17 @@ class StudentSessionApplication(models.Model):
     def accept(self) -> None:
         self.status = "accepted"
 
-        self.email_user(
+        self.user.email_user(
             "Application accepted",
-            "Your application has been accepted, enter the app and select a timeslot\n"
+            "Your application has been accepted, enter the app and select a timeslot\n "
             "They may run out at any time.\n",
         )
         self.save()
 
-
     def deny(self) -> None:
         self.status = "rejected"
 
-        self.email_user(
+        self.user.email_user(
             f"Your application to {self.student_session.company.name} has been rejected",
             "We regret to inform you that your application has been rejected.\n",
         )
@@ -67,14 +63,6 @@ class StudentSessionApplication(models.Model):
 
     def is_pending(self) -> bool:
         return self.status == "pending"
-
-    def email_user(self, subject: str, message: str, **kwargs: Any) -> None:
-        send_mail(
-            recipient_email=self.user.email,
-            subject=subject,
-            body_text=message,
-            body_html=message,
-        )
 
 
 class StudentSessionTimeslot(models.Model):
