@@ -177,7 +177,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
         return 404, "Application not found"
 
     timeslots = StudentSessionTimeslot.objects.filter(
-        student_session__company_id=company_id
+        student_session__company_id=company_id, selected=None
     ).all()
 
     return 200, [
