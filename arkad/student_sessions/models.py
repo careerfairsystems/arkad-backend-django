@@ -49,7 +49,6 @@ class StudentSessionApplication(models.Model):
         )
         self.save()
 
-
     def deny(self) -> None:
         self.status = "rejected"
 

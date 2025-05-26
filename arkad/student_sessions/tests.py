@@ -129,7 +129,7 @@ class StudentSessionTests(TestCase):
 
         # Accept the application
         resp = self.client.post(
-            f"/api/student-session/exhibitor/update-application-status",
+            "/api/student-session/exhibitor/update-application-status",
             data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
             content_type="application/json",
             headers=self._get_auth_headers(self.company_user1),
@@ -142,12 +142,14 @@ class StudentSessionTests(TestCase):
 
         # Now deny the application
         resp = self.client.post(
-            f"/api/student-session/exhibitor/update-application-status",
+            "/api/student-session/exhibitor/update-application-status",
             data={"applicantUserId": self.student_users[0].id, "status": "rejected"},
             content_type="application/json",
             headers=self._get_auth_headers(self.company_user1),
         )
-        self.assertEqual(resp.status_code, 409)  # Cannot change from accepted to rejected
+        self.assertEqual(
+            resp.status_code, 409
+        )  # Cannot change from accepted to rejected
 
         # Check application status is now rejected
         application.refresh_from_db()
@@ -280,7 +282,7 @@ class StudentSessionTests(TestCase):
 
         # Test accepting with wrong user
         resp = self.client.post(
-            f"/api/student-session/exhibitor/update-application-status",
+            "/api/student-session/exhibitor/update-application-status",
             data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[1]),
@@ -291,8 +293,11 @@ class StudentSessionTests(TestCase):
         # Add the expected 406 status code to our response handler
         try:
             resp = self.client.post(
-                f"/api/student-session/exhibitor/update-application-status",
-                data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
+                "/api/student-session/exhibitor/update-application-status",
+                data={
+                    "applicantUserId": self.student_users[0].id,
+                    "status": "accepted",
+                },
                 content_type="application/json",
                 headers=self._get_auth_headers(self.company_user2),
             )
@@ -306,7 +311,7 @@ class StudentSessionTests(TestCase):
 
         # Test accepting with correct company
         resp = self.client.post(
-            f"/api/student-session/exhibitor/update-application-status",
+            "/api/student-session/exhibitor/update-application-status",
             data={"applicantUserId": self.student_users[0].id, "status": "accepted"},
             content_type="application/json",
             headers=self._get_auth_headers(self.company_user1),
