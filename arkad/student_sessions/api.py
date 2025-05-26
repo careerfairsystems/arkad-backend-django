@@ -161,10 +161,10 @@ def update_student_session_application_status(
     request: AuthenticatedRequestSession, data: UpdateStudentSessionApplicantStatus
 ):
     """
-    Used to accept a student for a student session, takes in an applicantUserId.
+    Used to accept or reject a student for a student session, takes in an applicantUserId.
 
-    This will email the user and allow them to select one of the available timeslots connected to this
-    student session.
+    This will email the user. If accepted they will be allowed select one of the available 
+    timeslots connected to this student session. Otherwise send a standard rejection email.
     """
     session: StudentSession = request.student_session
     try:
