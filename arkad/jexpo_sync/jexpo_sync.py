@@ -1,9 +1,9 @@
-# sync_companies.py
 from typing import Tuple
 
 from companies.models import Company, Job
-from companies.jexpo_ingestion import ExhibitorSchema
+from jexpo_sync.jexpo_ingestion import ExhibitorSchema
 from companies.translation import SWEDISH_TO_ENGLISH
+from student_sessions.models import StudentSession
 
 
 def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, bool]:
@@ -46,7 +46,7 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
     sessions: str | None = (
         schema.studentsession.sessions if schema.studentsession else None
     )
-    if sessions is not None:
+    if sessions is not None and sessions != "none":
         # This is not the prettiest way to do this but easy to read
         numerical_chars: list[int] = []
         for i, char in enumerate(sessions):
@@ -90,6 +90,10 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             else None,
         },
     )
+    if parse_session_days and not StudentSession.objects.filter(company=company).exists():
+        # If company does not have a student session, and it has paid for it, we add create it.
+        StudentSession.objects.create(company=company)
+
     if schema.jobs is not None:
         jobs: list[Job] = [
             Job.objects.create(

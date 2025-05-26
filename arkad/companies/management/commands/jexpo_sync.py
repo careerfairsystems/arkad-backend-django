@@ -2,8 +2,8 @@ from typing import Any
 
 from django.core.management import BaseCommand
 from django.db import transaction
-from companies.jexpo_ingestion import ExhibitorSchema
-from companies.jexpo_sync import update_or_create_company
+from jexpo_sync.jexpo_ingestion import ExhibitorSchema
+from jexpo_sync.jexpo_sync import update_or_create_company
 import json
 import os
 
