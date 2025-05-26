@@ -24,7 +24,7 @@ from user_models.schema import ProfileSchema
 router = Router(tags=["Student Sessions"])
 
 
-@router.get("/all", response={200: StudentSessionNormalUserListSchema})
+@router.get("/all", response={200: StudentSessionNormalUserListSchema}, auth=None)
 def get_student_sessions(
     request: AuthenticatedRequest, only_available_sessions: bool = False
 ):

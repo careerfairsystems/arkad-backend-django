@@ -14,7 +14,7 @@ from event_booking.schemas import (
 router = Router(tags=["Events"])
 
 
-@router.get("", response={200: list[EventSchema]})
+@router.get("", response={200: list[EventSchema]}, auth=None)
 def get_events(request: AuthenticatedRequest):
     """
     Returns a list of all events
@@ -28,7 +28,7 @@ def get_booked_events(request: AuthenticatedRequest):
     return [t.event for t in ts]
 
 
-@router.get("{event_id}/", response={200: EventSchema, 404: str})
+@router.get("{event_id}/", response={200: EventSchema, 404: str}, auth=None)
 def get_event(request: AuthenticatedRequest, event_id: int):
     """
     Returns a single event
