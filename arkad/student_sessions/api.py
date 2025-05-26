@@ -154,6 +154,28 @@ def accept_student_session(
     return 200, "Applicant accepted"
 
 
+@router.post("/exhibitor/deny", response={200: str, 409: str, 401: str, 404: str})
+@exhibitor_check
+def accept_student_session(
+        request: AuthenticatedRequestSession, applicant_user_id: int
+):
+    """
+    Used to accept a student for a student session, takes in an applicant_user_id.
+
+    This will email the user and allow them to select one of the available timeslots connected to this
+    student session.
+    """
+    session: StudentSession = request.student_session
+    try:
+        applicant = StudentSessionApplication.objects.get(
+            student_session=session, user_id=applicant_user_id
+        )
+        applicant.deny()  # Sends
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Applicant not found"
+    return 200, "Applicant accepted"
+
+
 @router.get("/timeslots", response={200: list[TimeslotSchema], 401: str, 404: str})
 def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int):
     """

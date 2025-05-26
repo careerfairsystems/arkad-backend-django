@@ -49,6 +49,16 @@ class StudentSessionApplication(models.Model):
         )
         self.save()
 
+
+    def deny(self) -> None:
+        self.status = "rejected"
+
+        self.email_user(
+            f"Your application to {self.student_session.company.name} has been rejected",
+            "We regret to inform you that your application has been rejected.\n",
+        )
+        self.save()
+
     def is_accepted(self) -> bool:
         return self.status == "accepted"
 
