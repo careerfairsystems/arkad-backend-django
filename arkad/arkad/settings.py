@@ -68,7 +68,7 @@ INSTALLED_APPS = [
     "event_booking",
     "corsheaders",
     "email_app",
-    "jexpo_sync"
+    "jexpo_sync",
 ]
 
 MIDDLEWARE = [

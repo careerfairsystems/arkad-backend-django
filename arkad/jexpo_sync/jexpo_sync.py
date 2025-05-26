@@ -90,7 +90,10 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             else None,
         },
     )
-    if parse_session_days and not StudentSession.objects.filter(company=company).exists():
+    if (
+        parse_session_days
+        and not StudentSession.objects.filter(company=company).exists()
+    ):
         # If company does not have a student session, and it has paid for it, we add create it.
         StudentSession.objects.create(company=company)
 
