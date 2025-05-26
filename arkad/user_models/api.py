@@ -5,7 +5,7 @@ import secrets
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import IntegrityError
 from django.http import HttpRequest
 from ninja import File, UploadedFile, PatchDict
@@ -220,8 +220,6 @@ def delete_cv(request: AuthenticatedRequest):
     return 200, "CV deleted"
 
 
-
-
 @profile.post("favourite", response={200: str, 400:str})
 def add_favourite(request: AuthenticatedRequest, company_id: int):  # type: ignore[type-arg]
     """
@@ -237,9 +235,22 @@ def add_favourite(request: AuthenticatedRequest, company_id: int):  # type: igno
         logging.error(e)
         if "duplicate key" in str(e):
             return 400, "Company already exists"
-        
 
-#se om man likeat ett företag
+
+@profile.delete("favourite", response={200: str, 404: str})
+def remove_favourite(request: AuthenticatedRequest, company_id: int):
+    """
+    Removes a company from the user's favourites.
+    Returns 200 if the favourite is removed.
+    Returns 404 if the favourite (or company) does not exist for this user.
+    """
+    try:
+        company = Company.objects.get(id=company_id)
+        Favourites.objects.get(company=company, user=request.user).delete()
+        return 200, "Favourite removed successfully."
+    except ObjectDoesNotExist as e:
+        logging.error(e)
+        return 404, "Favourite not found or company does not exist."
 
 
 
