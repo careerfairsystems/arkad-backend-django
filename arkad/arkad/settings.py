@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "companies",
+    "company_admin_page",
     "user_models",
     "student_sessions",
     "event_booking",
