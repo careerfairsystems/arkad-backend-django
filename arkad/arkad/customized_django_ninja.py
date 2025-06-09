@@ -3,6 +3,8 @@ from typing import override, Any
 import ninja
 from ninja import Schema as NinjaSchema
 
+from typing import Generic, TypeVar
+from pydantic import RootModel
 from pydantic.alias_generators import to_camel
 
 
@@ -26,3 +28,8 @@ class Router(ninja.Router):
             raise ValueError("By_alias should not be set in add_api_operation")
         kwargs["by_alias"] = True
         return super().add_api_operation(*args, **kwargs)
+
+T = TypeVar("T")
+
+class ListType(RootModel[list[T]], Generic[T]):
+    pass
