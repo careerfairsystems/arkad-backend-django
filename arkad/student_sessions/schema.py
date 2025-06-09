@@ -38,10 +38,6 @@ class CreateStudentSessionSchema(Schema):
     booking_close_time: datetime
 
 
-class StudentSessionListSchema(Schema):
-    student_sessions: List[TimeslotSchema]
-    numElements: int
-
 
 class StudentSessionNormalUserSchema(Schema):
     company_id: int

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pydantic_core import ValidationError
 from ninja import File, UploadedFile
 
-from arkad.customized_django_ninja import Router
+from arkad.customized_django_ninja import Router, ListType
 from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
     StudentSession,
@@ -116,7 +116,7 @@ def create_student_session(
 
 
 @router.get(
-    "/exhibitor/sessions", response={200: list[TimeslotSchema], 401: str, 406: str}
+    "/exhibitor/sessions", response={200: ListType[TimeslotSchema], 401: str, 406: str}
 )
 @exhibitor_check
 def get_exhibitor_sessions(request: AuthenticatedRequestSession):
@@ -125,7 +125,7 @@ def get_exhibitor_sessions(request: AuthenticatedRequestSession):
 
 
 @router.get(
-    "/exhibitor/applicants", response={200: list[ApplicantSchema], 401: str, 404: str}
+    "/exhibitor/applicants", response={200: ListType[ApplicantSchema], 401: str, 404: str}
 )
 @exhibitor_check
 def get_student_session_applicants(request: AuthenticatedRequestSession):
@@ -186,7 +186,7 @@ def update_student_session_application_status(
     return 200, "Applicant accepted"
 
 
-@router.get("/timeslots", response={200: list[TimeslotSchema], 401: str, 404: str})
+@router.get("/timeslots", response={200: ListType[TimeslotSchema], 401: str, 404: str})
 def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int):
     """
     Returns a list of timeslots for a student session.
