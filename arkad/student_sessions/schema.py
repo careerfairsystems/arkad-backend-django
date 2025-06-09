@@ -38,7 +38,6 @@ class CreateStudentSessionSchema(Schema):
     booking_close_time: datetime
 
 
-
 class StudentSessionNormalUserSchema(Schema):
     company_id: int
     booking_close_time: datetime | None

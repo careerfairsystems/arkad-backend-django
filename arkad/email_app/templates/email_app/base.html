@@ -1,12 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{title}}</title>
-  <style type="text/css">
-    {% include "email_app/email_base.css" %}
-  </style>
+  <link rel="stylesheet" type="text/css" href="{{ base_url }}{% static 'css/email_base.css' %}">
 </head>
 <body>
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
@@ -25,19 +24,19 @@
 
               {% block content %}
               {% endblock %}
-       
+
               <!-- Footer -->
               <div class="email-footer">
                 <p>Följ oss på:</p>
                 <div class="social-icons">
                   <a href="https://www.facebook.com/TLTH.ARKAD" target="_blank">
-                    <img src="https://simpleicons.org/icons/facebook.svg" alt="Facebook">
+                    <img src="{{ base_url }}{% static 'images/facebook.png' %}" alt="Facebook">
                   </a>
                   <a href="https://www.instagram.com/arkadtlth/" target="_blank">
-                    <img src="https://simpleicons.org/icons/instagram.svg" alt="Instagram">
+                    <img src="{{ base_url }}{% static 'images/instagram.png' %}" alt="Instagram">
                   </a>
                   <a href="https://www.linkedin.com/company/arkadtlth" target="_blank">
-                    <img src="https://simpleicon.com/wp-content/uploads/linkedin_1.png" alt="LinkedIn">
+                    <img src="{{ base_url }}{% static 'images/linkedin.png' %}" alt="LinkedIn">
                   </a>
                 </div>
                 <p style="margin:15px 0 5px;">

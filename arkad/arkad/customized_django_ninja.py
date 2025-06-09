@@ -29,7 +29,9 @@ class Router(ninja.Router):
         kwargs["by_alias"] = True
         return super().add_api_operation(*args, **kwargs)
 
+
 T = TypeVar("T")
+
 
 class ListType(RootModel[list[T]], Generic[T]):
     pass

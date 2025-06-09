@@ -52,7 +52,10 @@ if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
     print("DEBUG ENABLED")
 
-STATIC_ROOT = BASE_DIR / "static"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # This is where your static files are located
+]
+STATIC_ROOT = BASE_DIR / "static_root"
 MEDIA_ROOT = BASE_DIR / "media"
 
 INSTALLED_APPS = [
@@ -155,7 +158,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from .api import api
-from .settings import DEBUG
+from .settings import DEBUG, STATIC_URL, STATICFILES_DIRS
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -29,4 +29,10 @@ urlpatterns = [
 if DEBUG:
     urlpatterns.append(
         path("email/", include("email_app.urls")),
+    )
+    # In debug also serve the static files
+    from django.conf.urls.static import static
+
+    urlpatterns.extend(
+        static(STATIC_URL, document_root=STATICFILES_DIRS[0], show_indexes=True)  # type: ignore[arg-type]
     )

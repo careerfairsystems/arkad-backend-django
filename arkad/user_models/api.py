@@ -60,7 +60,7 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     code = ("0" * (6 - len(code)) + code)[:6]
     salt: str = generate_salt()
     # Send 2fa code
-    send_signup_code_email(email=data.email, code=code)
+    send_signup_code_email(request, email=data.email, code=code)
     return 200, jwt_encode(
         {
             "code2fa": sha256(
