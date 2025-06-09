@@ -102,7 +102,6 @@ class StudentSession(models.Model):
         null=False,
         related_name="company_representative",
     )
-
     booking_close_time = models.DateTimeField(null=True, blank=True)
 
     @staticmethod
