@@ -5,16 +5,42 @@
     <title>ARKAD Company admin screen</title>
 </head>
 
-<h1>WASSUP</h1>
+<h1>Applications for {{ company }}</h1>
 
 <ul style="list-style: none;">
     {% for application in applications %}
         <li>
-            {{application}}
-            <button onclick="accept">Accept application</button>
+            
+            {{ application.applicantId }}
+            {{ application.name }}
+            {{ application.motivation_text}}
+            {{ application.cv }}
+
+            <button onclick="updateApplicationStatus('{{application.applicantId}}', 'accept')">Accept application</button>
             <button onClick="deny">Deny application</button>
         </li>
 
     {% endfor %}
 </ul>
 
+<script>
+
+    function updateApplicationStatus(applicantUserId, denyOrAccept){
+        fetch("/exhibitor/update-application-status", {
+            method: "POST",
+            header: {
+                "Content-Type": "application/json",
+            },
+            body:{
+                "applicantUserId": applicantUserId, 
+                "status": denyOrAccept
+            }
+        })
+        .then(response => {
+            if(!response.ok){
+                alert(`Error updating application status. Responded with status code: ${response.status}`)
+            }
+        });
+    }
+
+</script>
