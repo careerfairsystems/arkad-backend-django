@@ -14,6 +14,7 @@
             {{ application.name }}
             {{ application.motivation_text}}
             {{ application.cv }}
+            {{ applicaton.status }}
             <button onclick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'accepted')">Accept application</button>
             <button onClick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'rejected')">Deny application</button>
         </li>
@@ -24,6 +25,7 @@
 <script>
 
     function updateApplicationStatus(token, applicantUserId, denyOrAccept){
+        //need to fix so that it dynamically changes the url dpeending on prod or dev
         fetch("http://127.0.0.1:8000/api/student-session/exhibitor/update-application-status", {
             method: "POST",
             headers: {
