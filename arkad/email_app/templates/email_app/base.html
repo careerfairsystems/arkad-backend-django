@@ -1,58 +1,54 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{title}}</title>
-  <style>
-    {% include "email_app/email_base.css" %}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
 </head>
-<body>
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+<body style="margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #f4f4f4; font-family: 'Open Sans', Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="mso-table-lspace: 0; mso-table-rspace: 0;">
     <tr>
-      <td align="center">
-        <!-- Main container -->
-        <table class="email-container" cellpadding="0" cellspacing="0" role="presentation">
-          <tr>
-            <td>
-              <!-- Header -->
-              <div class="email-header">
-                <a href="https://www.arkadtlth.se">
-                  <img src="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/ca982652-b78f-49aa-a865-3371d4e6ba0f/ARKAD_logo.png" alt="ARKAD logotyp">
-                </a>
-              </div>
+        <td align="center">
+            <!-- Main container -->
+            <table cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; mso-table-lspace: 0; mso-table-rspace: 0;">
+                <tr>
+                    <td>
+                        <!-- Header -->
+                        <div style="background-color: #000000; text-align: center; padding: 20px;">
+                            <a href="https://www.arkadtlth.se" style="color: inherit; text-decoration: none;">
+                                <img src="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/ca982652-b78f-49aa-a865-3371d4e6ba0f/ARKAD_logo.png" alt="ARKAD logotyp" style="max-width: 150px; height: auto; display: block; margin: 0 auto; -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none;">
+                            </a>
+                        </div>
 
-              {% block content %}
-              {% endblock %}
+                        {% block content %}
+                        {% endblock %}
 
-              <!-- Footer -->
-              <div class="email-footer">
-                <p>Följ oss på:</p>
-                <div class="social-icons">
-                  <a href="https://www.facebook.com/TLTH.ARKAD" target="_blank">
-                    <img src="{{ base_url }}{% static 'images/facebook.png' %}" alt="Facebook">
-                  </a>
-                  <a href="https://www.instagram.com/arkadtlth/" target="_blank">
-                    <img src="{{ base_url }}{% static 'images/instagram.png' %}" alt="Instagram">
-                  </a>
-                  <a href="https://www.linkedin.com/company/arkadtlth" target="_blank">
-                    <img src="{{ base_url }}{% static 'images/linkedin.png' %}" alt="LinkedIn">
-                  </a>
-                </div>
-                <p style="margin:15px 0 5px;">
-                  ARKAD Career Fair<br>
-                  Kårhuset, Sölvegatan 22A, Lund<br>
-                  <a href="mailto:arkad@tlth.se">arkad@tlth.se</a> | +46 (0)704 187927
-                </p>
-                <p style="opacity:0.6;">&copy; 2025 ARKAD, Lunds Tekniska Högskola</p>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
+                        <!-- Footer -->
+                        <div style="background-color: #19A1DB; color: #e6e6e6; text-align: center; padding: 20px; font-size: 12px;">
+                            <p>Följ oss på:</p>
+                            <div style="margin: 10px 0;">
+                                <a href="https://www.facebook.com/TLTH.ARKAD" target="_blank" style="color: #ffffff; margin: 0 5px; font-size: 14px; display: inline-block; text-decoration: none;">
+                                    <img src="{{ base_url }}{% static 'images/facebook.png' %}" alt="Facebook" style="width: 24px; height: 24px; margin: 0 5px; vertical-align: middle; border: 0;">
+                                </a>
+                                <a href="https://www.instagram.com/arkadtlth/" target="_blank" style="color: #ffffff; margin: 0 5px; font-size: 14px; display: inline-block; text-decoration: none;">
+                                    <img src="{{ base_url }}{% static 'images/instagram.png' %}" alt="Instagram" style="width: 24px; height: 24px; margin: 0 5px; vertical-align: middle; border: 0;">
+                                </a>
+                                <a href="https://www.linkedin.com/company/arkadtlth" target="_blank" style="color: #ffffff; margin: 0 5px; font-size: 14px; display: inline-block; text-decoration: none;">
+                                    <img src="{{ base_url }}{% static 'images/linkedin.png' %}" alt="LinkedIn" style="width: 24px; height: 24px; margin: 0 5px; vertical-align: middle; border: 0;">
+                                </a>
+                            </div>
+                            <p style="margin:15px 0 5px;">
+                                ARKAD Career Fair<br>
+                                Kårhuset, Sölvegatan 22A, Lund<br>
+                                <a href="mailto:arkad@tlth.se" style="color: #ffffff; text-decoration: none;">arkad@tlth.se</a> | +46 (0)704 187927
+                            </p>
+                            <p style="opacity:0.6;">&copy; 2025 ARKAD, Lunds Tekniska Högskola</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
     </tr>
-  </table>
+</table>
 </body>
 </html>
