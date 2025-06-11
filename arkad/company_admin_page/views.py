@@ -5,20 +5,20 @@ from user_models.models import User
 from companies.models import Company
 from student_sessions.models import StudentSession, StudentSessionApplication, StudentSessionTimeslot
 
-def company_admin_page(request, user_id):
-
-    user = get_object_or_404(User, id=user_id)
+def company_admin_page(request, token):
+    #This is currently broken. 
+    #The token need to be decoded to extract the user id?
+    user = request.user
 
     if not user.is_company:
         raise PermissionDenied("Insufficient permissions")
 
     username = user.company.name
-    #company = get_object_or_404(Company, name=user.company.name) #The name should be replaced with a generated token that is in the company model
     
     applications = StudentSessionApplication.objects.filter(student_session__company__name=username)
     token = user.create_jwt_token()
 
-    #I application ska man kunna se: Namn, CV (rendera direkt i skärmen?), Motivational letter och ifall den är accepted/rejected.
+    #TODO: Fix so that "status" is visible on admin page
 
     application_info = []
     for application in applications:
@@ -27,6 +27,7 @@ def company_admin_page(request, user_id):
             "name":f"{application.user.first_name} {application.user.last_name}",
             "cv": "CV", #TODO: Add cv file (preview or download?)
             "motivation_text": application.motivation_text,
+            "status": application.status,
         })     
 
     return render(

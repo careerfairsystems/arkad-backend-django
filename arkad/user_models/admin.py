@@ -4,14 +4,30 @@ from .models import User
 
 
 # Register your models here.
-#admin.site.register(User)
 
 
 #TODO: Add admin action for creating a URL with users jwt token. create jwt token with loong expiry
-@admin.action(description="Generate urls for companies.")
+@admin.action(description="Generate & send url to company admin page.")
 def generate_urls(modeladmin, request, queryset) -> str:
-    updated = queryset.update(first_name="AnotherCompany")
-    #modeladmin.message_user(request, f"{updated}", messages.success)
+    """
+    Generates URLs to company admin page with a JWT, and sends an email with the url to user.
+    Skips users that are not part of a company.
+    """
+    for user in queryset:
+        if user.is_company: #Skip users that are not part of a company (maybe throw error instead?)
+            company_admin_url = generate_url(request, user)
+            user.email_user(
+                "ARKAD Company admin page", 
+                f"Here is the URL to the company admin page for ARKAD. Do not share with anyone: {company_admin_url}"
+                )
+
+
+def generate_url(request, user: User) -> str:
+    domain = f"{request.scheme}://{request.get_host()}"
+    token = user.create_jwt_token(expiry_hours=8000)
+    token = token.split(" ", 1)[1] #Remove "bearer" (ask someone about this)
+
+    return f"{domain}/company/admin/{token}"
 
 
 class CustomUserAdmin(UserAdmin):
@@ -20,5 +36,4 @@ class CustomUserAdmin(UserAdmin):
     actions = [generate_urls]
 
 
-#admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
