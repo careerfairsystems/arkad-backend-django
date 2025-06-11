@@ -18,6 +18,7 @@ from arkad.customized_django_ninja import Router
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
 from email_app.emails import send_signup_code_email
+from email_app.utils import get_base_url
 from user_models.models import User, AuthenticatedRequest
 from user_models.schema import (
     SigninSchema,
@@ -159,7 +160,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 email_template_name="registration/password_reset_email.html",
                 subject_template_name="registration/password_reset_subject.txt",
                 html_email_template_name="email_app/reset.html",
-                extra_email_context={"reset_link": reset_link},
+                extra_email_context={"reset_link": reset_link, "name": user.first_name, "base_url": get_base_url(request)},
             )
 
         except User.DoesNotExist:
