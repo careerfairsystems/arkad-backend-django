@@ -1,7 +1,10 @@
+from functools import partial
+
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
+from arkad.utils import unique_file_upload_path
 from user_models.models import User
 from companies.models import Company
 
@@ -14,7 +17,9 @@ class StudentSessionApplication(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    cv = models.FileField("Users cv", upload_to="application/cv", null=True, blank=True)
+    cv = models.FileField("Users cv",
+                          upload_to=partial(unique_file_upload_path, "application/cv"),
+                          null=True, blank=True)
     status = models.CharField(
         max_length=10,
         choices=[
