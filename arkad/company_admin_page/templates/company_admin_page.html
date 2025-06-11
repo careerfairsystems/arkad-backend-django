@@ -2,22 +2,20 @@
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
-    <title>ARKAD Company admin screen</title>
+    <title>ARKAD: Company admin screen</title>
 </head>
 
-<h1>Applications for {{ company }}</h1>
+<h1>Applications for {{ company_name }}</h1>
 
 <ul style="list-style: none;">
     {% for application in applications %}
         <li>
-            
             {{ application.applicantId }}
             {{ application.name }}
             {{ application.motivation_text}}
             {{ application.cv }}
-
-            <button onclick="updateApplicationStatus('{{application.applicantId}}', 'accept')">Accept application</button>
-            <button onClick="deny">Deny application</button>
+            <button onclick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'accepted')">Accept application</button>
+            <button onClick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'rejected')">Deny application</button>
         </li>
 
     {% endfor %}
@@ -25,20 +23,23 @@
 
 <script>
 
-    function updateApplicationStatus(applicantUserId, denyOrAccept){
-        fetch("/exhibitor/update-application-status", {
+    function updateApplicationStatus(token, applicantUserId, denyOrAccept){
+        fetch("http://127.0.0.1:8000/api/student-session/exhibitor/update-application-status", {
             method: "POST",
-            header: {
+            headers: {
                 "Content-Type": "application/json",
+                "Authorization": token,
             },
-            body:{
+            body:JSON.stringify({
                 "applicantUserId": applicantUserId, 
                 "status": denyOrAccept
-            }
+            })
         })
-        .then(response => {
+        .then(async response => { 
+            const message = await response.text();
             if(!response.ok){
-                alert(`Error updating application status. Responded with status code: ${response.status}`)
+                alert(`ApplicantUserId: ${applicantUserId}, Status: ${denyOrAccept}`)
+                alert(`Error updating application status. Responded with status code: ${response.status}, ${message}`)
             }
         });
     }
