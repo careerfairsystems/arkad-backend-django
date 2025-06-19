@@ -51,6 +51,6 @@ txaio==23.1.1
 types-PyYAML==6.0.12.20241230
 typing_extensions==4.12.2
 tzdata==2025.1
-urllib3==2.3.0
+urllib3==2.5.0
 uuid==1.30
 zope.interface==7.2
