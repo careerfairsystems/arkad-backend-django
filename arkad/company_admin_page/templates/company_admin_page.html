@@ -1,49 +1,152 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
-    <title>ARKAD: Company admin screen</title>
-</head>
-
-<h1>Applications for {{ company_name }}</h1>
-
-<ul style="list-style: none;">
-    {% for application in applications %}
-        <li>
-            {{ application.applicantId }}
-            {{ application.name }}
-            {{ application.motivation_text}}
-            {{ application.cv }}
-            {{ applicaton.status }}
-            <button onclick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'accepted')">Accept application</button>
-            <button onClick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'rejected')">Deny application</button>
-        </li>
-
-    {% endfor %}
-</ul>
-
-<script>
-
-    function updateApplicationStatus(token, applicantUserId, denyOrAccept){
-        //need to fix so that it dynamically changes the url dpeending on prod or dev
-        fetch("http://127.0.0.1:8000/api/student-session/exhibitor/update-application-status", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": token,
-            },
-            body:JSON.stringify({
-                "applicantUserId": applicantUserId, 
-                "status": denyOrAccept
-            })
-        })
-        .then(async response => { 
-            const message = await response.text();
-            if(!response.ok){
-                alert(`ApplicantUserId: ${applicantUserId}, Status: ${denyOrAccept}`)
-                alert(`Error updating application status. Responded with status code: ${response.status}, ${message}`)
-            }
-        });
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
+  <title>ARKAD: Company admin screen</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
     }
 
-</script>
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+
+    .application-list {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0;
+    }
+
+    .application-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .application-info {
+      margin-bottom: 1rem;
+    }
+
+    .application-info strong {
+      display: inline-block;
+      width: 130px;
+    }
+
+    .status-label {
+      font-weight: bold;
+      text-transform: capitalize;
+    }
+
+    .status-label.accepted {
+      color: #155724;
+    }
+
+    .status-label.rejected {
+      color: #721c24;
+    }
+
+    .status-label.pending {
+      color: #856404;
+    }
+
+    .actions button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .actions .accept {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .actions .deny {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .actions button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>Arkad Student Session applications for {{ company_name }}</h1>
+
+  <div class="application-list">
+    {% for application in applications %}
+      <div class="application-card">
+        <div class="application-info">
+          <div><strong>Name:</strong> {{ application.name }}</div>
+          <div><strong>Motivation:</strong> {{ application.motivation_text }}</div>
+          <div><strong>Studying:</strong></div>
+          <div><strong>Year:</strong></div>
+          <div><strong>CV:</strong> {{ application.cv }}</div>
+          <div>
+            <strong>Company status:</strong>
+            <span class="status-label 
+              {% if application.status == 'accepted' %}accepted
+              {% elif application.status == 'rejected' %}rejected
+              {% else %}pending{% endif %}">
+              {{ application.status|capfirst }}
+            </span>
+          </div>
+          <div>
+            <strong>Student status:</strong>
+            Pending
+          </div>
+        </div>
+        <div class="actions">
+          <button class="accept"
+                  onclick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'accepted')"
+                  {% if application.status in 'accepted rejected' %}disabled{% endif %}>
+            Accept
+          </button>
+          <button class="deny"
+                  onclick="updateApplicationStatus('{{token}}', '{{application.applicantId}}', 'rejected')"
+                  {% if application.status in 'accepted rejected' %}disabled{% endif %}>
+            Reject
+          </button>
+        </div>
+
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    function updateApplicationStatus(token, applicantUserId, status) {
+      fetch("http://127.0.0.1:8000/api/student-session/exhibitor/update-application-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token,
+        },
+        body: JSON.stringify({
+          applicantUserId: applicantUserId,
+          status: status
+        })
+      })
+      .then(async response => {
+        const message = await response.text();
+        if (!response.ok) {
+          alert(`Error: ${message}`);
+        } else {
+          location.reload(); 
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
