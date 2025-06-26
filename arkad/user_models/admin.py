@@ -25,7 +25,7 @@ def generate_urls(modeladmin, request, queryset) -> str:
 def generate_url(request, user: User) -> str:
     domain = f"{request.scheme}://{request.get_host()}"
 
-    token = user.create_jwt_token(expiry_hours=730) #Expires in one month
+    token = user.create_jwt_token(expiry_days=30) #Expires in one month
     token = token.split(" ", 1)[1] 
 
     return f"{domain}/company/admin/{token}"
