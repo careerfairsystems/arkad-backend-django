@@ -6,7 +6,7 @@ from .models import User
 # Register your models here.
 
 
-#TODO: Add admin action for creating a URL with users jwt token. create jwt token with loong expiry
+#TODO: Add admin action for creating a URL with users jwt token. Create jwt token with loong expiry
 @admin.action(description="Generate & send url to company admin page.")
 def generate_urls(modeladmin, request, queryset) -> str:
     """
@@ -18,14 +18,15 @@ def generate_urls(modeladmin, request, queryset) -> str:
             company_admin_url = generate_url(request, user)
             user.email_user(
                 "ARKAD Company admin page", 
-                f"Here is the URL to the company admin page for ARKAD. Do not share with anyone: {company_admin_url}"
+                f"This is the URL to your company admin page for ARKAD. Do not share with anyone: {company_admin_url}"
                 )
 
 
 def generate_url(request, user: User) -> str:
     domain = f"{request.scheme}://{request.get_host()}"
-    token = user.create_jwt_token(expiry_hours=8000)
-    token = token.split(" ", 1)[1] #Remove "bearer" (ask someone about this)
+
+    token = user.create_jwt_token(expiry_hours=730) #Expires in one month
+    token = token.split(" ", 1)[1] 
 
     return f"{domain}/company/admin/{token}"
 
