@@ -10,7 +10,7 @@ class StudentSessionApplication(models.Model):
     student_session = models.ForeignKey(
         "StudentSession", on_delete=models.CASCADE, null=False
     )
-
+    
     timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
