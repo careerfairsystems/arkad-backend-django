@@ -12,3 +12,4 @@ arkad/private
 arkad/config
 .DS_Store
 .dmypy.json
+/arkad/static_root/

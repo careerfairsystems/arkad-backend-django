@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from functools import partial
 from typing import Any
 
 from django.contrib.auth.models import AbstractUser
@@ -7,6 +7,8 @@ from pydantic_core import CoreSchema, core_schema
 
 from arkad.jwt_utils import jwt_encode
 from django.db import models
+
+from arkad.utils import unique_file_upload_path
 from companies.models import Company
 
 
@@ -45,9 +47,15 @@ class User(AbstractUser):
     )
 
     is_student = models.BooleanField(default=True)
-    cv = models.FileField("Users cv", upload_to="user/cv", null=True, blank=True)
+    cv = models.FileField("Users cv",
+                          upload_to=partial(unique_file_upload_path, "user/cv"),
+                          null=True,
+                          blank=True)
     profile_picture = models.FileField(
-        "User profile picture", upload_to="user/profile-pictures", blank=True, null=True
+        "User profile picture",
+        upload_to=partial(unique_file_upload_path, "user/profile-picture"),
+        blank=True,
+        null=True
     )
 
     programme = models.CharField(
@@ -67,12 +75,12 @@ class User(AbstractUser):
             return self.email
         return name
 
-    def create_jwt_token(self, expiry_hours: int = 96) -> str:
+    def create_jwt_token(self, expiry_days: int = 30) -> str:
         return "Bearer " + jwt_encode(
             {
-                "exp": datetime.now(tz=timezone.utc) + timedelta(hours=expiry_hours),
                 "user_id": self.id,
             },
+            expiry_minutes=expiry_days * 24 * 60,
         )
 
     def get_auth_headers(self) -> dict[str, str]:

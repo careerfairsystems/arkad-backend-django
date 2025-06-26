@@ -59,6 +59,8 @@ class UserRoutesTestCase(TestCase):
             username="testuser@example.com",
             password="password123",
             email="testuser@example.com",
+            first_name="Test",
+            last_name="User",
         )
         self.token = self.client.post(
             "/api/user/signin",

@@ -1,15 +1,12 @@
-
 {% extends "email_app/base.html" %}
 
 {% block content %}
-  <div class="email-hero">
-    <div class="overlay">
-      <h1>Hello {{name}}!</h1>
-      <h4>Reset your password with the link below</h4>
-      <a href="{{reset_link}}" class="btn btn-primary">Reset password</a>
-      <p style="font-style:italic; margin:0 0 5px; font-size:13px;"><br><br>If you didn't request the password reset, go ahead and ignore this email.</p>
+    <div style="background-image: url('https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/97f5e874-adf7-444e-9909-acc13c047833/background_home.png'); background-size: cover; background-position: center; position: relative; text-align: center; color: #ffffff;">
+        <div style="background-color: rgba(0, 0, 0, 0.6); padding: 60px 20px;">
+            <h1 style="font-size: 32px; margin: 0 0 10px; letter-spacing: 2px;">Hello {{name}}!</h1>
+            <h4 style="font-size: 18px; margin: 0 0 20px; font-weight: normal; opacity: 0.9;">Reset your password with the link below</h4>
+            <a href="{{reset_link}}" style="display: inline-block; padding: 12px 24px; margin: 5px; border-radius: 50px; font-weight: 600; font-size: 14px; background-color: #EB6F00; color: #ffffff; text-decoration: none;">Reset password</a>
+            <p style="font-style:italic; margin:0 0 5px; font-size:13px;"><br><br>If you didn't request the password reset, go ahead and ignore this email.</p>
+        </div>
     </div>
-  </div>
 {% endblock %}
-
-              

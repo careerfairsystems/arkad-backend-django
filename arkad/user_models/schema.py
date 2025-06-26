@@ -11,6 +11,7 @@ class SignupSchema(Schema):
     first_name: str | None = None
     last_name: str | None = None
     email: str
+    food_preferences: str | None = None
 
 
 class CompleteSignupSchema(Schema):
@@ -20,22 +21,23 @@ class CompleteSignupSchema(Schema):
     first_name: str | None = None
     last_name: str | None = None
     email: str
+    food_preferences: str | None = None
 
 
 class ProfileSchema(Schema):
-    id: int | None = None
-    email: str | None = None
-    first_name: str | None = None
-    last_name: str | None = None
-    is_student: bool | None = None
+    id: int
+    email: str
+    first_name: str
+    last_name: str
+    is_student: bool
     cv: str | None = None
     profile_picture: str | None = None
     programme: str | None = None
     linkedin: str | None = None
     master_title: str | None = None
     study_year: int | None = None
-    is_active: bool | None = None
-    is_staff: bool | None = None
+    is_active: bool
+    is_staff: bool
     food_preferences: str | None = None
 
 

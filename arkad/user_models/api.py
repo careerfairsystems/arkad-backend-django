@@ -8,18 +8,17 @@ from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from ninja import File, UploadedFile, PatchDict
-
-from arkad import settings
 from arkad.customized_django_ninja import Router
 from arkad.jwt_utils import jwt_encode, jwt_decode
 from arkad.settings import SECRET_KEY
+from email_app.emails import send_signup_code_email
+from email_app.utils import get_base_url
 from user_models.models import User, AuthenticatedRequest
 from user_models.schema import (
     SigninSchema,
@@ -62,13 +61,7 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     code = ("0" * (6 - len(code)) + code)[:6]
     salt: str = generate_salt()
     # Send 2fa code
-    send_mail(
-        subject=code,
-        message=f"Your 2fa code is {code}",
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[data.email],
-        html_message=code,
-    )  # TODO: Make this nice
+    send_signup_code_email(request, email=data.email, code=code)
     return 200, jwt_encode(
         {
             "code2fa": sha256(
@@ -167,7 +160,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 email_template_name="registration/password_reset_email.html",
                 subject_template_name="registration/password_reset_subject.txt",
                 html_email_template_name="email_app/reset.html",
-                extra_email_context={"reset_link": reset_link},
+                extra_email_context={"reset_link": reset_link, "name": user.first_name, "base_url": get_base_url(request)},
             )
 
         except User.DoesNotExist:
