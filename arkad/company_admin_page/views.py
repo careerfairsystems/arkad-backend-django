@@ -18,10 +18,14 @@ def company_admin_page(request, token):
     company_name = user.company.name
     
     applications = StudentSessionApplication.objects.filter(student_session__company__name=company_name)
+    
     applications_info = [{
-                "applicantId": application.user.id,
+                "applicantid": application.user.id,
                 "name":f"{application.user.first_name} {application.user.last_name}",
-                "cv": "CV", #TODO: Add cv file (render directly on screen?)
+                "programme": application.user.programme,
+                "study_year": application.user.study_year,
+                "master_title" : application.user.master_title,
+                "cv": application.cv,
                 "motivation_text": application.motivation_text,
                 "status": application.status,
             } for application in applications]
