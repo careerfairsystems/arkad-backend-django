@@ -3,12 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 from .models import User
 
 
-# Register your models here.
-
-
-#TODO: Add admin action for creating a URL with users jwt token. Create jwt token with loong expiry
-@admin.action(description="Generate & send url to company admin page.")
-def generate_urls(modeladmin, request, queryset) -> str:
+@admin.action(description="Send url to company admin page.")
+def send_urls(modeladmin, request, queryset) -> str:
     """
     Generates URLs to company admin page with a JWT, and sends an email with the url to user.
     Skips users that are not part of a company.
@@ -32,9 +28,9 @@ def generate_url(request, user: User) -> str:
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ["id", "username", "email", "first_name", "last_name", "company", "is_active", "is_staff"]
+    list_display = ["id", "username", "email", "first_name", "last_name", "company", "is_active", "is_staff", "is_superuser"]
     list_filter = ["is_staff", "is_superuser", "is_active"]
-    actions = [generate_urls]
+    actions = [send_urls]
 
 
 admin.site.register(User, CustomUserAdmin)
