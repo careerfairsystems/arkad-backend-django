@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from .api import api
-from .settings import DEBUG, STATIC_URL, STATICFILES_DIRS
+from .settings import DEBUG, STATIC_URL, STATICFILES_DIRS, MEDIA_URL, MEDIA_ROOT
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -37,3 +37,5 @@ if DEBUG:
     urlpatterns.extend(
         static(STATIC_URL, document_root=STATICFILES_DIRS[0], show_indexes=True)  # type: ignore[arg-type]
     )
+
+    urlpatterns += static(MEDIA_URL, document_root=MEDIA_ROOT) # The PDFs on company admin page only visible in debug
