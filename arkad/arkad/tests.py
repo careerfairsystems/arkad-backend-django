@@ -15,3 +15,14 @@ class TestJWT(TestCase):
 
         # Assert that the token has almost 30 days to expiry, allow 10s for clock skew
         self.assertAlmostEqual(exp, time.time() + 30 * 24 * 60 * 60, delta=10)
+
+class TestCache(TestCase):
+    def test_cache(self):
+        from django.core.cache import cache
+
+        cache.set("test_key", "test_value", timeout=1)
+        value = cache.get("test_key")
+        self.assertEqual(value, "test_value")
+        time.sleep(1)
+        value = cache.get("test_key")
+        self.assertIsNone(value)
