@@ -21,7 +21,7 @@ services:
     build: ../../arkad
     command: sh -c "
       python manage.py collectstatic --no-input &&
-      python manage.py createcachetable && # create cache table if not exists
+      python manage.py createcachetable && 
       python manage.py migrate &&
       gunicorn --workers 8 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
       "
