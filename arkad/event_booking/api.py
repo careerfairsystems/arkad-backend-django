@@ -71,12 +71,14 @@ def get_event_ticket(request: AuthenticatedRequest, event_id: int):
     return UseTicketSchema(uuid=ticket.uuid, event_id=ticket.event.id)
 
 
-@router.post("use-ticket", response={200: TicketSchema, 401: str})
+@router.post("use-ticket", response={200: TicketSchema, 401: str, 404: str})
 def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     """
     Returns 200 and the ticket schema which will now be used.
 
-    If used or non-existing return 401.
+    If not a staff user, return 401.
+
+    If the ticket is not found or already used, return 404.
     """
     if not request.user.is_staff:
         return 401, "This route is staff only."
@@ -84,8 +86,9 @@ def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
         used=True
     )
     if modified_tickets == 1:
+        # uuid is unique so we can safely assume we got the ticket
         return 200, Ticket.objects.get(uuid=ticket.uuid)
-    return 401, "Unauthorized"
+    return 404, "Ticket not found or already used"
 
 
 @router.post(

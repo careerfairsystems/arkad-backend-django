@@ -105,7 +105,7 @@ class EventBookingTestCase(TestCase):
             content_type="application/json",
             headers=self._get_auth_headers(self.staff_user),
         )
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 404)
 
     def test_book_event_twice(self):
         headers = self._get_auth_headers(self.user)
@@ -134,3 +134,76 @@ class EventBookingTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "Event already fully booked")
+
+
+    def test_ticket_cannot_be_used_twice(self):
+        """Ensure a ticket cannot be verified more than once."""
+        ticket = Ticket.objects.create(user=self.user, event=self.event)
+
+        # First valid use by staff
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=ticket.uuid, event_id=self.event.id).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(self.staff_user),
+        )
+        self.assertEqual(response.status_code, 200)
+        ticket.refresh_from_db()
+        self.assertTrue(ticket.used)
+
+        # Try using it again
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=ticket.uuid, event_id=self.event.id).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(self.staff_user),
+        )
+        self.assertEqual(response.status_code, 404)  # Already used
+
+
+    def test_ticket_invalid_for_different_event(self):
+        """Ensure a ticket can only be used for the event it was issued for."""
+        ticket = Ticket.objects.create(user=self.user, event=self.event)
+        other_event = Event.objects.create(
+            name="Another Event",
+            description="Another event desc",
+            type="ce",
+            location="Other Location",
+            company=self.company,
+            start_time=timezone.now() + datetime.timedelta(days=3),
+            end_time=timezone.now() + datetime.timedelta(days=4),
+            capacity=50,
+        )
+
+        # Try to use the ticket for the wrong event
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=ticket.uuid, event_id=other_event.id).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(self.staff_user),
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_nonstaff_user_cannot_use_ticket_for_wrong_event(self):
+        """Ensure non-staff users cannot use tickets, especially for the wrong event."""
+        ticket = Ticket.objects.create(user=self.user, event=self.event)
+        other_event = Event.objects.create(
+            name="Other Event",
+            description="Other event desc",
+            type="ce",
+            location="Somewhere else",
+            company=self.company,
+            start_time=timezone.now() + datetime.timedelta(days=5),
+            end_time=timezone.now() + datetime.timedelta(days=6),
+            capacity=20,
+        )
+
+        # Non-staff user tries to use ticket for the wrong event
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=ticket.uuid, event_id=other_event.id).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(self.user),  # not staff
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), "This route is staff only.")
