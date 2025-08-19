@@ -1,4 +1,5 @@
 import datetime
+from uuid import uuid4
 
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
@@ -81,14 +82,14 @@ class EventBookingTestCase(TestCase):
         self.ticket = Ticket.objects.create(user=self.user, event=self.event)
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=self.ticket.uuid).model_dump(),
+            data=UseTicketSchema(uuid=self.ticket.uuid, event_id=self.event.id).model_dump(),
             content_type="application/json",
             headers=headers,
         )
         self.assertEqual(response.status_code, 401)
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=self.ticket.uuid).model_dump(),
+            data=UseTicketSchema(uuid=self.ticket.uuid, event_id=self.event.id).model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.staff_user),
         )
@@ -96,6 +97,15 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.json()["used"], True)
         self.ticket.refresh_from_db()
         self.assertTrue(self.ticket.used)
+
+    def test_nonexistent_ticket(self):
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=uuid4(), event_id=self.event.id).model_dump(),
+            content_type="application/json",
+            headers=self._get_auth_headers(self.staff_user),
+        )
+        self.assertEqual(response.status_code, 401)
 
     def test_book_event_twice(self):
         headers = self._get_auth_headers(self.user)

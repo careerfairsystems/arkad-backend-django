@@ -25,6 +25,7 @@ class TicketSchema(Schema):
 
 class UseTicketSchema(Schema):
     uuid: UUID
+    event_id: int
 
 
 class EventUserInformation(Schema):

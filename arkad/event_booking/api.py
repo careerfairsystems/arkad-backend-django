@@ -68,7 +68,7 @@ def get_event_ticket(request: AuthenticatedRequest, event_id: int):
         return 401, "Unauthorized"
     ticket: Ticket | None = tickets.first()  # Should only be one
     assert ticket is not None, "Should not be possible"
-    return UseTicketSchema(uuid=ticket.uuid)
+    return UseTicketSchema(uuid=ticket.uuid, event_id=ticket.event.id)
 
 
 @router.post("use-ticket", response={200: TicketSchema, 401: str})
@@ -80,7 +80,7 @@ def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     """
     if not request.user.is_staff:
         return 401, "This route is staff only."
-    modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, used=False).update(
+    modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, event_id=ticket.event_id, used=False).update(
         used=True
     )
     if modified_tickets == 1:
