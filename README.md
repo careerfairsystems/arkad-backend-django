@@ -27,8 +27,9 @@ You must use Python 3.13 to run this project as we are using some very new typin
     - `docker compose up` (from the arkad folder)
 9. Create migrations: `python manage.py makemigrations`
 10. Migrate the database: `python manage.py migrate`
-11. Run the server: `python manage.py runserver`
-12. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+11. Create the cache database `python manage.py createcachetable`
+12. Run the server: `python manage.py runserver`
+13. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend
 

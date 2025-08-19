@@ -171,3 +171,10 @@ AWS_SES_REGION_ENDPOINT = f"email.{AWS_SES_REGION_NAME}.amazonaws.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = "Arkad No Reply <no-reply@arkadtlth.se>"
+
+CACHES = {
+    "default": {  # This is slow, if using caches in greater capacity, use Redis
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "arkad_db_cache_table",
+    }
+}
