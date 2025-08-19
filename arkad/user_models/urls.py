@@ -1,7 +1,9 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 
-urlpatterns = [
+from arkad.settings import DEBUG
+
+debugging_urls = [
     path(
         "reset-password/",
         auth_views.PasswordResetView.as_view(template_name="password_reset.html"),
@@ -13,7 +15,11 @@ urlpatterns = [
             template_name="password_reset_done.html"
         ),
         name="password_reset_done",
-    ),
+    )
+]
+
+urlpatterns = [
+    *(debugging_urls if DEBUG else []),
     path(
         "reset/<uidb64>/<token>/",
         auth_views.PasswordResetConfirmView.as_view(

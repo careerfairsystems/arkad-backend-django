@@ -139,11 +139,16 @@ def signin(request: HttpRequest, data: SigninSchema):
     return 200, user.create_jwt_token()
 
 
-@auth.post("reset-password", auth=None, response={200: str})
+@auth.post("reset-password", auth=None, response={200: str, 429: str})
 def reset_password(request: HttpRequest, data: ResetPasswordSchema):
     """
     Sends an email with a link to reset password. Always returns 200 (or 500).
+    Returns 429 if the user has requested a reset within the last 30 seconds.
     """
+    key: str = f"reset-password-{data.email}"
+    ratelimited: bool = cache.get(key, False)
+    if ratelimited:
+        return 429, "You have already requested a password reset, please wait before trying again."
 
     form = PasswordResetForm(data={"email": data.email})
 
@@ -171,6 +176,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 html_email_template_name="email_app/reset.html",
                 extra_email_context={"reset_link": reset_link, "name": user.first_name, "base_url": get_base_url(request)},
             )
+            cache.set(key, True, timeout=30)
 
         except User.DoesNotExist:
             pass
