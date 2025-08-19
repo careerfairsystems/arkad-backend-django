@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login, get_user_model
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpRequest
@@ -38,10 +39,12 @@ router.add_router("", auth)
 router.add_router("profile", profile)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str})
-def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
+@auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str, 429: str})
+def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
+
+    Only allowing sending an email once every 30 seconds to prevent abuse. If in that window 429 is returned.
 
     """
 
@@ -56,12 +59,18 @@ def begin_signup(request: AuthenticatedRequest, data: SignupSchema):
     if User.objects.filter(email=data.email, username=data.email).exists():
         return 415, "User with this email already exists."
 
+    key: str = f"signup-{data.email}"
+
+    ratelimited: bool = cache.get(key, False)
+    if ratelimited:
+        return 429, "You have already requested a signup code, please wait before trying again."
     # 6 random numbers
     code: str = str(secrets.randbelow(1000000))
     code = ("0" * (6 - len(code)) + code)[:6]
     salt: str = generate_salt()
     # Send 2fa code
     send_signup_code_email(request, email=data.email, code=code)
+    cache.set(key, True, timeout=30)
     return 200, jwt_encode(
         {
             "code2fa": sha256(
