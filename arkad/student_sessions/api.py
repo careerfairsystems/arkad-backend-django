@@ -21,7 +21,7 @@ from student_sessions.schema import (
     ApplicantSchema,
     StudentSessionApplicationSchema,
     UpdateStudentSessionApplicantStatus,
-    StudentSessionApplicationOutSchema,
+    StudentSessionApplicationOutSchema, ExhibitorTimeslotSchema,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
@@ -116,12 +116,12 @@ def create_student_session(
 
 
 @router.get(
-    "/exhibitor/sessions", response={200: ListType[TimeslotSchema], 401: str, 406: str}
+    "/exhibitor/sessions", response={200: ListType[ExhibitorTimeslotSchema], 401: str, 406: str}
 )
 @exhibitor_check
 def get_exhibitor_sessions(request: AuthenticatedRequestSession):
     session: StudentSession = request.student_session
-    return session.timeslots.prefetch_related("selected").all()
+    return session.timeslots.prefetch_related("selected", "selected__user").all()
 
 
 @router.get(

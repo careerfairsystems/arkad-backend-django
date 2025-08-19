@@ -11,7 +11,7 @@ from student_sessions.models import (
 )
 from student_sessions.schema import (
     CreateStudentSessionSchema,
-    StudentSessionNormalUserListSchema,
+    StudentSessionNormalUserListSchema, ExhibitorTimeslotSchema,
 )
 from user_models.models import User
 
@@ -181,8 +181,9 @@ class StudentSessionTests(TestCase):
             headers=self._get_auth_headers(self.company_user1),
         )
         self.assertEqual(resp.status_code, 200)
-        timeslots = resp.json()
+        timeslots = [ExhibitorTimeslotSchema(**t) for t in resp.json()]
         self.assertEqual(len(timeslots), 3)
+
 
     def test_student_application(self):
         """Test that students can apply for sessions"""

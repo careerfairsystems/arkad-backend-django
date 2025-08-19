@@ -31,6 +31,17 @@ class TimeslotSchema(Schema):
     duration: int
     id: int
 
+class StudentSessionApplicationSchemaAccepted(Schema):
+    id: int
+    user: ProfileSchema
+    motivation_text: str | None = None
+    cv: str | None = None
+    status: Literal["accepted", "rejected", "pending"]
+    timestamp: datetime | None = None
+
+class ExhibitorTimeslotSchema(TimeslotSchema):
+    selected: StudentSessionApplicationSchemaAccepted | None = None
+
 
 class CreateStudentSessionSchema(Schema):
     start_time: datetime
