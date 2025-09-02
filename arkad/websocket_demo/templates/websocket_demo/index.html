@@ -26,6 +26,29 @@
         }
         .connected { background-color: #d4edda; color: #155724; }
         .disconnected { background-color: #f8d7da; color: #721c24; }
+        .login-form {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .auth-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .authenticated { background-color: #d1ecf1; color: #0c5460; }
+        .unauthenticated { background-color: #f8d7da; color: #721c24; }
         .controls {
             margin: 20px 0;
             display: flex;
@@ -71,7 +94,7 @@
             gap: 10px;
             align-items: center;
         }
-        input[type="text"] {
+        input[type="text"], input[type="email"], input[type="password"] {
             flex: 1;
             padding: 8px;
             border: 1px solid #ddd;
@@ -88,12 +111,29 @@
     <div class="container">
         <h1>WebSocket Ping/Pong Demo</h1>
 
+        <!-- Login Form -->
+        <div class="login-form">
+            <h3>Authentication</h3>
+            <div id="authStatus" class="auth-status unauthenticated">
+                Not authenticated
+            </div>
+            <div id="loginSection">
+                <input type="email" id="emailInput" placeholder="Email">
+                <input type="password" id="passwordInput" placeholder="Password">
+                <button id="loginBtn" class="btn-primary">Login</button>
+            </div>
+            <div id="loggedInSection" style="display: none;">
+                <p>Logged in successfully! You can now connect to WebSocket.</p>
+                <button id="logoutBtn" class="btn-danger">Logout</button>
+            </div>
+        </div>
+
         <div id="status" class="status disconnected">
             Disconnected
         </div>
 
         <div class="controls">
-            <button id="connectBtn" class="btn-primary">Connect</button>
+            <button id="connectBtn" class="btn-primary" disabled>Connect</button>
             <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
             <button id="pingBtn" class="btn-success" disabled>Send Ping</button>
             <button id="heartbeatBtn" class="btn-warning" disabled>Start Heartbeat</button>
@@ -106,15 +146,18 @@
         </div>
 
         <div class="message-log" id="messageLog">
-            <div class="message system">WebSocket Demo Ready - Click Connect to start</div>
+            <div class="message system">WebSocket Demo Ready - Please login first</div>
         </div>
     </div>
 
     <script>
         let socket = null;
         let isConnected = false;
+        let bearerToken = null;
+        let wsToken = null;
 
         const statusDiv = document.getElementById('status');
+        const authStatus = document.getElementById('authStatus');
         const messageLog = document.getElementById('messageLog');
         const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
@@ -123,6 +166,12 @@
         const clearBtn = document.getElementById('clearBtn');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginSection = document.getElementById('loginSection');
+        const loggedInSection = document.getElementById('loggedInSection');
 
         function addMessage(message, type = 'system') {
             const messageDiv = document.createElement('div');
@@ -133,12 +182,27 @@
             messageLog.scrollTop = messageLog.scrollHeight;
         }
 
+        function updateAuthState(authenticated, userEmail = '') {
+            if (authenticated) {
+                authStatus.textContent = `Authenticated as ${userEmail}`;
+                authStatus.className = 'auth-status authenticated';
+                loginSection.style.display = 'none';
+                loggedInSection.style.display = 'block';
+                connectBtn.disabled = false;
+            } else {
+                authStatus.textContent = 'Not authenticated';
+                authStatus.className = 'auth-status unauthenticated';
+                loginSection.style.display = 'block';
+                loggedInSection.style.display = 'none';
+                connectBtn.disabled = true;
+            }
+        }
+
         function updateConnectionState(connected) {
             isConnected = connected;
             statusDiv.textContent = connected ? 'Connected' : 'Disconnected';
             statusDiv.className = `status ${connected ? 'connected' : 'disconnected'}`;
 
-            connectBtn.disabled = connected;
             disconnectBtn.disabled = !connected;
             pingBtn.disabled = !connected;
             heartbeatBtn.disabled = !connected;
@@ -146,8 +210,82 @@
             sendBtn.disabled = !connected;
         }
 
-        function connect() {
-            const wsUrl = `ws://${window.location.host}/ws/ping/`;
+        async function login() {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!email || !password) {
+                addMessage('Please enter both email and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/signin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    bearerToken = await response.text();
+                    // Remove quotes if present
+                    bearerToken = bearerToken.replace(/"/g, '');
+                    updateAuthState(true, email);
+                    addMessage('Login successful!', 'system');
+                    passwordInput.value = '';
+                } else {
+                    const error = await response.text();
+                    addMessage(`Login failed: ${error}`, 'error');
+                }
+            } catch (error) {
+                addMessage(`Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getWebSocketToken() {
+            if (!bearerToken) {
+                addMessage('No bearer token available', 'error');
+                return null;
+            }
+
+            try {
+                const response = await fetch('/api/user/ws-token', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': bearerToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    wsToken = await response.text();
+                    // Remove quotes if present
+                    wsToken = wsToken.replace(/"/g, '');
+                    addMessage('WebSocket token obtained', 'system');
+                    return wsToken;
+                } else {
+                    const error = await response.text();
+                    addMessage(`Failed to get WS token: ${error}`, 'error');
+                    return null;
+                }
+            } catch (error) {
+                addMessage(`WS token error: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function connect() {
+            const token = await getWebSocketToken();
+            if (!token) {
+                return;
+            }
+
+            const wsUrl = `ws://${window.location.host}/ws/ping/?token=${encodeURIComponent(token)}`;
             socket = new WebSocket(wsUrl);
 
             socket.onopen = function(e) {
@@ -169,7 +307,11 @@
             };
 
             socket.onclose = function(e) {
-                addMessage(`WebSocket connection closed (Code: ${e.code})`, 'system');
+                let closeMessage = `WebSocket connection closed (Code: ${e.code})`;
+                if (e.code === 4001) {
+                    closeMessage += ' - Authentication failed';
+                }
+                addMessage(closeMessage, 'system');
                 updateConnectionState(false);
             };
 
@@ -183,6 +325,18 @@
             if (socket) {
                 socket.close();
             }
+        }
+
+        function logout() {
+            bearerToken = null;
+            wsToken = null;
+            updateAuthState(false);
+            if (isConnected) {
+                disconnect();
+            }
+            addMessage('Logged out', 'system');
+            emailInput.value = '';
+            passwordInput.value = '';
         }
 
         function sendPing() {
@@ -222,6 +376,8 @@
         }
 
         // Event listeners
+        loginBtn.addEventListener('click', login);
+        logoutBtn.addEventListener('click', logout);
         connectBtn.addEventListener('click', connect);
         disconnectBtn.addEventListener('click', disconnect);
         pingBtn.addEventListener('click', sendPing);
@@ -235,7 +391,20 @@
             }
         });
 
+        emailInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                passwordInput.focus();
+            }
+        });
+
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+
         // Initialize
+        updateAuthState(false);
         updateConnectionState(false);
     </script>
 </body>
