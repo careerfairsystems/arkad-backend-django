@@ -206,6 +206,13 @@ CACHES = {
     )
 }
 
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    },
+}
+
 # Celery specific settings (kept minimal; tune later)
 if CELERY_BROKER_URL:
     CELERY_TASK_TRACK_STARTED = True
