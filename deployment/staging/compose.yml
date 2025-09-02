@@ -39,6 +39,25 @@ services:
     networks:
       - app_network
 
+  # WebSocket service using Daphne
+  websocket:
+    restart: unless-stopped
+    build: ../../arkad
+    command: sh -c "
+      python manage.py migrate &&
+      daphne -b 0.0.0.0 -p 8001 arkad.asgi:application
+      "
+    volumes:
+      - ./config:/app/arkad/config
+      - ./private:/app/arkad/private
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
   nginx:
     restart: unless-stopped
     image: nginx:latest
@@ -58,6 +77,7 @@ services:
       - 80
     depends_on:
       - web
+      - websocket
     networks:
       - app_network
       - traefik

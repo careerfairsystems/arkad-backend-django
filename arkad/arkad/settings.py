@@ -186,3 +186,10 @@ CACHES = {
         "LOCATION": "arkad_db_cache_table",
     }
 }
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    },
+}

@@ -24,6 +24,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
     path("user/", include("user_models.urls")),
+    path("websocket-demo/", include("websocket_demo.urls")),
 ]
 
 if DEBUG:
