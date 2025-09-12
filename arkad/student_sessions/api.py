@@ -301,12 +301,11 @@ def apply_for_session(
     except StudentSession.DoesNotExist:
         return 404, "Session not found, or booking has closed"
 
-    if data.update_profile:
-        request.user.programme = data.programme
-        request.user.linkedin = data.linkedin
-        request.user.master_title = data.master_title
-        request.user.study_year = data.study_year
-        request.user.save()
+    request.user.programme = data.programme
+    request.user.linkedin = data.linkedin
+    request.user.master_title = data.master_title
+    request.user.study_year = data.study_year
+    request.user.save()
 
     try:
         StudentSessionApplication.objects.create(

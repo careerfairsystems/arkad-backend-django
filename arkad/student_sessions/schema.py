@@ -10,7 +10,6 @@ class StudentSessionApplicationSchema(Schema):
     master_title: str | None = None
     study_year: int | None = None
     motivation_text: str | None = None
-    update_profile: bool | None = None
     company_id: int
 
 
