@@ -255,8 +255,10 @@ def confirm_student_session(
             )
             timeslot.selected = applicant
             timeslot.time_booked = timezone.now()
-            timeslot.save()
             return 200, "Student session confirmed"
+    except IntegrityError:
+        # Each application can only be connected to one timeslot
+        return 409, "You have already booked a timeslot"
     except StudentSessionTimeslot.DoesNotExist:
         return 404, "Timeslot not found or already taken"
 
