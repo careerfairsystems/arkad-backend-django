@@ -24,6 +24,7 @@ from student_sessions.schema import (
     UpdateStudentSessionApplicantStatus,
     StudentSessionApplicationOutSchema,
     ExhibitorTimeslotSchema,
+    TimeslotSchemaUser,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
@@ -192,30 +193,37 @@ def update_student_session_application_status(
     return 200, "Applicant accepted"
 
 
-@router.get("/timeslots", response={200: ListType[TimeslotSchema], 401: str, 404: str})
+@router.get(
+    "/timeslots",
+    response={200: ListType[TimeslotSchemaUser], 401: str, 404: str, 403: str},
+)
 def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int):
     """
     Returns a list of timeslots for a student session.
-    Only viewable if accepted
+    Only viewable if accepted and returns only timeslots which are unbooked or booked by the user.
     """
     try:
         application: StudentSessionApplication = StudentSessionApplication.objects.get(
             user=request.user, student_session__company_id=company_id
         )
         if not application.is_accepted():
-            return 401, "You are not accepted to this session"
+            return 403, "You are not accepted to this session"
     except StudentSessionApplication.DoesNotExist:
         return 404, "Application not found"
 
     timeslots = StudentSessionTimeslot.objects.filter(
-        student_session__company_id=company_id, selected=None
+        Q(student_session__company_id=company_id)
+        & (Q(selected__isnull=True) | Q(selected=application))
     ).all()
 
     return 200, [
-        TimeslotSchema(
+        TimeslotSchemaUser(
             id=timeslot.id,
             start_time=timeslot.start_time,
             duration=timeslot.duration,
+            status="bookedByCurrentUser"
+            if timeslot.selected == application
+            else "free",
         )
         for timeslot in timeslots
     ]

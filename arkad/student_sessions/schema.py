@@ -31,6 +31,10 @@ class TimeslotSchema(Schema):
     id: int
 
 
+class TimeslotSchemaUser(TimeslotSchema):
+    status: Literal["free", "bookedByCurrentUser"]
+
+
 class StudentSessionApplicationSchemaAccepted(Schema):
     id: int
     user: ProfileSchema

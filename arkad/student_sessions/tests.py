@@ -13,6 +13,7 @@ from student_sessions.schema import (
     CreateStudentSessionSchema,
     StudentSessionNormalUserListSchema,
     ExhibitorTimeslotSchema,
+    TimeslotSchemaUser,
 )
 from user_models.models import User
 
@@ -392,6 +393,10 @@ class StudentSessionTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 1)
 
+        timeslot_schema: TimeslotSchemaUser = TimeslotSchemaUser(**resp.json()[0])
+        # Check that the timeslot is free
+        self.assertEqual(timeslot_schema.status, "free")
+
         # Test selecting timeslot
         resp = self.client.post(
             f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
@@ -404,6 +409,18 @@ class StudentSessionTests(TestCase):
         timeslot.refresh_from_db()
         self.assertEqual(timeslot.selected, application)
         self.assertIsNotNone(timeslot.time_booked)
+
+        # Test viewing timeslots and verifying that the user can see that they are accepted
+        resp = self.client.get(
+            f"/api/student-session/timeslots?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 1)
+
+        timeslot_schema: TimeslotSchemaUser = TimeslotSchemaUser(**resp.json()[0])
+        # Check that the timeslot is free
+        self.assertEqual(timeslot_schema.status, "bookedByCurrentUser")
 
         # Test with another student who should not be able to select the same timeslot
         _ = StudentSessionApplication.objects.create(
