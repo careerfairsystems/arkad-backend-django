@@ -63,7 +63,10 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
 
     ratelimited: bool = cache.get(key, False)
     if ratelimited:
-        return 429, "You have already requested a signup code, please wait before trying again."
+        return (
+            429,
+            "You have already requested a signup code, please wait before trying again.",
+        )
     # 6 random numbers
     code: str = str(secrets.randbelow(1000000))
     code = ("0" * (6 - len(code)) + code)[:6]
@@ -148,7 +151,10 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
     key: str = f"reset-password-{data.email}"
     ratelimited: bool = cache.get(key, False)
     if ratelimited:
-        return 429, "You have already requested a password reset, please wait before trying again."
+        return (
+            429,
+            "You have already requested a password reset, please wait before trying again.",
+        )
 
     form = PasswordResetForm(data={"email": data.email})
 
@@ -174,7 +180,11 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
                 email_template_name="registration/password_reset_email.html",
                 subject_template_name="registration/password_reset_subject.txt",
                 html_email_template_name="email_app/reset.html",
-                extra_email_context={"reset_link": reset_link, "name": user.first_name, "base_url": get_base_url(request)},
+                extra_email_context={
+                    "reset_link": reset_link,
+                    "name": user.first_name,
+                    "base_url": get_base_url(request),
+                },
             )
             cache.set(key, True, timeout=30)
 

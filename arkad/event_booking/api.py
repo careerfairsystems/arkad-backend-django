@@ -82,9 +82,9 @@ def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     """
     if not request.user.is_staff:
         return 401, "This route is staff only."
-    modified_tickets: int = Ticket.objects.filter(uuid=ticket.uuid, event_id=ticket.event_id, used=False).update(
-        used=True
-    )
+    modified_tickets: int = Ticket.objects.filter(
+        uuid=ticket.uuid, event_id=ticket.event_id, used=False
+    ).update(used=True)
     if modified_tickets == 1:
         # uuid is unique so we can safely assume we got the ticket
         return 200, Ticket.objects.get(uuid=ticket.uuid)

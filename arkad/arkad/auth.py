@@ -18,3 +18,6 @@ class AuthBearer(HttpBearer):
             raise jwt.InvalidTokenError("No such user")
         request.user = user
         return user
+
+
+OPTIONAL_AUTH: list[AuthBearer | None] = [AuthBearer(), None]

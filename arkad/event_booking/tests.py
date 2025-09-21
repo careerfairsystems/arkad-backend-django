@@ -82,14 +82,18 @@ class EventBookingTestCase(TestCase):
         self.ticket = Ticket.objects.create(user=self.user, event=self.event)
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=self.ticket.uuid, event_id=self.event.id).model_dump(),
+            data=UseTicketSchema(
+                uuid=self.ticket.uuid, event_id=self.event.id
+            ).model_dump(),
             content_type="application/json",
             headers=headers,
         )
         self.assertEqual(response.status_code, 401)
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=self.ticket.uuid, event_id=self.event.id).model_dump(),
+            data=UseTicketSchema(
+                uuid=self.ticket.uuid, event_id=self.event.id
+            ).model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.staff_user),
         )
@@ -135,7 +139,6 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "Event already fully booked")
 
-
     def test_ticket_cannot_be_used_twice(self):
         """Ensure a ticket cannot be verified more than once."""
         ticket = Ticket.objects.create(user=self.user, event=self.event)
@@ -160,7 +163,6 @@ class EventBookingTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 404)  # Already used
 
-
     def test_ticket_invalid_for_different_event(self):
         """Ensure a ticket can only be used for the event it was issued for."""
         ticket = Ticket.objects.create(user=self.user, event=self.event)
@@ -178,7 +180,9 @@ class EventBookingTestCase(TestCase):
         # Try to use the ticket for the wrong event
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=ticket.uuid, event_id=other_event.id).model_dump(),
+            data=UseTicketSchema(
+                uuid=ticket.uuid, event_id=other_event.id
+            ).model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.staff_user),
         )
@@ -201,7 +205,9 @@ class EventBookingTestCase(TestCase):
         # Non-staff user tries to use ticket for the wrong event
         response = self.client.post(
             "/api/events/use-ticket",
-            data=UseTicketSchema(uuid=ticket.uuid, event_id=other_event.id).model_dump(),
+            data=UseTicketSchema(
+                uuid=ticket.uuid, event_id=other_event.id
+            ).model_dump(),
             content_type="application/json",
             headers=self._get_auth_headers(self.user),  # not staff
         )

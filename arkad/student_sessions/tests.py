@@ -11,7 +11,8 @@ from student_sessions.models import (
 )
 from student_sessions.schema import (
     CreateStudentSessionSchema,
-    StudentSessionNormalUserListSchema, ExhibitorTimeslotSchema,
+    StudentSessionNormalUserListSchema,
+    ExhibitorTimeslotSchema,
 )
 from user_models.models import User
 
@@ -85,12 +86,10 @@ class StudentSessionTests(TestCase):
         data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
 
-
     def test_get_sessions_authed(self):
         """Test getting all sessions with authentication"""
         self._create_student_session(self.company_user1.company)
         self._create_student_session(self.company_user2.company)
-
 
         headers = self._get_auth_headers(self.student_users[0])
         resp = self.client.get("/api/student-session/all", headers=headers)
@@ -114,7 +113,9 @@ class StudentSessionTests(TestCase):
             )
 
             s: StudentSession = self._create_student_session(company.company)
-            StudentSessionApplication.objects.create(student_session=s, user=self.student_users[0], status=status)
+            StudentSessionApplication.objects.create(
+                student_session=s, user=self.student_users[0], status=status
+            )
 
             headers = self._get_auth_headers(self.student_users[0])
             resp = self.client.get("/api/student-session/all", headers=headers)
@@ -122,7 +123,14 @@ class StudentSessionTests(TestCase):
 
             data = StudentSessionNormalUserListSchema(**resp.json())
             # Check that the application status is included and is null for the first session and "pending" for the second
-            session2 = next((s for s in data.student_sessions if s.company_id == company.company.id), None)
+            session2 = next(
+                (
+                    s
+                    for s in data.student_sessions
+                    if s.company_id == company.company.id
+                ),
+                None,
+            )
             self.assertIsNotNone(session2)
             self.assertEqual(session2.user_status, status)
 
@@ -224,7 +232,6 @@ class StudentSessionTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         timeslots = [ExhibitorTimeslotSchema(**t) for t in resp.json()]
         self.assertEqual(len(timeslots), 3)
-
 
     def test_student_application(self):
         """Test that students can apply for sessions"""

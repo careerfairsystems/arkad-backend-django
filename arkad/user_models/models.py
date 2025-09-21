@@ -47,15 +47,17 @@ class User(AbstractUser):
     )
 
     is_student = models.BooleanField(default=True)
-    cv = models.FileField("Users cv",
-                          upload_to=partial(unique_file_upload_path, "user/cv"),
-                          null=True,
-                          blank=True)
+    cv = models.FileField(
+        "Users cv",
+        upload_to=partial(unique_file_upload_path, "user/cv"),
+        null=True,
+        blank=True,
+    )
     profile_picture = models.FileField(
         "User profile picture",
         upload_to=partial(unique_file_upload_path, "user/profile-picture"),
         blank=True,
-        null=True
+        null=True,
     )
 
     programme = models.CharField(

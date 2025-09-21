@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pydantic_core import ValidationError
 from ninja import File, UploadedFile
 
-from arkad.auth import AuthBearer
+from arkad.auth import OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router, ListType
 from user_models.models import AuthenticatedRequest
 from student_sessions.models import (
@@ -22,7 +22,8 @@ from student_sessions.schema import (
     ApplicantSchema,
     StudentSessionApplicationSchema,
     UpdateStudentSessionApplicantStatus,
-    StudentSessionApplicationOutSchema, ExhibitorTimeslotSchema,
+    StudentSessionApplicationOutSchema,
+    ExhibitorTimeslotSchema,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
@@ -56,7 +57,9 @@ def exhibitor_check(func: Callable):
     return wrapper
 
 
-@router.get("/all", response={200: StudentSessionNormalUserListSchema}, auth=[AuthBearer(), None])
+@router.get(
+    "/all", response={200: StudentSessionNormalUserListSchema}, auth=OPTIONAL_AUTH
+)
 def get_student_sessions(request: AuthenticatedRequest):
     """
     Returns a list of available student sessions.
@@ -80,7 +83,6 @@ def get_student_sessions(request: AuthenticatedRequest):
                 my_applications_statuses[application.student_session_id] = (
                     application.status
                 )
-
 
     return StudentSessionNormalUserListSchema(
         student_sessions=[
@@ -118,7 +120,8 @@ def create_student_session(
 
 
 @router.get(
-    "/exhibitor/sessions", response={200: ListType[ExhibitorTimeslotSchema], 401: str, 406: str}
+    "/exhibitor/sessions",
+    response={200: ListType[ExhibitorTimeslotSchema], 401: str, 406: str},
 )
 @exhibitor_check
 def get_exhibitor_sessions(request: AuthenticatedRequestSession):

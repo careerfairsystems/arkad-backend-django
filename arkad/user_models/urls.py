@@ -15,7 +15,7 @@ debugging_urls = [
             template_name="password_reset_done.html"
         ),
         name="password_reset_done",
-    )
+    ),
 ]
 
 urlpatterns = [

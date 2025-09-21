@@ -17,9 +17,12 @@ class StudentSessionApplication(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     motivation_text = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    cv = models.FileField("Users cv",
-                          upload_to=partial(unique_file_upload_path, "application/cv"),
-                          null=True, blank=True)
+    cv = models.FileField(
+        "Users cv",
+        upload_to=partial(unique_file_upload_path, "application/cv"),
+        null=True,
+        blank=True,
+    )
     status = models.CharField(
         max_length=10,
         choices=[
