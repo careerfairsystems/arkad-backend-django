@@ -1,3 +1,5 @@
+from typing import Callable
+
 import jwt
 from django.http import HttpRequest
 from ninja.security import HttpBearer
@@ -20,4 +22,11 @@ class AuthBearer(HttpBearer):
         return user
 
 
-OPTIONAL_AUTH: list[AuthBearer | None] = [AuthBearer(), None]
+def anonymous(request: HttpRequest) -> str:
+    return "<anonymous user>"
+
+
+OPTIONAL_AUTH: list[AuthBearer | Callable[[HttpRequest], str]] = [
+    AuthBearer(),
+    anonymous,
+]

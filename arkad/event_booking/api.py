@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import QuerySet
 
+from arkad.auth import OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router, ListType
 from user_models.models import AuthenticatedRequest
 from event_booking.models import Event, Ticket
@@ -14,7 +15,7 @@ from event_booking.schemas import (
 router = Router(tags=["Events"])
 
 
-@router.get("", response={200: ListType[EventSchema]}, auth=None)
+@router.get("", response={200: ListType[EventSchema]}, auth=OPTIONAL_AUTH)
 def get_events(request: AuthenticatedRequest):
     """
     Returns a list of all events
@@ -28,7 +29,7 @@ def get_booked_events(request: AuthenticatedRequest):
     return [t.event for t in ts]
 
 
-@router.get("{event_id}/", response={200: EventSchema, 404: str}, auth=None)
+@router.get("{event_id}/", response={200: EventSchema, 404: str}, auth=OPTIONAL_AUTH)
 def get_event(request: AuthenticatedRequest, event_id: int):
     """
     Returns a single event

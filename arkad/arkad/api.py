@@ -6,7 +6,7 @@ from ninja.constants import NOT_SET, NOT_SET_TYPE
 import jwt
 from ninja.throttling import BaseThrottle
 
-from arkad.auth import AuthBearer
+from arkad.auth import AuthBearer, OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router
 from arkad.jwt_utils import PUBLIC_KEY, PublicKeySchema
 from user_models.models import AuthenticatedRequest
@@ -78,7 +78,10 @@ def on_invalid_algorithm(request: HttpRequest, exc: Exception) -> HttpResponse:
 
 
 @api.get(
-    "get-public-key", response={200: PublicKeySchema}, auth=None, tags=["Cryptography"]
+    "get-public-key",
+    response={200: PublicKeySchema},
+    auth=OPTIONAL_AUTH,
+    tags=["Cryptography"],
 )
 def get_public_key(request: AuthenticatedRequest):
     if not PUBLIC_KEY.strip().startswith(
