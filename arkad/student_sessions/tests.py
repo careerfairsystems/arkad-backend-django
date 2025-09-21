@@ -85,6 +85,47 @@ class StudentSessionTests(TestCase):
         data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
 
+
+    def test_get_sessions_authed(self):
+        """Test getting all sessions with authentication"""
+        self._create_student_session(self.company_user1.company)
+        self._create_student_session(self.company_user2.company)
+
+
+        headers = self._get_auth_headers(self.student_users[0])
+        resp = self.client.get("/api/student-session/all", headers=headers)
+        self.assertEqual(resp.status_code, 200)
+
+        data = StudentSessionNormalUserListSchema(**resp.json())
+        self.assertEqual(data.numElements, 2)
+
+    def test_get_sessions_authed_with_application_status(self):
+        """Test getting all sessions with authentication and with a application status"""
+        statuses = ["accepted", "rejected", "pending"]
+
+        for status in statuses:
+            company = User.objects.create_user(
+                first_name="Company2-" + status,
+                last_name="Company2" + status,
+                email="a@company2.com",
+                password="PASSWORD",
+                username="Company2 + status",
+                company=Company.objects.create(name=status),
+            )
+
+            s: StudentSession = self._create_student_session(company.company)
+            StudentSessionApplication.objects.create(student_session=s, user=self.student_users[0], status=status)
+
+            headers = self._get_auth_headers(self.student_users[0])
+            resp = self.client.get("/api/student-session/all", headers=headers)
+            self.assertEqual(resp.status_code, 200)
+
+            data = StudentSessionNormalUserListSchema(**resp.json())
+            # Check that the application status is included and is null for the first session and "pending" for the second
+            session2 = next((s for s in data.student_sessions if s.company_id == company.company.id), None)
+            self.assertIsNotNone(session2)
+            self.assertEqual(session2.user_status, status)
+
     def test_exhibitor_create_timeslot(self):
         """Test that exhibitors can create timeslots"""
         _ = self._create_student_session(self.company_user1.company)
