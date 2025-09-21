@@ -4,6 +4,7 @@ from arkad.customized_django_ninja import Schema
 
 
 class EventSchema(Schema):
+    id: int
     name: str
     description: str
     type: str

@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from event_booking.models import Event, Ticket
 from companies.models import Company
-from event_booking.schemas import UseTicketSchema
+from event_booking.schemas import UseTicketSchema, EventSchema
 
 User = get_user_model()
 
@@ -64,6 +64,19 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
+
+    def test_booked_events(self):
+        headers = self._get_auth_headers(self.user)
+        response = self.client.post(
+            f"/api/events/acquire-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 200)
+
+        r2 = self.client.get("/api/events/booked-events", headers=headers)
+        self.assertEqual(r2.status_code, 200)
+        result: list[EventSchema] = [EventSchema(**event) for event in r2.json()]
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].id, self.event.id)
 
     def test_unbook_event(self):
         headers = self._get_auth_headers(self.user)
