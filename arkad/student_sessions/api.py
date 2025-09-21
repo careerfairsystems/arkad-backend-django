@@ -334,7 +334,7 @@ def apply_for_session(
     return 200, "You have now applied to the session"
 
 
-@router.post("cv", response={200: str})
+@router.post("cv", response={200: str, 404: str})
 def update_cv_for_session(
     request: AuthenticatedRequest, company_id: int, cv: UploadedFile = File(...)
 ):  # type: ignore[type-arg]
@@ -342,9 +342,12 @@ def update_cv_for_session(
     Sets the CV for the user for some companies student sessions.
     """
 
-    application: StudentSessionApplication = StudentSessionApplication.objects.get(
-        user_id=request.user.id, student_session__company_id=company_id
-    )
+    try:
+        application: StudentSessionApplication = StudentSessionApplication.objects.get(
+            user_id=request.user.id, student_session__company_id=company_id
+        )
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Application not found"
     application.cv = cv
     application.save()
     return 200, "CV updated"
