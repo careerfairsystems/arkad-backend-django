@@ -109,7 +109,7 @@ class StudentSessionTests(TestCase):
                 last_name="Company2" + status,
                 email="a@company2.com",
                 password="PASSWORD",
-                username="Company2 + status",
+                username="Company2" + status,
                 company=Company.objects.create(name=status),
             )
 

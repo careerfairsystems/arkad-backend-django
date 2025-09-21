@@ -3,31 +3,17 @@ from typing import Union, Any, List, Optional, override
 from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI, Swagger
 from ninja.constants import NOT_SET, NOT_SET_TYPE
-from ninja.security import HttpBearer
 import jwt
 from ninja.throttling import BaseThrottle
 
+from arkad.auth import AuthBearer
 from arkad.customized_django_ninja import Router
-from arkad.jwt_utils import jwt_decode, PUBLIC_KEY, PublicKeySchema
-from user_models.models import User, AuthenticatedRequest
+from arkad.jwt_utils import PUBLIC_KEY, PublicKeySchema
+from user_models.models import AuthenticatedRequest
 from user_models.api import router as user_router
 from student_sessions.api import router as student_sessions_router
 from companies.api import router as company_router
 from event_booking.api import router as event_booking_router
-
-
-class AuthBearer(HttpBearer):
-    def authenticate(self, request: HttpRequest, token: str) -> User:
-        # Implement authentication
-        decoded: dict[str, str] = jwt_decode(token)
-        if "user_id" not in decoded:
-            raise jwt.InvalidTokenError("No user id")
-        try:
-            user: User = User.objects.get(id=decoded["user_id"])
-        except User.DoesNotExist:
-            raise jwt.InvalidTokenError("No such user")
-        request.user = user
-        return user
 
 
 class CustomNinjaAPI(NinjaAPI):
