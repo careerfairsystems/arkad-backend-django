@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "email_app",
     "jexpo_sync",
+    "person_counter",
 ]
 
 MIDDLEWARE = [
@@ -189,7 +190,5 @@ CACHES = {
 
 # Channels configuration
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    },
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
 }
