@@ -407,7 +407,9 @@ class StudentSessionTests(TestCase):
 
         # Check timeslot was updated
         timeslot.refresh_from_db()
-        self.assertEqual(timeslot.selected, application)
+        application.refresh_from_db()
+        self.assertEqual(application.status, "accepted", application.status)
+        self.assertEqual(timeslot.selected, application, timeslot)
         self.assertIsNotNone(timeslot.time_booked)
 
         # Test viewing timeslots and verifying that the user can see that they are accepted

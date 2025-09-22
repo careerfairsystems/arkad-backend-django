@@ -255,6 +255,7 @@ def confirm_student_session(
             )
             timeslot.selected = applicant
             timeslot.time_booked = timezone.now()
+            timeslot.save()
             return 200, "Student session confirmed"
     except IntegrityError:
         # Each application can only be connected to one timeslot
