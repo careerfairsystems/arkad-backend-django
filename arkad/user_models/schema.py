@@ -36,7 +36,6 @@ class ProfileSchema(Schema):
     linkedin: str | None = None
     master_title: str | None = None
     study_year: int | None = None
-    is_active: bool
     is_staff: bool
     food_preferences: str | None = None
 

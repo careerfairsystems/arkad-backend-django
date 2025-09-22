@@ -16,6 +16,8 @@ class AuthBearer(HttpBearer):
             raise jwt.InvalidTokenError("No user id")
         try:
             user: User = User.objects.get(id=decoded["user_id"])
+            if not user.is_active:
+                raise jwt.InvalidTokenError("User is inactive")
         except User.DoesNotExist:
             raise jwt.InvalidTokenError("No such user")
         request.user = user
