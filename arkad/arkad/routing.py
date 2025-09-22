@@ -1,5 +1,5 @@
 from django.urls import re_path
-from arkad.consumers import PingConsumer, RoomCounterConsumer
+from person_counter.consumers import PingConsumer, RoomCounterConsumer
 
 websocket_urlpatterns = [
     re_path(r"ws/ping/$", PingConsumer.as_asgi()),

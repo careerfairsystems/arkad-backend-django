@@ -8,7 +8,7 @@ https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
 """
 
 import os
-
+from arkad import routing
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
@@ -18,7 +18,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "arkad.settings")
 
 django_asgi_app = get_asgi_application()
 
-from arkad import routing
 
 application = ProtocolTypeRouter(
     {

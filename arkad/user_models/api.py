@@ -148,10 +148,9 @@ def get_ws_token(request: AuthenticatedRequest):
     Exchange bearer token for WebSocket token with shorter expiry.
     """
     # Create a WebSocket-specific token with shorter expiry (30 minutes)
-    return 200, jwt_encode({
-        "user_id": request.user.id,
-        "token_type": "websocket"
-    }, expiry_minutes=30)
+    return 200, jwt_encode(
+        {"user_id": request.user.id, "token_type": "websocket"}, expiry_minutes=30
+    )
 
 
 @auth.post("reset-password", auth=None, response={200: str, 429: str})
