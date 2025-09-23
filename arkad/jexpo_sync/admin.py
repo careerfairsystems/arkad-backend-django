@@ -1,1 +1,189 @@
-# Register your models here.
+from django.contrib import admin
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.urls import path
+from django.shortcuts import render
+from django.db import transaction
+from django.utils import timezone
+from django.core.exceptions import PermissionDenied
+import json
+import os
+from .models import CompanySyncUpload
+from jexpo_sync.jexpo_ingestion import ExhibitorSchema
+from jexpo_sync.jexpo_sync import update_or_create_company
+
+
+@admin.register(CompanySyncUpload)
+class CompanySyncUploadAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "file",
+        "status",
+        "companies_processed",
+        "companies_created",
+        "companies_updated",
+        "uploaded_by",
+        "uploaded_at",
+        "processed_at",
+    ]
+    list_filter = ["status", "uploaded_at", "processed_at", "uploaded_by"]
+    readonly_fields = [
+        "uploaded_at",
+        "processed_at",
+        "companies_processed",
+        "companies_created",
+        "companies_updated",
+        "error_message",
+    ]
+
+    def get_queryset(self, request):
+        """Limit queryset to user's own uploads unless they're superuser"""
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            qs = qs.filter(uploaded_by=request.user)
+        return qs
+
+    def has_add_permission(self, request):
+        """Check if user has permission to upload files"""
+        return request.user.has_perm("jexpo_sync.can_upload_company_sync")
+
+    def has_change_permission(self, request, obj=None):
+        """Users can only modify their own uploads"""
+        if obj is None:
+            return True
+        return request.user.is_superuser or obj.uploaded_by == request.user
+
+    def has_delete_permission(self, request, obj=None):
+        """Users can only delete their own uploads"""
+        if obj is None:
+            return True
+        return request.user.is_superuser or obj.uploaded_by == request.user
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # Only set user on creation
+            obj.uploaded_by = request.user
+        super().save_model(request, obj, form, change)
+
+        # Auto-process the upload if it's pending
+        if obj.status == "pending":
+            self.process_single_upload(request, obj)
+
+    def process_single_upload(self, request, upload_obj):
+        """Process a single upload object with enhanced security"""
+        # Check permissions
+        if not self.has_change_permission(request, upload_obj):
+            messages.error(request, "You don't have permission to process this file.")
+            return
+
+        try:
+            upload_obj.status = "processing"
+            upload_obj.save()
+
+            # Validate file exists and is accessible
+            if not upload_obj.file or not os.path.exists(upload_obj.file.path):
+                raise ValueError("File not found or inaccessible")
+
+            # Read and process the JSON file
+            with upload_obj.file.open("r") as f:
+                content = f.read()
+
+                # Parse JSON with validation
+                data = json.loads(content)
+
+                # Validate it's a list
+                if not isinstance(data, list):
+                    raise ValueError("JSON must contain an array of exhibitor objects")
+
+            # Process exhibitors
+            exhibitors = []
+            for i, d in enumerate(data):
+                try:
+                    exhibitor = ExhibitorSchema(**ExhibitorSchema.preprocess(d))
+                    exhibitors.append(exhibitor)
+                except Exception as e:
+                    raise ValueError(f"Invalid exhibitor data at index {i}: {str(e)}")
+
+            companies_created = 0
+            companies_updated = 0
+            companies_processed = 0
+
+            with transaction.atomic():
+                for schema in exhibitors:
+                    company, created = update_or_create_company(schema)
+                    if company:
+                        companies_processed += 1
+                        if created:
+                            companies_created += 1
+                        else:
+                            companies_updated += 1
+
+            # Update the upload record
+            upload_obj.status = "completed"
+            upload_obj.companies_processed = companies_processed
+            upload_obj.companies_created = companies_created
+            upload_obj.companies_updated = companies_updated
+            upload_obj.processed_at = timezone.now()
+            upload_obj.error_message = None
+            upload_obj.save()
+
+            messages.success(
+                request,
+                f"Successfully processed {companies_processed} companies "
+                f"({companies_created} created, {companies_updated} updated)",
+            )
+
+        except json.JSONDecodeError as e:
+            upload_obj.status = "failed"
+            upload_obj.error_message = f"Invalid JSON format: {str(e)}"
+            upload_obj.processed_at = timezone.now()
+            upload_obj.save()
+            messages.error(request, f"JSON decode error: {str(e)}")
+
+        except Exception as e:
+            upload_obj.status = "failed"
+            upload_obj.error_message = str(e)
+            upload_obj.processed_at = timezone.now()
+            upload_obj.save()
+            messages.error(request, f"Processing error: {str(e)}")
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "upload-companies/",
+                self.admin_site.admin_view(self.upload_companies_view),
+                name="jexpo_sync_upload_companies",
+            ),
+        ]
+        return custom_urls + urls
+
+    def upload_companies_view(self, request):
+        """Custom view for uploading company data with permission checks"""
+        # Check permissions
+        if not self.has_add_permission(request):
+            raise PermissionDenied(
+                "You don't have permission to upload company sync files."
+            )
+
+        if request.method == "POST" and request.FILES.get("json_file"):
+            try:
+                # Create upload record
+                upload_obj = CompanySyncUpload.objects.create(
+                    file=request.FILES["json_file"],
+                    uploaded_by=request.user,
+                    status="pending",
+                )
+
+                # Process the upload
+                self.process_single_upload(request, upload_obj)
+
+                return HttpResponseRedirect("../")
+
+            except Exception as e:
+                messages.error(request, f"Upload failed: {str(e)}")
+
+        context = {
+            "title": "Upload Company Sync File",
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/jexpo_sync/upload_companies.html", context)

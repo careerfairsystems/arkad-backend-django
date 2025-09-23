@@ -1,0 +1,56 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:jexpo_sync_companysyncupload_changelist' %}">Company Sync Uploads</a>
+&rsaquo; Upload Companies
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module aligned">
+    <h2>Upload Company Synchronization File</h2>
+    <p class="help">
+        Upload a JSON file containing company data to synchronize with the database.
+        The file will be processed automatically after upload.
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="aligned">
+        {% csrf_token %}
+
+        <div class="form-row">
+            <div>
+                <label for="id_json_file" class="required">JSON File:</label>
+                <input type="file" name="json_file" accept=".json" required id="id_json_file">
+                <p class="help">Select a JSON file containing exhibitor/company data.</p>
+            </div>
+        </div>
+
+        <div class="submit-row">
+            <input type="submit" value="Upload and Process" class="default" name="_save">
+            <p class="deletelink-box">
+                <a href="{% url 'admin:jexpo_sync_companysyncupload_changelist' %}" class="deletelink">Cancel</a>
+            </p>
+        </div>
+    </form>
+</div>
+
+<div class="module">
+    <h2>Instructions</h2>
+    <ul>
+        <li>The JSON file should contain an array of exhibitor objects</li>
+        <li>Each exhibitor object will be processed and converted to a Company record</li>
+        <li>Existing companies with the same name will be updated</li>
+        <li>New companies will be created</li>
+        <li>The processing happens in a database transaction for data integrity</li>
+        <li>You can view the processing status and results in the <a href="{% url 'admin:jexpo_sync_companysyncupload_changelist' %}">Company Sync Uploads</a> list</li>
+    </ul>
+</div>
+
+{% endblock %}

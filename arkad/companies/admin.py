@@ -1,5 +1,6 @@
 from django.contrib import admin
 from companies.models import Job, Company
+from django.urls import reverse
 
 
 # Register your models here.
@@ -9,6 +10,11 @@ class CompanyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_filter = [
         "desired_degrees",
     ]
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["upload_url"] = reverse("admin:jexpo_sync_upload_companies")
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 admin.site.register(Job)
