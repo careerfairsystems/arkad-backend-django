@@ -71,6 +71,7 @@ It is possible to automatically update the database with new information about a
 For example jobs, if they have studentsessions etc.
 This is done by running `python manage.py jexpo_sync --file /path/to/jexpo.json`
 
+Jexpo information can also be uploaded via the admin page (this is useful primarily in production/staging).
 ### Linting and formatting rules
 
 Migrations files are excluded from ruff formatting and are only checked to be legal by mypy.
