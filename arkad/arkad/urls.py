@@ -20,6 +20,10 @@ from django.urls import include, path
 from .api import api
 from .settings import DEBUG, STATIC_URL, STATICFILES_DIRS
 
+# Configure Django Admin with Arkad branding
+admin.site.site_header = "Arkad Administration"
+admin.site.site_title = "Arkad Admin"
+admin.site.index_title = "Welcome to Arkad Administration"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
