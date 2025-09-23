@@ -1,12 +1,14 @@
 import os
 from functools import partial
+from typing import Any
+
 from django.db import models
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from arkad.utils import unique_file_upload_path
+from user_models.models import User
 
 
-def validate_json_file(value):
+def validate_json_file(value: Any) -> None:
     """Validate that the uploaded file is a JSON file"""
     if not value.name.lower().endswith(".json"):
         raise ValidationError("Only JSON files are allowed.")
@@ -33,7 +35,7 @@ class CompanySyncUpload(models.Model):
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name="company_sync_uploads",
     )
@@ -52,16 +54,16 @@ class CompanySyncUpload(models.Model):
             ("can_upload_company_sync", "Can upload company sync files"),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Upload {self.id} - {self.file.name} ({self.status})"
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Override delete to ensure file is removed from filesystem"""
         if self.file:
             try:
-                if os.path.isfile(self.file.path):
+                if os.path.exists(self.file.path):
                     os.remove(self.file.path)
             except (ValueError, OSError):
                 # File might not exist or path might be invalid
                 pass
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
