@@ -218,7 +218,7 @@ class CompanySyncUploadAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if request.method == "POST" and request.FILES.get("json_file"):
             try:
                 # Create upload record
-                upload_obj = CompanySyncUpload.objects.create(  # type: ignore[attr-defined, misc]
+                upload_obj = CompanySyncUpload.objects.create(  # type: ignore[misc]
                     file=request.FILES["json_file"],
                     uploaded_by=request.user,
                     status="pending",
