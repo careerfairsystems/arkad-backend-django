@@ -178,8 +178,8 @@ class Profile(BaseModel):
     desiredProgramme: List[str] = Field(default_factory=list)
     purpose: List[str] = Field(default_factory=list)
     name: Optional[str] = None
-    employeesLocal: Optional[str] = None
-    employeesGlobal: Optional[str] = None
+    employeesLocal: Optional[int] = None
+    employeesGlobal: Optional[int] = None
     requests: Optional[dict[Any, Any]] = Field(default=None, alias="$requests")
     updated: Optional[dict[Any, Any]] = Field(default=None, alias="$updated")
     submitted: Optional[dict[Any, Any]] = Field(default=None, alias="$submitted")
@@ -203,10 +203,10 @@ class ExhibitorSchema(BaseModel):
     # Some are left out
     index: List[str] = Field(default_factory=list, alias="$index")
     print_contract: Optional[PrintContract] = None
-    archives: List[str] = Field(default_factory=list)
+    archives: List[dict] = Field(default_factory=list)
     tickets: Optional[Tickets] = None
     prereg: Optional[Prereg] = None
-    requests: Optional[bool] = Field(None, alias="$requests")
+    requests: Optional[Any] = Field(None, alias="$requests")
     inventory: Optional[Inventory] = None
     billing: Optional[Billing] = None
     current: Optional[bool] = None
@@ -235,3 +235,25 @@ class ExhibitorSchema(BaseModel):
     status: Optional[str] = None
     rev: Optional[datetime] = Field(None, alias="$rev")
     key: Optional[str] = Field(None, alias="$key")
+
+    @classmethod
+    def preprocess(cls, data: dict) -> dict:
+        # For some reason employeesLocal and global can be strings
+        employees_local = data.get("profile", {}).get("employeesLocal")
+        employees_global = data.get("profile", {}).get("employeesGlobal")
+
+        if isinstance(employees_local, str):
+            if "." in employees_local:
+                employees_local = employees_local.replace(".", "")
+            try:
+                data["profile"]["employeesLocal"] = int(employees_local)
+            except ValueError:
+                data["profile"]["employeesLocal"] = None
+        if isinstance(employees_global, str):
+            if "." in employees_global:
+                employees_global = employees_global.replace(".", "")
+            try:
+                data["profile"]["employeesGlobal"] = int(employees_global)
+            except ValueError:
+                data["profile"]["employeesGlobal"] = None
+        return data
