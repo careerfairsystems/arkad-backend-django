@@ -30,6 +30,7 @@ class EventBookingTestCase(TestCase):
             type="ce",
             location="Test Location",
             company=self.company,
+            release_time=timezone.now() - datetime.timedelta(days=1), # So they have been released
             start_time=timezone.now() + datetime.timedelta(days=1),
             end_time=timezone.now() + datetime.timedelta(days=2),
             capacity=100,
@@ -94,6 +95,27 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 0)
+
+    def test_book_unreleased_event(self):
+        self.event.release_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.post(
+            f"/api/events/acquire-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Event not yet released")
+
+    def test_book_unset_release_event(self):
+        self.event.release_time = None
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.post(
+            f"/api/events/acquire-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Event release date not yet scheduled")
+
 
     def test_use_ticket(self):
         headers = self._get_auth_headers(self.user)
@@ -231,3 +253,29 @@ class EventBookingTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), "This route is staff only.")
+
+    def test_unbook_used_ticket(self):
+        """Ensure users cannot unbook tickets that have already been used."""
+        headers = self._get_auth_headers(self.user)
+        ticket = Ticket.objects.create(user=self.user, event=self.event)
+        self.event.number_booked += 1
+        self.event.save()
+
+        # Staff user marks the ticket as used
+        staff_headers = self._get_auth_headers(self.staff_user)
+        response = self.client.post(
+            "/api/events/use-ticket",
+            data=UseTicketSchema(uuid=ticket.uuid, event_id=self.event.id).model_dump(),
+            content_type="application/json",
+            headers=staff_headers,
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # User tries to unbook the used ticket
+        response = self.client.post(
+            f"/api/events/remove-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), "You do not have a ticket for this event")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.number_booked, 1)

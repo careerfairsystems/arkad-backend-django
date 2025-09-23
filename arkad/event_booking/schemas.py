@@ -10,6 +10,7 @@ class EventSchema(Schema):
     type: str
     location: str
     language: str
+    release_time: datetime | None
     start_time: datetime
     end_time: datetime
     capacity: int

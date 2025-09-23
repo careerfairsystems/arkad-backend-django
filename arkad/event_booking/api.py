@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from arkad.auth import OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router, ListType
@@ -104,6 +105,12 @@ def book_event(request: AuthenticatedRequest, event_id: int):
             event: Event = (
                 Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
             )
+            if event.release_time is None:
+                return 409, "Event release date not yet scheduled"
+            if event.release_time >= timezone.now():
+                return 409, "Event not yet released"
+            if event.end_time <= timezone.now():
+                return 409, "Event already ended"
         except Event.DoesNotExist:
             return 404, "Event not found"
         if event.number_booked < event.capacity:
@@ -132,7 +139,7 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
             return 404, "Event not found"
 
         # Delete the ticket
-        deleted_count, _ = event.tickets.filter(user_id=request.user.id).delete()
+        deleted_count, _ = event.tickets.filter(user_id=request.user.id, used=False).delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"

@@ -36,6 +36,10 @@ class Event(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
 
+    release_time = models.DateTimeField(
+        null=True, default=None, verbose_name="The time the event is released"
+    )
+
     start_time = models.DateTimeField(null=False)
     end_time = models.DateTimeField(null=False)
 
