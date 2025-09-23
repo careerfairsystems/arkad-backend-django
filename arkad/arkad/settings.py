@@ -27,6 +27,7 @@ if not DEBUG:
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
         traces_sample_rate=1.0,  # Adjust this value in production
+        enable_logs=True
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
