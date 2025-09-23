@@ -88,7 +88,7 @@ def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     ).update(used=True)
     if modified_tickets == 1:
         # uuid is unique so we can safely assume we got the ticket
-        return 200, Ticket.objects.get(uuid=ticket.uuid)
+        return 200, Ticket.objects.prefetch_related("user").get(uuid=ticket.uuid)
     return 404, "Ticket not found or already used"
 
 

@@ -17,8 +17,15 @@ class EventSchema(Schema):
     company_id: int | None
 
 
+class UserEventInformationSchema(Schema):
+    id: int
+    first_name: str | None
+    last_name: str | None
+    food_preferences: str | None
+
+
 class TicketSchema(Schema):
-    user_id: int
+    user: UserEventInformationSchema
     uuid: UUID
     event_id: int
     used: bool

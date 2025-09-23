@@ -15,7 +15,12 @@ class EventBookingTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.company = Company.objects.create(name="Test Company")
-        self.user = User.objects.create_user(username="testuser", password="password")
+        self.user = User.objects.create_user(
+            username="testuser",
+            password="password",
+            first_name="test",
+            last_name="test",
+        )
         self.staff_user = User.objects.create_user(
             username="teststaffuser", password="password", is_staff=True
         )
