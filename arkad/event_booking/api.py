@@ -139,7 +139,9 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
             return 404, "Event not found"
 
         # Delete the ticket
-        deleted_count, _ = event.tickets.filter(user_id=request.user.id, used=False).delete()
+        deleted_count, _ = event.tickets.filter(
+            user_id=request.user.id, used=False
+        ).delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"

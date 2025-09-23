@@ -203,7 +203,7 @@ class ExhibitorSchema(BaseModel):
     # Some are left out
     index: List[str] = Field(default_factory=list, alias="$index")
     print_contract: Optional[PrintContract] = None
-    archives: List[dict] = Field(default_factory=list)
+    archives: List[dict[Any, Any]] = Field(default_factory=list)
     tickets: Optional[Tickets] = None
     prereg: Optional[Prereg] = None
     requests: Optional[Any] = Field(None, alias="$requests")
@@ -237,7 +237,7 @@ class ExhibitorSchema(BaseModel):
     key: Optional[str] = Field(None, alias="$key")
 
     @classmethod
-    def preprocess(cls, data: dict) -> dict:
+    def preprocess(cls, data: dict[Any, Any]) -> dict[Any, Any]:
         # For some reason employeesLocal and global can be strings
         employees_local = data.get("profile", {}).get("employeesLocal")
         employees_global = data.get("profile", {}).get("employeesGlobal")

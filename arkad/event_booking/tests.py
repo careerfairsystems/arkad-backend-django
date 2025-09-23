@@ -30,7 +30,8 @@ class EventBookingTestCase(TestCase):
             type="ce",
             location="Test Location",
             company=self.company,
-            release_time=timezone.now() - datetime.timedelta(days=1), # So they have been released
+            release_time=timezone.now()
+            - datetime.timedelta(days=1),  # So they have been released
             start_time=timezone.now() + datetime.timedelta(days=1),
             end_time=timezone.now() + datetime.timedelta(days=2),
             capacity=100,
@@ -115,7 +116,6 @@ class EventBookingTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "Event release date not yet scheduled")
-
 
     def test_use_ticket(self):
         headers = self._get_auth_headers(self.user)
