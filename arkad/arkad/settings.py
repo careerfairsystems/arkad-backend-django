@@ -33,7 +33,7 @@ if not DEBUG:
         # Set profile_lifecycle to "trace" to automatically
         # run the profiler on when there is an active transaction
         profile_lifecycle="trace",
-        enable_logs=True
+        enable_logs=True,
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
