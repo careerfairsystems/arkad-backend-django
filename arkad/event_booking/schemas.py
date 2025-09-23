@@ -1,6 +1,13 @@
 from datetime import datetime
+from enum import Enum
 from uuid import UUID
 from arkad.customized_django_ninja import Schema
+
+
+class EventUserStatus(Enum):
+    NOT_BOOKED = "not_booked"
+    BOOKED = "booked"
+    TICKET_USED = "ticket_used"
 
 
 class EventSchema(Schema):
@@ -16,6 +23,10 @@ class EventSchema(Schema):
     capacity: int
     number_booked: int
     company_id: int | None
+    status: EventUserStatus = EventUserStatus.NOT_BOOKED
+
+    class Config:
+        use_enum_values = True
 
 
 class UserEventInformationSchema(Schema):
