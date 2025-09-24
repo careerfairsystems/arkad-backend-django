@@ -1,7 +1,7 @@
 # Register your models here.
 
 from django.contrib import admin
-from .models import PersonCounter
+from .models import PersonCounter, RoomModel
 
 @admin.register(PersonCounter)
 class PersonCounterAdmin(admin.ModelAdmin):
@@ -10,3 +10,5 @@ class PersonCounterAdmin(admin.ModelAdmin):
     search_fields = ('room',)
     ordering = ('-created_at',)
     readonly_fields = ('created_at',)
+
+admin.site.register(RoomModel)
