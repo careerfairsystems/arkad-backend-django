@@ -13,9 +13,9 @@ from arkad.settings import DEBUG
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "arkad.settings")
 
-from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator
+from channels.auth import AuthMiddlewareStack  # type: ignore[import-untyped]
+from channels.routing import ProtocolTypeRouter, URLRouter  # type: ignore[import-untyped]
+from channels.security.websocket import AllowedHostsOriginValidator  # type: ignore[import-untyped]
 from django.core.asgi import get_asgi_application
 
 

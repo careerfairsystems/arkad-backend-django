@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import json
 import asyncio
 import logging
 from typing import Any, Dict, Optional
 
-from channels.db import database_sync_to_async
+from channels.db import database_sync_to_async  # type: ignore[import-untyped]
 from datetime import datetime
 from person_counter.models import RoomModel, PersonCounter
 from user_models.models import User
@@ -23,9 +21,11 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
     room: RoomModel
 
     async def connect(self) -> None:
-        # Parse query and authenticate
+        # Parse query and authenticate (prefers cookie session via AuthMiddlewareStack)
         self.parse_query_params()
-        authed: bool = await self.authenticate_from_query(expected_token_type="websocket")
+        authed: bool = await self.authenticate_from_query(
+            expected_token_type="websocket"
+        )
         if not authed:
             return
 
@@ -84,36 +84,37 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
     async def _get_user(self, user_id: int) -> Optional[User]:
         # Overrides base for proper typing import of decorator
-        @database_sync_to_async
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> Optional[User]:
             try:
                 return User.objects.get(id=user_id)
             except User.DoesNotExist:
                 return None
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
     async def _get_room(self, room_name: str) -> Optional[RoomModel]:
-        @database_sync_to_async
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> Optional[RoomModel]:
             try:
                 return RoomModel.objects.get(name=room_name)
             except RoomModel.DoesNotExist:
                 return None
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
     async def _get_current_counter(self, room_name: str) -> int:
-        @database_sync_to_async
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> int:
             counter = PersonCounter.get_last(room_name)
             return counter.count if counter else 0
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
     async def _get_all_room_counters(self) -> Dict[str, int]:
         """Get current counters for all rooms"""
-        @database_sync_to_async
+
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> Dict[str, int]:
             result: Dict[str, int] = {}
             for room in RoomModel.objects.all():
@@ -121,21 +122,25 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
                 result[room.name] = counter.count if counter else 0
             return result
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
-    async def _apply_delta(self, room: RoomModel, delta: int, updated_by: Optional[User] = None) -> PersonCounter:
-        @database_sync_to_async
+    async def _apply_delta(
+        self, room: RoomModel, delta: int, updated_by: Optional[User] = None
+    ) -> PersonCounter:
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> PersonCounter:
             return PersonCounter.add_delta(room, delta, updated_by=updated_by)
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
-    async def _reset_counter(self, room: RoomModel, updated_by: Optional[User] = None) -> PersonCounter:
-        @database_sync_to_async
+    async def _reset_counter(
+        self, room: RoomModel, updated_by: Optional[User] = None
+    ) -> PersonCounter:
+        @database_sync_to_async  # type: ignore[misc]
         def _sync() -> PersonCounter:
             return PersonCounter.reset_to_zero(room, updated_by=updated_by)
 
-        return await _sync()
+        return await _sync()  # type: ignore[no-any-return]
 
     async def disconnect(self, close_code: int) -> None:
         # Leave both room group and global group
@@ -163,7 +168,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
                 },
             )
 
-    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
+    async def receive(
+        self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None
+    ) -> None:
         if text_data:
             try:
                 text_data_json: Dict[str, Any] = json.loads(text_data)
@@ -171,7 +178,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
                 if message_type == "increment":
                     # Increment counter using database
-                    new_counter: PersonCounter = await self._apply_delta(self.room, 1, self.user)
+                    new_counter: PersonCounter = await self._apply_delta(
+                        self.room, 1, self.user
+                    )
                     all_rooms: Dict[str, int] = await self._get_all_room_counters()
 
                     await self.channel_layer.group_send(
@@ -189,7 +198,7 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
                 elif message_type == "decrement":
                     # Decrement counter using database
-                    new_counter: PersonCounter = await self._apply_delta(self.room, -1, self.user)
+                    new_counter = await self._apply_delta(self.room, -1, self.user)
                     all_rooms = await self._get_all_room_counters()
 
                     await self.channel_layer.group_send(
@@ -250,6 +259,18 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
                                 "type": "all_rooms_update",
                                 "all_rooms": all_rooms,
                                 "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+                    )
+
+                elif message_type == "ping":
+                    # Respond to client heartbeat
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "pong",
+                                "timestamp": datetime.now().isoformat(),
+                                "room": getattr(self, "room_name", None),
                             }
                         )
                     )
@@ -333,7 +354,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
     async def connect(self) -> None:
         self.parse_query_params()
-        authed: bool = await self.authenticate_from_query(expected_token_type="websocket")
+        authed: bool = await self.authenticate_from_query(
+            expected_token_type="websocket"
+        )
         if not authed:
             return
         await self.accept()
@@ -347,7 +370,9 @@ class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
             )
         )
 
-    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
+    async def receive(
+        self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None
+    ) -> None:
         if text_data:
             try:
                 text_data_json: Dict[str, Any] = json.loads(text_data)
