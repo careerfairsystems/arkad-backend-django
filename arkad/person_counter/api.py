@@ -11,10 +11,10 @@ router = Router(tags=["Person Counter"])
 
 @router.get("rooms", auth=None)
 def list_rooms(request: HttpRequest):
-    """List available rooms with current counters. Requires staff via session auth."""
-    user = getattr(request, "user", None)
-    if not getattr(user, "is_authenticated", False) or not getattr(user, "is_staff", False):
-        raise HttpError(403, "Require staff status")
+    """List available rooms with current counters."""
+    # Allow anyone (including anonymous) to fetch available rooms so the
+    # frontend can populate the dropdown for all users.
+    # If you want to restrict this later, add auth checks here.
 
     rooms: List[Dict[str, int | str]] = []
     for room in RoomModel.objects.all():
