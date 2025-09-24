@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Literal
 from arkad.customized_django_ninja import Schema
+from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.schema import ProfileSchema
 
 
@@ -59,6 +60,7 @@ class StudentSessionNormalUserSchema(Schema):
     booking_close_time: datetime | None
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
+    field_modifications: list[FieldModificationSchema]
     id: int
 
 
