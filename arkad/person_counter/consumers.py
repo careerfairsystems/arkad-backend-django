@@ -1,16 +1,17 @@
 import json
 import asyncio
+import logging
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from datetime import datetime
 from arkad.jwt_utils import jwt_decode
+from person_counter.models import RoomModel, PersonCounter
 from user_models.models import User
 from urllib.parse import parse_qs
 
 
 class RoomCounterConsumer(AsyncWebsocketConsumer):
-    # Class-level dictionary to store room counters
-    room_counters = {}
     # Global group for all connected users
     global_group_name = "global_counter_updates"
 
@@ -20,6 +21,17 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
         query_params = parse_qs(query_string)
         token = query_params.get("token", [None])[0]
         self.room_name = query_params.get("room", ["default"])[0]
+
+        # Make sure that room is a valid room name
+        try:
+            self.room = await self.get_room(self.room_name)
+            if not self.room:
+                await self.close(code=4004)
+                return
+        except Exception:
+            await self.close(code=4004)
+            return
+
         self.room_group_name = f"counter_{self.room_name}"
 
         if not token:
@@ -44,7 +56,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4001)
                 return
 
-        except Exception:
+        except Exception as e:
+            logging.exception(e)
             await self.close(code=4001)
             return
 
@@ -54,19 +67,18 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-        # Initialize counter for room if it doesn't exist
-        if self.room_name not in self.room_counters:
-            self.room_counters[self.room_name] = 0
-
         # Send current counter value and connection message
+        current_counter = await self.get_current_counter(self.room_name)
+        all_rooms = await self.get_all_room_counters()
+
         await self.send(
             text_data=json.dumps(
                 {
                     "type": "connection",
                     "message": f'Connected to room "{self.room_name}" as {self.user.email}',
-                    "counter": self.room_counters[self.room_name],
+                    "counter": current_counter,
                     "room": self.room_name,
-                    "all_rooms": dict(self.room_counters),
+                    "all_rooms": all_rooms,
                     "timestamp": datetime.now().isoformat(),
                 }
             )
@@ -79,8 +91,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                 "type": "user_joined",
                 "user": self.user.email,
                 "room": self.room_name,
-                "counter": self.room_counters[self.room_name],
-                "all_rooms": dict(self.room_counters),
+                "counter": current_counter,
+                "all_rooms": all_rooms,
             },
         )
 
@@ -90,6 +102,40 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
             return User.objects.get(id=user_id)
         except User.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def get_room(self, room_name):
+        try:
+            return RoomModel.objects.get(name=room_name)
+        except RoomModel.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_current_counter(self, room_name):
+        counter = PersonCounter.get_last(room_name)
+        return counter.count if counter else 0
+
+    @database_sync_to_async
+    def get_all_room_counters(self):
+        """Get current counters for all rooms"""
+        result = {}
+        for room in RoomModel.objects.all():
+            counter = PersonCounter.get_last(room.name)
+            result[room.name] = counter.count if counter else 0
+        return result
+
+    @database_sync_to_async
+    def apply_delta(self, room, delta, updated_by=None):
+        """Safely apply delta to the counter and return new counter object"""
+        return PersonCounter.add_delta(room, delta, updated_by=updated_by)
+
+    @database_sync_to_async
+    def reset_counter(self, room, updated_by=None):
+        """Reset counter by setting it to 0"""
+        last_counter = PersonCounter.get_last(room.name)
+        current_count = last_counter.count if last_counter else 0
+        # Create a reset entry with negative delta to bring count to 0
+        return PersonCounter.add_delta(room, -current_count, updated_by=updated_by)
 
     async def disconnect(self, close_code):
         # Leave both room group and global group
@@ -103,14 +149,17 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
         # Notify all users about user leaving
         if hasattr(self, "user") and hasattr(self, "room_name"):
+            current_counter = await self.get_current_counter(self.room_name)
+            all_rooms = await self.get_all_room_counters()
+
             await self.channel_layer.group_send(
                 self.global_group_name,
                 {
                     "type": "user_left",
                     "user": self.user.email,
                     "room": self.room_name,
-                    "counter": self.room_counters.get(self.room_name, 0),
-                    "all_rooms": dict(self.room_counters),
+                    "counter": current_counter,
+                    "all_rooms": all_rooms,
                 },
             )
 
@@ -121,59 +170,71 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                 message_type = text_data_json.get("type", "unknown")
 
                 if message_type == "increment":
-                    # Increment counter
-                    self.room_counters[self.room_name] += 1
+                    # Increment counter using database
+                    new_counter = await self.apply_delta(self.room, 1, self.user)
+                    all_rooms = await self.get_all_room_counters()
+
                     await self.channel_layer.group_send(
                         self.global_group_name,
                         {
                             "type": "counter_update",
                             "action": "increment",
                             "room": self.room_name,
-                            "counter": self.room_counters[self.room_name],
+                            "counter": new_counter.count,
+                            "delta": 1,
                             "user": self.user.email,
-                            "all_rooms": dict(self.room_counters),
+                            "all_rooms": all_rooms,
                         },
                     )
 
                 elif message_type == "decrement":
-                    # Decrement counter
-                    self.room_counters[self.room_name] -= 1
+                    # Decrement counter using database
+                    new_counter = await self.apply_delta(self.room, -1, self.user)
+                    all_rooms = await self.get_all_room_counters()
+
                     await self.channel_layer.group_send(
                         self.global_group_name,
                         {
                             "type": "counter_update",
                             "action": "decrement",
                             "room": self.room_name,
-                            "counter": self.room_counters[self.room_name],
+                            "counter": new_counter.count,
+                            "delta": -1,
                             "user": self.user.email,
-                            "all_rooms": dict(self.room_counters),
+                            "all_rooms": all_rooms,
                         },
                     )
 
                 elif message_type == "reset":
-                    # Reset counter
-                    self.room_counters[self.room_name] = 0
+                    # Reset counter using database
+                    new_counter = await self.reset_counter(self.room, self.user)
+                    all_rooms = await self.get_all_room_counters()
+
                     await self.channel_layer.group_send(
                         self.global_group_name,
                         {
                             "type": "counter_update",
                             "action": "reset",
                             "room": self.room_name,
-                            "counter": self.room_counters[self.room_name],
+                            "counter": new_counter.count,
+                            "delta": new_counter.delta,
                             "user": self.user.email,
-                            "all_rooms": dict(self.room_counters),
+                            "all_rooms": all_rooms,
                         },
                     )
 
                 elif message_type == "get_counter":
                     # Get current counter value
+                    current_counter = await self.get_current_counter(self.room_name)
+                    all_rooms = await self.get_all_room_counters()
+
                     await self.send(
                         text_data=json.dumps(
                             {
                                 "type": "counter_value",
-                                "counter": self.room_counters[self.room_name],
+                                "counter": current_counter,
                                 "room": self.room_name,
-                                "all_rooms": dict(self.room_counters),
+                                "all_rooms": all_rooms,
                                 "timestamp": datetime.now().isoformat(),
                             }
                         )
@@ -181,11 +242,13 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
                 elif message_type == "get_all_rooms":
                     # Get all room counters
+                    all_rooms = await self.get_all_room_counters()
+
                     await self.send(
                         text_data=json.dumps(
                             {
                                 "type": "all_rooms_update",
-                                "all_rooms": dict(self.room_counters),
+                                "all_rooms": all_rooms,
                                 "timestamp": datetime.now().isoformat(),
                             }
                         )
@@ -223,6 +286,7 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                     "action": event["action"],
                     "room": event["room"],
                     "counter": event["counter"],
+                    "delta": event.get("delta", 0),
                     "user": event["user"],
                     "all_rooms": event["all_rooms"],
                     "is_my_room": event["room"] == self.room_name,
