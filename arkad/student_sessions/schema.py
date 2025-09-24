@@ -60,6 +60,8 @@ class StudentSessionNormalUserSchema(Schema):
     booking_close_time: datetime | None
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
+    description: str | None
+    disclaimer: str | None
     field_modifications: list[FieldModificationSchema]
     id: int
 

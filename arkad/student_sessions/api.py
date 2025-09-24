@@ -94,6 +94,8 @@ def get_student_sessions(request: AuthenticatedRequest):
                 available=True,
                 user_status=my_applications_statuses.get(s.id, None),
                 field_modifications=s.field_modifications,
+                description=s.description,
+                disclaimer=s.disclaimer,
             )
             for s in sessions
         ],

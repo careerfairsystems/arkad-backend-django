@@ -116,6 +116,18 @@ class StudentSession(models.Model):
         schema=list[FieldModificationSchema],
         default=FieldModificationSchema.student_session_modifications_default,
     )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Description of the student session, shown to students when applying",
+    )
+    disclaimer = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Disclaimer shown to students when applying (example SAAB requiring ONLY swedish citizens)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     @staticmethod
     def available_filter() -> Q:
