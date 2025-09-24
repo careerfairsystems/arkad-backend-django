@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
 
@@ -98,7 +97,10 @@ class PersonCounterConcurrencyTests(TransactionTestCase):
         workers = 10
         per_worker = 10
         with ThreadPoolExecutor(max_workers=workers) as ex:
-            futures = [ex.submit(self._worker, per_worker, self._inc_once) for _ in range(workers)]
+            futures = [
+                ex.submit(self._worker, per_worker, self._inc_once)
+                for _ in range(workers)
+            ]
             for f in as_completed(futures):
                 f.result()
 

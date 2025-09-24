@@ -14,6 +14,7 @@ from user_models.api import router as user_router
 from student_sessions.api import router as student_sessions_router
 from companies.api import router as company_router
 from event_booking.api import router as event_booking_router
+from person_counter.api import router as person_counter_router
 
 
 class CustomNinjaAPI(NinjaAPI):
@@ -55,6 +56,7 @@ api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
 api.add_router("company", company_router)
 api.add_router("events", event_booking_router)
+api.add_router("counter", person_counter_router)
 
 
 @api.exception_handler(jwt.InvalidKeyError)
@@ -65,7 +67,7 @@ def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     )
 
 
-@api.exception_handler(jwt.ExpiredSignatureError)
+@api.exception_handler(jwt.expired_signature_error if hasattr(jwt, 'expired_signature_error') else jwt.ExpiredSignatureError)
 def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
         request, {"detail": "Expired token supplied"}, status=401
@@ -88,5 +90,3 @@ def get_public_key(request: AuthenticatedRequest):
         "-----BEGIN PUBLIC KEY-----"
     ) or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----"):
         raise jwt.InvalidTokenError("Something went very wrong")
-
-    return PublicKeySchema(public_key=PUBLIC_KEY)
