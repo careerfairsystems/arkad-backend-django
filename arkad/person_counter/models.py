@@ -1,6 +1,11 @@
 # Create your models here.
 from django.db import models
 
+class RoomModel(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
 
 class PersonCounter(models.Model):
     """
@@ -10,7 +15,7 @@ class PersonCounter(models.Model):
     It also contains the delta, which is the change in count since the last update.
     0 means no change, positive means people entered, negative means people left.
     """
-    room = models.CharField(max_length=100)
+    room = models.ForeignKey(RoomModel, on_delete=models.CASCADE, related_name='counters')
     created_at = models.DateTimeField(auto_now_add=True)
     count = models.IntegerField(default=0)
     delta = models.IntegerField(default=0)
