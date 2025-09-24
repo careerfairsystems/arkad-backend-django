@@ -5,292 +5,424 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Room Counter</title>
     <style>
-        :root { --primary:#1f2937; --secondary:#1e3a8a; --bg:#0b1220; --card:#111827; --muted:#6b7280; }
-        * { box-sizing: border-box; }
-        body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#e5e7eb; background:linear-gradient(180deg,var(--bg),#0d1730 60%); min-height:100vh; }
-        .container { max-width:980px; margin:0 auto; padding:24px 20px 64px; }
-        header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-        .title { display:flex; gap:10px; align-items:center; }
-        .title h1 { margin:0; font-size:22px; font-weight:700; color:#fff; }
-        .subtitle { margin:0; color:var(--muted); font-size:14px; }
-        .user-chip { color:#cbd5e1; font-size:13px; padding:6px 10px; border-radius:8px; background:rgba(30,58,138,0.15); border:1px solid rgba(30,58,138,0.35); }
-        .alert { display:none; position:sticky; top:0; z-index:50; background:rgba(239,68,68,0.1); color:#fecaca; padding:10px 12px; border-bottom:1px solid rgba(239,68,68,0.35); backdrop-filter:blur(6px); }
-        .card { background: radial-gradient(1200px 400px at 20% -20%, rgba(30,58,138,0.20), transparent 70%), var(--card); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.02); }
-        .row { display:grid; grid-template-columns:1fr; gap:16px; }
-        @media (min-width:720px){ .row{ grid-template-columns:1fr 1fr; } }
-        .status-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(17,24,39,0.6); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); }
-        .badge { font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.16); color:#d1d5db; }
-        .badge.ok { background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.45); color:#a7f3d0; }
-        .badge.err { background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.45); color:#fecaca; }
-        .spacer { flex:1; }
-        .select { appearance:none; background:rgba(17,24,39,0.6); border:1px solid rgba(255,255,255,0.10); color:#e5e7eb; padding:10px 12px; border-radius:10px; min-width:220px; }
-        .counter { display:grid; place-items:center; text-align:center; padding:24px; border-radius:12px; background:linear-gradient(135deg, rgba(30,58,138,0.45), rgba(17,24,39,0.6)); border:1px solid rgba(30,58,138,0.55); }
-        .counter-value { font-size:72px; font-weight:800; letter-spacing:1px; color:#fff; margin:0; transition:transform .12s ease; }
-        .room-info { color:#cbd5e1; margin-top:6px; font-size:14px; }
-        .controls { display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; }
-        button { font-size:16px; font-weight:600; border:none; cursor:pointer; padding:14px 18px; border-radius:12px; color:#e5e7eb; background:rgba(17,24,39,0.6); border:1px solid rgba(255,255,255,0.08); transition:transform .08s ease, background .2s ease, box-shadow .2s ease; }
-        button:hover:not(:disabled){ transform:translateY(-1px); }
-        button:disabled { opacity:.55; cursor:not-allowed; }
-        .btn-minus { background:rgba(239,68,68,0.14); border-color:rgba(239,68,68,0.35); }
-        .btn-plus { background:rgba(16,185,129,0.14); border-color:rgba(16,185,129,0.35); }
-        .btn-reset { background:rgba(245,158,11,0.14); border-color:rgba(245,158,11,0.35); }
-        .btn-refresh { background:rgba(30,58,138,0.18); border-color:rgba(30,58,138,0.4); }
-        .log { height:280px; overflow:auto; padding:10px; background:rgba(2,6,23,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; }
-        .log .entry { margin:4px 0; color:#cbd5e1; }
-        .log .ts { color:#64748b; margin-left:6px; font-size:11px; }
+        :root {
+            --primary: #1f2937;
+            --secondary: #1e3a8a;
+            --bg: #0b1220;
+            --card: #111827;
+            --muted: #6b7280;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            color: #e5e7eb;
+            background: linear-gradient(180deg, var(--bg), #0d1730 60%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 24px 16px 64px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .title {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .title h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .user-chip {
+            color: #cbd5e1;
+            font-size: 13px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(30, 58, 138, 0.15);
+            border: 1px solid rgba(30, 58, 138, 0.35);
+            white-space: nowrap;
+        }
+        .alert {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(239, 68, 68, 0.1);
+            color: #fecaca;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.35);
+            backdrop-filter: blur(6px);
+        }
+        .card {
+            background: radial-gradient(1200px 400px at 20% -20%, rgba(30, 58, 138, 0.20), transparent 70%), var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #d1d5db;
+        }
+        .badge.ok {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #a7f3d0;
+        }
+        .badge.err {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.45);
+            color: #fecaca;
+        }
+        .room-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+        .select {
+            appearance: none;
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 16px;
+        }
+        hr {
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.08);
+            margin: 24px 0;
+        }
+        .counter {
+            text-align: center;
+        }
+        .counter-value {
+            font-size: 80px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 1px;
+            color: #fff;
+            margin: 0;
+            transition: transform .12s ease;
+        }
+        .room-info {
+            color: #cbd5e1;
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 24px;
+        }
+        button {
+            flex-grow: 1;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            padding: 16px;
+            border-radius: 12px;
+            color: #e5e7eb;
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: transform .08s ease, background .2s ease, box-shadow .2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+        .btn-minus {
+            background: rgba(239, 68, 68, 0.14);
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+        .btn-plus {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+        .btn-reset {
+            background: rgba(245, 158, 11, 0.14);
+            border-color: rgba(245, 158, 11, 0.35);
+        }
     </style>
 </head>
 <body>
-<div id="disconnectAlert" class="alert">Disconnected — attempting to reconnect…</div>
+<div id="disconnectAlert" class="alert">Disconnected. Attempting to reconnect…</div>
 <div class="container">
     <header>
         <div class="title">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/></svg>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/></svg>
             <div>
-                <h1>Room Counter</h1>
-                <p class="subtitle">Real-time shared counter per room</p>
+                <h1>Counter</h1>
+                <p class="subtitle">Real-time & Shared</p>
             </div>
         </div>
-        <div class="user-chip">Signed in as {{ request.user.email }}</div>
+        <div class="user-chip">{{ request.user.email }}</div>
     </header>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div class="card">
         <div class="status-bar">
-            <div id="connBadge" class="badge err">Disconnected</div>
+            <div id="connBadge" class="badge err">Offline</div>
             <div id="hbBadge" class="badge">Heartbeat: —</div>
-            <div class="spacer"></div>
-            <label for="roomSelect" class="subtitle" style="margin-right:6px;">Room</label>
+        </div>
+        <div class="room-selector">
+            <label for="roomSelect" class="subtitle">Select Room</label>
             <select id="roomSelect" class="select"></select>
-            <button id="refreshBtn" class="btn-refresh" title="Refresh counter" disabled>Refresh</button>
         </div>
-    </div>
 
-    <div class="row">
-        <div class="card">
-            <div class="counter">
-                <div id="counterValue" class="counter-value">0</div>
-                <div id="roomInfo" class="room-info">Room: —</div>
-            </div>
-            <div class="controls" style="margin-top:16px;">
-                <button id="decrementBtn" class="btn-minus" disabled>−1</button>
-                <button id="resetBtn" class="btn-reset" disabled>Reset</button>
-                <button id="incrementBtn" class="btn-plus" disabled>+1</button>
-            </div>
+        <hr>
+
+        <div class="counter">
+            <div id="counterValue" class="counter-value">0</div>
+            <div id="roomInfo" class="room-info">Room: —</div>
         </div>
-        <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <h3 style="margin:0;font-size:14px;color:#cbd5e1;">Activity</h3>
-                <button id="clearBtn" style="font-size:12px;padding:6px 10px;">Clear</button>
-            </div>
-            <div id="messageLog" class="log"></div>
+        <div class="controls">
+            <button id="decrementBtn" class="btn-minus" disabled>−</button>
+            <button id="resetBtn" class="btn-reset" disabled>Reset</button>
+            <button id="incrementBtn" class="btn-plus" disabled>+</button>
         </div>
     </div>
 </div>
 
 <script>
-(() => {
-    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsPath = '/ws/counter/';
+    (() => {
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsPath = '/ws/counter/';
 
-    let socket = null;
-    let isConnected = false;
-    let selectedRoom = 'default';
-    let lastPong = 0;
-    let hbTimer = null;
-    let reconnectTimer = null;
-    let reconnectDelay = 1000; // backoff up to 15s
+        let socket = null;
+        let selectedRoom = 'default';
+        let lastPong = 0;
+        let hbTimer = null;
+        let reconnectTimer = null;
+        let reconnectDelay = 1000;
 
-    const connBadge = document.getElementById('connBadge');
-    const hbBadge = document.getElementById('hbBadge');
-    const disconnectAlert = document.getElementById('disconnectAlert');
-    const roomSelect = document.getElementById('roomSelect');
-    const counterValue = document.getElementById('counterValue');
-    const roomInfo = document.getElementById('roomInfo');
-    const messageLog = document.getElementById('messageLog');
+        const connBadge = document.getElementById('connBadge');
+        const hbBadge = document.getElementById('hbBadge');
+        const disconnectAlert = document.getElementById('disconnectAlert');
+        const roomSelect = document.getElementById('roomSelect');
+        const counterValue = document.getElementById('counterValue');
+        const roomInfo = document.getElementById('roomInfo');
+        const incrementBtn = document.getElementById('incrementBtn');
+        const decrementBtn = document.getElementById('decrementBtn');
+        const resetBtn = document.getElementById('resetBtn');
 
-    const incrementBtn = document.getElementById('incrementBtn');
-    const decrementBtn = document.getElementById('decrementBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const clearBtn = document.getElementById('clearBtn');
+        function setConnected(connected) {
+            connBadge.textContent = connected ? 'Connected' : 'Disconnected';
+            connBadge.className = `badge ${connected ? 'ok' : 'err'}`;
+            incrementBtn.disabled = !connected;
+            decrementBtn.disabled = !connected;
+            resetBtn.disabled = !connected;
+            roomSelect.disabled = false;
+            disconnectAlert.style.display = connected ? 'none' : 'block';
+        }
 
-    function log(message) {
-        const ts = new Date().toLocaleTimeString();
-        const div = document.createElement('div');
-        div.className = 'entry';
-        div.innerHTML = `${message}<span class="ts">${ts}</span>`;
-        // Allow selecting a different room even while connected so users on mobile
-        // can switch rooms without needing to disconnect first.
-        roomSelect.disabled = false;
-        messageLog.scrollTop = messageLog.scrollHeight;
-    }
+        function setHeartbeat(ok) {
+            const agoSec = Math.max(0, Math.floor((Date.now() - lastPong) / 1000));
+            hbBadge.textContent = ok ? `Heartbeat: ${agoSec}s ago` : 'Heartbeat: —';
+            hbBadge.className = 'badge' + (ok ? ' ok' : '');
+        }
 
-    function setConnected(connected) {
-        isConnected = connected;
-        connBadge.textContent = connected ? 'Connected' : 'Disconnected';
-        connBadge.className = `badge ${connected ? 'ok' : 'err'}`;
-        incrementBtn.disabled = !connected;
-        decrementBtn.disabled = !connected;
-        resetBtn.disabled = !connected;
-        refreshBtn.disabled = !connected;
-        roomSelect.disabled = connected; // lock room while connected
-        disconnectAlert.style.display = connected ? 'none' : 'block';
-    }
+        function updateCounter(v) {
+            counterValue.textContent = v;
+            counterValue.style.transform = 'scale(1.05)';
+            setTimeout(() => counterValue.style.transform = 'scale(1)', 120);
+        }
 
-    function setHeartbeat(ok) {
-        const agoSec = Math.max(0, Math.floor((Date.now() - lastPong) / 1000));
-        hbBadge.textContent = ok ? `Heartbeat: ${agoSec}s ago` : 'Heartbeat: —';
-        hbBadge.className = 'badge' + (ok ? ' ok' : '');
-    }
+        function updateRoomInfo() {
+            roomInfo.textContent = `Room: ${selectedRoom}`;
+        }
 
-    function updateCounter(v) {
-        counterValue.textContent = v;
-        counterValue.style.transform = 'scale(1.04)';
-        setTimeout(() => counterValue.style.transform = 'scale(1)', 120);
-    }
+        function scheduleReconnect() {
+            if (reconnectTimer) return;
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                connect();
+                reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+            }, reconnectDelay);
+        }
 
-    function updateRoomInfo() {
-        roomInfo.textContent = `Room: ${selectedRoom}`;
-    }
-
-    function scheduleReconnect() {
-        if (reconnectTimer) return;
-        reconnectTimer = setTimeout(() => {
-            reconnectTimer = null;
-            connect();
-            reconnectDelay = Math.min(reconnectDelay * 2, 15000);
-        }, reconnectDelay);
-    }
-
-    function startHeartbeat() {
-        stopHeartbeat();
-        hbTimer = setInterval(() => {
-            if (!socket || socket.readyState !== WebSocket.OPEN) return;
-            try {
-                socket.send(JSON.stringify({ type: 'ping' }));
-                const since = Date.now() - lastPong;
-                if (lastPong > 0) setHeartbeat(since < 20000);
-            } catch (_) {}
-        }, 10000);
-    }
-
-    function stopHeartbeat() {
-        if (hbTimer) clearInterval(hbTimer);
-        hbTimer = null;
-    }
-
-    function connect() {
-        if (socket && socket.readyState === WebSocket.OPEN) return;
-        const url = `${wsScheme}://${window.location.host}${wsPath}?room=${encodeURIComponent(selectedRoom)}`;
-        socket = new WebSocket(url);
-
-        socket.onopen = () => {
-            setConnected(true);
-            lastPong = Date.now();
-            setHeartbeat(true);
-            startHeartbeat();
-            reconnectDelay = 1000;
-            log(`Connected to room "${selectedRoom}"`);
-        };
-
-        socket.onmessage = (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                if (data.type === 'connection') {
-                    if (typeof data.counter === 'number') updateCounter(data.counter);
-                    if (data.all_rooms) populateRoomsFromMap(data.all_rooms);
-                } else if (data.type === 'counter_update') {
-                    if (data.is_my_room) updateCounter(data.counter);
-                    log(`${data.user} ${data.action} → ${data.counter} ${data.room === selectedRoom ? '' : `(room: ${data.room})`}`);
-                } else if (data.type === 'counter_value') {
-                    if (data.is_my_room || data.room === selectedRoom) updateCounter(data.counter);
-                } else if (data.type === 'user_joined') {
-                    log(`${data.message}`);
-                } else if (data.type === 'user_left') {
-                    log(`${data.message}`);
-                } else if (data.type === 'all_rooms_update') {
-                    if (data.all_rooms) populateRoomsFromMap(data.all_rooms);
-                } else if (data.type === 'pong') {
-                    lastPong = Date.now();
-                    setHeartbeat(true);
-                }
-            } catch (_) {}
-        };
-
-        socket.onclose = (e) => {
-            setConnected(false);
+        function startHeartbeat() {
             stopHeartbeat();
-            setHeartbeat(false);
-            log(`Socket closed (${e.code})`);
-            scheduleReconnect();
-        };
+            hbTimer = setInterval(() => {
+                if (!socket || socket.readyState !== WebSocket.OPEN) return;
+                try {
+                    socket.send(JSON.stringify({ type: 'ping' }));
+                    if (lastPong > 0) setHeartbeat(Date.now() - lastPong < 20000);
+                } catch (_) {}
+            }, 10000);
+        }
 
-        socket.onerror = () => {
-            setConnected(false);
-            stopHeartbeat();
-            setHeartbeat(false);
-            log('Socket error');
-            scheduleReconnect();
-        };
-    }
+        function stopHeartbeat() {
+            if (hbTimer) clearInterval(hbTimer);
+            hbTimer = null;
+        }
 
-    function disconnect() { if (socket) { try { socket.close(); } catch (_) {} } }
+        function connect() {
+            if (socket && socket.readyState === WebSocket.OPEN) return;
+            const url = `${wsScheme}://${window.location.host}${wsPath}?room=${encodeURIComponent(selectedRoom)}`;
+            socket = new WebSocket(url);
 
-    function send(type) { if (socket && isConnected) socket.send(JSON.stringify({ type })); }
+            socket.onopen = () => {
+                setConnected(true);
+                lastPong = Date.now();
+                setHeartbeat(true);
+                startHeartbeat();
+                reconnectDelay = 1000;
+            };
 
-    function clearLog() { messageLog.innerHTML = ''; }
+            socket.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    switch (data.type) {
+                        case 'connection':
+                        case 'counter_update':
+                        case 'counter_value':
+                            if (data.room === selectedRoom) {
+                                updateCounter(data.counter);
+                            }
+                            if (data.all_rooms) {
+                                populateRoomsFromMap(data.all_rooms);
+                            }
+                            break;
+                        case 'all_rooms_update':
+                            if (data.all_rooms) populateRoomsFromMap(data.all_rooms);
+                            break;
+                        case 'pong':
+                            lastPong = Date.now();
+                            setHeartbeat(true);
+                            break;
+                    }
+                } catch (_) {}
+            };
 
-    function populateRoomsFromMap(map) { const names = Object.keys(map).sort(); applyRooms(names); }
+            socket.onclose = () => {
+                setConnected(false);
+                stopHeartbeat();
+                setHeartbeat(false);
+                scheduleReconnect();
+            };
 
-    async function fetchRooms() {
-        try {
-            const res = await fetch('/api/counter/rooms', { credentials: 'same-origin' });
-            if (!res.ok) throw new Error('Failed');
-            const data = await res.json();
-            const names = (data.rooms || []).map(r => r.name).sort();
+            socket.onerror = () => {
+                setConnected(false);
+                stopHeartbeat();
+                setHeartbeat(false);
+            };
+        }
+
+        function disconnect() {
+            if (socket) {
+                try {
+                    socket.close(1000, "Changing room");
+                } catch (_) {}
+            }
+        }
+
+        function send(type) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type, room: selectedRoom }));
+            }
+        }
+
+        function populateRoomsFromMap(map) {
+            const names = Object.keys(map).sort();
             applyRooms(names);
-        } catch (e) {
-            applyRooms(['default']);
         }
-    }
 
-    function applyRooms(names) {
-        const current = selectedRoom || 'default';
-        roomSelect.innerHTML = '';
-        const unique = Array.from(new Set(names.length ? names : ['default']));
-        unique.forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name; opt.textContent = name; if (name === current) opt.selected = true; roomSelect.appendChild(opt);
-        });
-        if (!unique.includes(current)) {
-            selectedRoom = unique[0];
+        async function fetchRooms() {
+            try {
+                const res = await fetch('/api/counter/rooms', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed to fetch rooms');
+                const data = await res.json();
+                const names = (data.rooms || []).map(r => r.name).sort();
+                applyRooms(names);
+            } catch (e) {
+                console.error(e);
+                applyRooms(['default']);
+            }
+        }
+
+        function applyRooms(names) {
+            const current = selectedRoom || 'default';
+            roomSelect.innerHTML = '';
+            const unique = Array.from(new Set(names.length ? names : ['default']));
+            unique.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if (name === current) opt.selected = true;
+                roomSelect.appendChild(opt);
+            });
+            if (!unique.includes(current)) {
+                selectedRoom = unique[0];
+                updateRoomInfo();
+                if (socket && socket.readyState === WebSocket.OPEN) reconnectToRoom();
+            }
+        }
+
+        function reconnectToRoom() {
+            disconnect();
+            setTimeout(connect, 150);
+        }
+
+        roomSelect.addEventListener('change', () => {
+            selectedRoom = roomSelect.value || 'default';
             updateRoomInfo();
-            if (isConnected) reconnectToRoom();
-        }
-    }
+            reconnectToRoom();
+        });
 
-    // Keyboard shortcuts and UI event wiring
-    function reconnectToRoom() { disconnect(); setTimeout(connect, 150); }
+        incrementBtn.addEventListener('click', () => send('increment'));
+        decrementBtn.addEventListener('click', () => send('decrement'));
+        resetBtn.addEventListener('click', () => send('reset'));
 
-    roomSelect.addEventListener('change', () => { selectedRoom = roomSelect.value || 'default'; updateRoomInfo(); reconnectToRoom(); });
-    incrementBtn.addEventListener('click', () => send('increment'));
-    decrementBtn.addEventListener('click', () => send('decrement'));
-    resetBtn.addEventListener('click', () => send('reset'));
-    refreshBtn.addEventListener('click', () => send('get_counter'));
-    clearBtn.addEventListener('click', clearLog);
+        document.addEventListener('keydown', (e) => {
+            if (incrementBtn.disabled) return;
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); send('increment'); }
+            if (e.key === '-') { e.preventDefault(); send('decrement'); }
+            if (e.key === 'r' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send('reset'); }
+        });
 
-    document.addEventListener('keydown', (e) => {
-        if (!isConnected) return;
-        if (e.key === '+' || e.key === '=') { e.preventDefault(); send('increment'); }
-        if (e.key === '-') { e.preventDefault(); send('decrement'); }
-        if ((e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send('reset'); }
-    });
-
-    // Initialize UI
-    log('UI ready. Loading rooms…');
-    updateRoomInfo();
-    fetchRooms().finally(connect);
-})();
+        // Initialize
+        updateRoomInfo();
+        fetchRooms().finally(connect);
+    })();
 </script>
 </body>
 </html>
