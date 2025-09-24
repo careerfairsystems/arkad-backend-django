@@ -1,65 +1,51 @@
+from __future__ import annotations
+
 import json
 import asyncio
 import logging
+from typing import Any, Dict, Optional
 
-from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from datetime import datetime
-from arkad.jwt_utils import jwt_decode
 from person_counter.models import RoomModel, PersonCounter
 from user_models.models import User
-from urllib.parse import parse_qs
+
+from arkad.consumers import AuthenticatedAsyncWebsocketConsumer
 
 
-class RoomCounterConsumer(AsyncWebsocketConsumer):
+class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
     # Global group for all connected users
-    global_group_name = "global_counter_updates"
+    global_group_name: str = "global_counter_updates"
 
-    async def connect(self):
-        # Get token and room name from query parameters
-        query_string = self.scope.get("query_string", b"").decode()
-        query_params = parse_qs(query_string)
-        token = query_params.get("token", [None])[0]
-        self.room_name = query_params.get("room", ["default"])[0]
+    # Attributes initialized at connect
+    room_name: str
+    room_group_name: str
+    room: RoomModel
+
+    async def connect(self) -> None:
+        # Parse query and authenticate
+        self.parse_query_params()
+        authed: bool = await self.authenticate_from_query(expected_token_type="websocket")
+        if not authed:
+            return
+
+        # Get room name
+        room_name_qp: Optional[str] = self.get_query_param("room", "default")
+        self.room_name = room_name_qp or "default"
 
         # Make sure that room is a valid room name
         try:
-            self.room = await self.get_room(self.room_name)
-            if not self.room:
+            room: Optional[RoomModel] = await self._get_room(self.room_name)
+            if not room:
                 await self.close(code=4004)
                 return
-        except Exception:
+            self.room = room
+        except Exception as e:
+            logging.exception(e)
             await self.close(code=4004)
             return
 
         self.room_group_name = f"counter_{self.room_name}"
-
-        if not token:
-            await self.close(code=4001)
-            return
-
-        try:
-            # Validate WebSocket token
-            jwt_data = jwt_decode(token)
-            if jwt_data.get("token_type") != "websocket":
-                await self.close(code=4001)
-                return
-
-            user_id = jwt_data.get("user_id")
-            if not user_id:
-                await self.close(code=4001)
-                return
-
-            # Get user from database
-            self.user = await self.get_user(user_id)
-            if not self.user:
-                await self.close(code=4001)
-                return
-
-        except Exception as e:
-            logging.exception(e)
-            await self.close(code=4001)
-            return
 
         # Join both room-specific group and global group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -68,8 +54,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Send current counter value and connection message
-        current_counter = await self.get_current_counter(self.room_name)
-        all_rooms = await self.get_all_room_counters()
+        current_counter: int = await self._get_current_counter(self.room_name)
+        all_rooms: Dict[str, int] = await self._get_all_room_counters()
 
         await self.send(
             text_data=json.dumps(
@@ -96,48 +82,62 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    @database_sync_to_async
-    def get_user(self, user_id):
-        try:
-            return User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return None
+    async def _get_user(self, user_id: int) -> Optional[User]:
+        # Overrides base for proper typing import of decorator
+        @database_sync_to_async
+        def _sync() -> Optional[User]:
+            try:
+                return User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return None
 
-    @database_sync_to_async
-    def get_room(self, room_name):
-        try:
-            return RoomModel.objects.get(name=room_name)
-        except RoomModel.DoesNotExist:
-            return None
+        return await _sync()
 
-    @database_sync_to_async
-    def get_current_counter(self, room_name):
-        counter = PersonCounter.get_last(room_name)
-        return counter.count if counter else 0
+    async def _get_room(self, room_name: str) -> Optional[RoomModel]:
+        @database_sync_to_async
+        def _sync() -> Optional[RoomModel]:
+            try:
+                return RoomModel.objects.get(name=room_name)
+            except RoomModel.DoesNotExist:
+                return None
 
-    @database_sync_to_async
-    def get_all_room_counters(self):
+        return await _sync()
+
+    async def _get_current_counter(self, room_name: str) -> int:
+        @database_sync_to_async
+        def _sync() -> int:
+            counter = PersonCounter.get_last(room_name)
+            return counter.count if counter else 0
+
+        return await _sync()
+
+    async def _get_all_room_counters(self) -> Dict[str, int]:
         """Get current counters for all rooms"""
-        result = {}
-        for room in RoomModel.objects.all():
-            counter = PersonCounter.get_last(room.name)
-            result[room.name] = counter.count if counter else 0
-        return result
+        @database_sync_to_async
+        def _sync() -> Dict[str, int]:
+            result: Dict[str, int] = {}
+            for room in RoomModel.objects.all():
+                counter = PersonCounter.get_last(room.name)
+                result[room.name] = counter.count if counter else 0
+            return result
 
-    @database_sync_to_async
-    def apply_delta(self, room, delta, updated_by=None):
-        """Safely apply delta to the counter and return new counter object"""
-        return PersonCounter.add_delta(room, delta, updated_by=updated_by)
+        return await _sync()
 
-    @database_sync_to_async
-    def reset_counter(self, room, updated_by=None):
-        """Reset counter by setting it to 0"""
-        last_counter = PersonCounter.get_last(room.name)
-        current_count = last_counter.count if last_counter else 0
-        # Create a reset entry with negative delta to bring count to 0
-        return PersonCounter.add_delta(room, -current_count, updated_by=updated_by)
+    async def _apply_delta(self, room: RoomModel, delta: int, updated_by: Optional[User] = None) -> PersonCounter:
+        @database_sync_to_async
+        def _sync() -> PersonCounter:
+            return PersonCounter.add_delta(room, delta, updated_by=updated_by)
 
-    async def disconnect(self, close_code):
+        return await _sync()
+
+    async def _reset_counter(self, room: RoomModel, updated_by: Optional[User] = None) -> PersonCounter:
+        @database_sync_to_async
+        def _sync() -> PersonCounter:
+            return PersonCounter.reset_to_zero(room, updated_by=updated_by)
+
+        return await _sync()
+
+    async def disconnect(self, close_code: int) -> None:
         # Leave both room group and global group
         if hasattr(self, "room_group_name"):
             await self.channel_layer.group_discard(
@@ -149,8 +149,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
         # Notify all users about user leaving
         if hasattr(self, "user") and hasattr(self, "room_name"):
-            current_counter = await self.get_current_counter(self.room_name)
-            all_rooms = await self.get_all_room_counters()
+            current_counter: int = await self._get_current_counter(self.room_name)
+            all_rooms: Dict[str, int] = await self._get_all_room_counters()
 
             await self.channel_layer.group_send(
                 self.global_group_name,
@@ -163,16 +163,16 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-    async def receive(self, text_data=None, bytes_data=None):
+    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
         if text_data:
             try:
-                text_data_json = json.loads(text_data)
-                message_type = text_data_json.get("type", "unknown")
+                text_data_json: Dict[str, Any] = json.loads(text_data)
+                message_type: str = text_data_json.get("type", "unknown")
 
                 if message_type == "increment":
                     # Increment counter using database
-                    new_counter = await self.apply_delta(self.room, 1, self.user)
-                    all_rooms = await self.get_all_room_counters()
+                    new_counter: PersonCounter = await self._apply_delta(self.room, 1, self.user)
+                    all_rooms: Dict[str, int] = await self._get_all_room_counters()
 
                     await self.channel_layer.group_send(
                         self.global_group_name,
@@ -189,8 +189,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
                 elif message_type == "decrement":
                     # Decrement counter using database
-                    new_counter = await self.apply_delta(self.room, -1, self.user)
-                    all_rooms = await self.get_all_room_counters()
+                    new_counter: PersonCounter = await self._apply_delta(self.room, -1, self.user)
+                    all_rooms = await self._get_all_room_counters()
 
                     await self.channel_layer.group_send(
                         self.global_group_name,
@@ -206,9 +206,9 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                     )
 
                 elif message_type == "reset":
-                    # Reset counter using database
-                    new_counter = await self.reset_counter(self.room, self.user)
-                    all_rooms = await self.get_all_room_counters()
+                    # Reset counter using database in a race-safe manner
+                    new_counter = await self._reset_counter(self.room, self.user)
+                    all_rooms = await self._get_all_room_counters()
 
                     await self.channel_layer.group_send(
                         self.global_group_name,
@@ -225,8 +225,8 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
                 elif message_type == "get_counter":
                     # Get current counter value
-                    current_counter = await self.get_current_counter(self.room_name)
-                    all_rooms = await self.get_all_room_counters()
+                    current_counter = await self._get_current_counter(self.room_name)
+                    all_rooms = await self._get_all_room_counters()
 
                     await self.send(
                         text_data=json.dumps(
@@ -242,7 +242,7 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
                 elif message_type == "get_all_rooms":
                     # Get all room counters
-                    all_rooms = await self.get_all_room_counters()
+                    all_rooms = await self._get_all_room_counters()
 
                     await self.send(
                         text_data=json.dumps(
@@ -278,7 +278,7 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
                 )
 
     # Handler for counter updates - now sent to all users
-    async def counter_update(self, event):
+    async def counter_update(self, event: Dict[str, Any]) -> None:
         await self.send(
             text_data=json.dumps(
                 {
@@ -296,7 +296,7 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
         )
 
     # Handler for user joined - now sent to all users
-    async def user_joined(self, event):
+    async def user_joined(self, event: Dict[str, Any]) -> None:
         if event["user"] != self.user.email:  # Don't send to the user who just joined
             await self.send(
                 text_data=json.dumps(
@@ -313,7 +313,7 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
             )
 
     # Handler for user left - now sent to all users
-    async def user_left(self, event):
+    async def user_left(self, event: Dict[str, Any]) -> None:
         await self.send(
             text_data=json.dumps(
                 {
@@ -330,39 +330,12 @@ class RoomCounterConsumer(AsyncWebsocketConsumer):
 
 
 # Keep the old PingConsumer for backward compatibility
-class PingConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        # Get token from query parameters
-        query_string = self.scope.get("query_string", b"").decode()
-        query_params = parse_qs(query_string)
-        token = query_params.get("token", [None])[0]
-
-        if not token:
-            await self.close(code=4001)
+class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
+    async def connect(self) -> None:
+        self.parse_query_params()
+        authed: bool = await self.authenticate_from_query(expected_token_type="websocket")
+        if not authed:
             return
-
-        try:
-            # Validate WebSocket token
-            jwt_data = jwt_decode(token)
-            if jwt_data.get("token_type") != "websocket":
-                await self.close(code=4001)
-                return
-
-            user_id = jwt_data.get("user_id")
-            if not user_id:
-                await self.close(code=4001)
-                return
-
-            # Get user from database
-            self.user = await self.get_user(user_id)
-            if not self.user:
-                await self.close(code=4001)
-                return
-
-        except Exception:
-            await self.close(code=4001)
-            return
-
         await self.accept()
         await self.send(
             text_data=json.dumps(
@@ -374,21 +347,11 @@ class PingConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    @database_sync_to_async
-    def get_user(self, user_id):
-        try:
-            return User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return None
-
-    async def disconnect(self, close_code):
-        pass
-
-    async def receive(self, text_data=None, bytes_data=None):
+    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
         if text_data:
             try:
-                text_data_json = json.loads(text_data)
-                message_type = text_data_json.get("type", "unknown")
+                text_data_json: Dict[str, Any] = json.loads(text_data)
+                message_type: str = text_data_json.get("type", "unknown")
 
                 if message_type == "ping":
                     # Respond to ping with pong
@@ -442,11 +405,11 @@ class PingConsumer(AsyncWebsocketConsumer):
                     )
                 )
 
-    async def start_heartbeat(self):
+    async def start_heartbeat(self) -> None:
         """Send periodic heartbeat messages"""
         asyncio.create_task(self.heartbeat_loop())
 
-    async def heartbeat_loop(self):
+    async def heartbeat_loop(self) -> None:
         """Send heartbeat every 10 seconds"""
         while True:
             try:
