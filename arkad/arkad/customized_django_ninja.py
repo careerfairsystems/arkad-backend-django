@@ -12,6 +12,7 @@ class Schema(NinjaSchema):
     class Config(NinjaSchema.Config):
         alias_generator = to_camel
         populate_by_name = True
+        use_enum_values = True
 
 
 class Router(ninja.Router):

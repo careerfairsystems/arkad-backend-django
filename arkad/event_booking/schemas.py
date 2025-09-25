@@ -23,10 +23,7 @@ class EventSchema(Schema):
     capacity: int
     number_booked: int
     company_id: int | None
-    status: EventUserStatus = EventUserStatus.NOT_BOOKED.value
-
-    class Config:
-        use_enum_values = True
+    status: EventUserStatus = EventUserStatus.NOT_BOOKED
 
 
 class UserEventInformationSchema(Schema):

@@ -16,10 +16,7 @@ class FieldModificationSchema(Schema):
     """
 
     name: str
-    field_level: FieldLevel = FieldLevel.REQUIRED.value
-
-    class Config:
-        use_enum_values = True
+    field_level: FieldLevel = FieldLevel.REQUIRED
 
     @classmethod
     def student_session_modifications_default(cls) -> list["FieldModificationSchema"]:
