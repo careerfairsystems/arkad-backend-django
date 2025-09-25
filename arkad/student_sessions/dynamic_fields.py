@@ -16,7 +16,7 @@ class FieldModificationSchema(Schema):
     """
 
     name: str
-    field_level: FieldLevel = FieldLevel.REQUIRED
+    field_level: FieldLevel = FieldLevel.REQUIRED.value
 
     class Config:
         use_enum_values = True
