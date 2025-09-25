@@ -4,7 +4,7 @@ from uuid import UUID
 from arkad.customized_django_ninja import Schema
 
 
-class EventUserStatus(Enum):
+class EventUserStatus(str, Enum):
     NOT_BOOKED = "not_booked"
     BOOKED = "booked"
     TICKET_USED = "ticket_used"

@@ -2,7 +2,7 @@ from enum import Enum
 from arkad.customized_django_ninja import Schema
 
 
-class FieldLevel(Enum):
+class FieldLevel(str, Enum):
     REQUIRED = "required"
     OPTIONAL = "optional"
     HIDDEN = "hidden"
