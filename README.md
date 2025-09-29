@@ -50,6 +50,14 @@ Required environment variables are:
 - DEBUG (Must be set to "False" in production)
 - POSTGRES_PASSWORD (The postgres database password for the user arkad_db_user)
 
+
+## Scheduling tasks
+
+- Celery beat is used to schedule periodic tasks which can be created from the admin interface at /admin under "Periodic tasks".
+- The tasks which are to be created must be defined in a tasks.py file in any app.
+- The tasks must be decorated with `@shared_task` from celery.
+- There is an example task in arkad/arkad/celery.py.
+
 ### Testing with docker
 ## Celery (worker + beat)
 - Uses Redis for broker and result backend.
