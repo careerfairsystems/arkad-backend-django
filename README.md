@@ -65,8 +65,6 @@ Required environment variables are:
 - Worker processes tasks; beat schedules periodic tasks.
 - Run manually (outside compose):
 Ran with: `docker compose up`
-
-  celery -A arkad beat -l info
 ### Deployment
 - Define tasks in any app `tasks.py`:
 When deploying you must set DEBUG environment value to False.
@@ -121,4 +119,38 @@ Run tests using `python manage.py test`
 
 When pushing linting and tests will be run automatically.
 And when a new commit is added to master it is auto deployed.
+
+# General Django Tips
+
+## DB
+
+- To create a new app: `python manage.py startapp app_name`
+- To create migrations: `python manage.py makemigrations`: This will create migration files for any changes in models.
+- To migrate the database: `python manage.py migrate`: This will apply the migrations to the database.
+
+### Creating new fields
+
+When creating new fields in models it is important to set a default value or allow null values.
+Otherwise, the migration will fail if there are existing rows in the database.
+
+#### Adding fields to existing models
+
+Adding fields to existing models is very simple in django, simply go to the model, for example `class User(AbstractBaseUser)`
+And add the new field, for example:
+```python
+    push_token = models.CharField(max_length=255, blank=True, null=True)
+```
+
+## Admin Interface
+
+Django comes with an admin interface from where data can be edited, created or deleted. It is also possible to create new users and assign them to groups with different permissions.
+
+An additional feature of the admin interface is that it is possible to create actions for each table. For example, it is possible to create an action to email all selected users.
+
+### Actions
+
+Actions are created by defining a function and adding it to the `actions` list in the admin class.
+For more information see the [Django documentation](https://docs.djangoproject.com/en/5.2/ref/contrib/admin/actions/).
+
+It is also possible to create actions which take input, they can be seen here: [Stack Overflow](https://stackoverflow.com/a/63644851/11836881).
 
