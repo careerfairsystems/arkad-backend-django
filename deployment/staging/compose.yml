@@ -75,7 +75,7 @@ services:
   celery-beat:
     build: ../../arkad
     restart: unless-stopped
-    command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info --schedule /app/arkad/celerybeat/schedule.db"
+    command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info -S django"
     env_file:
       - .env
     depends_on:
