@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs
 
@@ -47,7 +45,7 @@ class AuthenticatedAsyncWebsocketConsumer(AsyncWebsocketConsumer):  # type: igno
         # Prefer cookie-based session auth if available
         scope_user = self.scope.get("user")
         if scope_user is not None and getattr(scope_user, "is_authenticated", False):
-            self.user = scope_user  # type: ignore[assignment]
+            self.user = scope_user
             return True
 
         # Fallback to explicit token in query string
