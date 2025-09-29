@@ -24,12 +24,15 @@ You must use Python 3.13 to run this project as we are using some very new typin
 7. Copy `example.env` to `.env` (Both are in arkad folder)
     - This contains the default environment variables.
 8. Start the Postgres database if not running it locally.
-8. Start services (database, redis, web, celery worker, celery beat) using docker: from the `arkad` folder run:
-9. Create migrations: `python manage.py makemigrations`
-10. Migrate the database: `python manage.py migrate`
-11. Create the cache database `python manage.py createcachetable`
-12. Run the server: `python manage.py runserver`
-13. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+9. Start services (database, redis, web, celery worker, celery beat) using docker: from the `arkad` folder run:
+    ```shell
+    docker compose up
+    ```
+10. Create migrations: `python manage.py makemigrations`
+11. Migrate the database: `python manage.py migrate`
+12. Create the cache database `python manage.py createcachetable`
+13. Run the server: `python manage.py runserver`
+14. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend
 
