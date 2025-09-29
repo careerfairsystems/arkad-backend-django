@@ -1,5 +1,5 @@
 import os
-from celery import Celery
+from celery import Celery  # type: ignore[import-untyped]
 
 # Set default Django settings module for 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "arkad.settings")
@@ -19,5 +19,5 @@ app.autodiscover_tasks()
 @app.task(bind=True)
 def debug_task(self):  # type: ignore[no-untyped-def]
     import time
-    print(time.time())
 
+    print(time.time())

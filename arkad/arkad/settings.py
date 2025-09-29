@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+
 import logging
 import os
 from pathlib import Path
@@ -73,7 +74,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'django_celery_beat',
+    "django_celery_beat",
     "companies",
     "user_models",
     "student_sessions",
@@ -184,9 +185,7 @@ DEFAULT_FROM_EMAIL = "Arkad No Reply <no-reply@arkadtlth.se>"
 # Celery / Redis configuration
 REDIS_URL: str | None = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 CELERY_BROKER_URL: str | None = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND: str | None = os.environ.get(
-    "CELERY_RESULT_BACKEND", REDIS_URL
-)
+CELERY_RESULT_BACKEND: str | None = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL)
 
 CACHES = {
     "default": (
