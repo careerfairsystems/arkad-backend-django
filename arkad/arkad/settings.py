@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -73,6 +74,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_celery_beat",
     "companies",
     "user_models",
     "student_sessions",
@@ -180,9 +182,34 @@ EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = "Arkad No Reply <no-reply@arkadtlth.se>"
 
+# Celery / Redis configuration
+REDIS_URL: str | None = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+CELERY_BROKER_URL: str | None = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND: str | None = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL)
+
 CACHES = {
-    "default": {  # This is slow, if using caches in greater capacity, use Redis
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "arkad_db_cache_table",
-    }
+    "default": (
+        {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "KEY_PREFIX": "arkad",
+        }
+        if REDIS_URL
+        else {
+            # Fallback to db cache if REDIS_URL not set (e.g., initial local setup)
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "arkad_db_cache_table",
+        }
+    )
 }
+
+# Celery specific settings (kept minimal; tune later)
+if CELERY_BROKER_URL:
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+    CELERY_BROKER_CONNECTION_MAX_RETRIES = 0
+else:
+    logging.warning("CELERY_BROKER_URL is not set, Celery will not work!")

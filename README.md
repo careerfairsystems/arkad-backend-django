@@ -24,16 +24,20 @@ You must use Python 3.13 to run this project as we are using some very new typin
 7. Copy `example.env` to `.env` (Both are in arkad folder)
     - This contains the default environment variables.
 8. Start the Postgres database if not running it locally.
-    - `docker compose up` (from the arkad folder)
-9. Create migrations: `python manage.py makemigrations`
-10. Migrate the database: `python manage.py migrate`
-11. Create the cache database `python manage.py createcachetable`
-12. Run the server: `python manage.py runserver`
-13. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
+9. Start services (database, redis, web, celery worker, celery beat) using docker: from the `arkad` folder run:
+    ```shell
+    docker compose up
+    ```
+10. Create migrations: `python manage.py makemigrations`
+11. Migrate the database: `python manage.py migrate`
+12. Create the cache database `python manage.py createcachetable`
+13. Run the server: `python manage.py runserver`
+14. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend
 
-This backend uses django and postgres as the database
+   - Celery beat scheduler (celery-beat)
+   - Start celery using `celery -A arkad worker -l info` if not using docker compose.
 
 ## API
 
@@ -46,15 +50,25 @@ Required environment variables are:
 - DEBUG (Must be set to "False" in production)
 - POSTGRES_PASSWORD (The postgres database password for the user arkad_db_user)
 
+
+## Scheduling tasks
+
+- Celery beat is used to schedule periodic tasks which can be created from the admin interface at /admin under "Periodic tasks".
+- The tasks which are to be created must be defined in a tasks.py file in any app.
+- The tasks must be decorated with `@shared_task` from celery.
+- There is an example task in arkad/arkad/celery.py.
+
 ### Testing with docker
-
-If testing locally using docker debug should be True.
-
-Can be built using: `docker compose build`
+## Celery (worker + beat)
+- Uses Redis for broker and result backend.
+- Two services run via compose: `celery-worker` and `celery-beat`.
+- Worker processes tasks; beat schedules periodic tasks.
+- Run manually (outside compose):
 Ran with: `docker compose up`
 
+  celery -A arkad beat -l info
 ### Deployment
-
+- Define tasks in any app `tasks.py`:
 When deploying you must set DEBUG environment value to False.
 Also make sure to set a secure secret key as it is otherwise possible to high-jack sessions.
 You should also set a good postgres password.
@@ -62,7 +76,20 @@ You should also set a good postgres password.
 ### Creating a superuser in docker
 
 Enter the bash with: `docker compose run web bash`
-Enter the shell utility: `python manage.py createsuperuser`
+- Add periodic tasks by creating (or editing) `arkad/celery.py` or a dedicated module and using Celery signals, e.g.:
+  ```python
+  from celery.schedules import crontab
+  from .celery import app
+
+  app.conf.beat_schedule = {
+      "example-task-every-minute": {
+          "task": "email_app.tasks.example_task",
+          "schedule": crontab(minute="*"),
+          "args": (1, 2),
+      }
+  }
+  ```
+  (Adjust task path / schedule as needed.)
 Follow the instructions.
 
 ### Update company information
@@ -94,3 +121,4 @@ Run tests using `python manage.py test`
 
 When pushing linting and tests will be run automatically.
 And when a new commit is added to master it is auto deployed.
+

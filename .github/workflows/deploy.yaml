@@ -53,6 +53,10 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
@@ -83,6 +87,8 @@ jobs:
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
           DJANGO_SECRET_KEY: INSECURETESTSECRETKEY
+          REDIS_URL: redis://localhost:6379/0
+
         run: |
           gunicorn arkad.wsgi:application --bind 127.0.0.1:8000 --timeout 5 &
           PID=$!
@@ -96,6 +102,7 @@ jobs:
           DB_HOST: localhost
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
+          REDIS_URL: redis://localhost:6379/0
         run: (cd arkad && python manage.py test)
 
   deploy:
