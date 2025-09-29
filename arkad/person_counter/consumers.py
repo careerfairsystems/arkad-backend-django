@@ -52,7 +52,13 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
             hash_object = hashlib.sha256(name.encode())
             return hash_object.hexdigest()
 
-        self.room_group_name = f"counter_{_safe_channel_name(room_name_qp)}"  # Room-specific group which is safe for channel
+        if room_name_qp is None:
+            room_name_qp = "default"
+
+        safe_name = _safe_channel_name(room_name_qp)
+        self.room_group_name = (
+            f"counter_{safe_name}"  # Room-specific group which is safe for channel
+        )
         print(self.room_group_name)
         # Join both room-specific group and global group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
