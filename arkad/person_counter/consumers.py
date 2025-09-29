@@ -1,7 +1,9 @@
+import hashlib
 import json
 import asyncio
 import logging
 from typing import Any, Dict, Optional
+import urllib.parse
 
 from channels.db import database_sync_to_async  # type: ignore[import-untyped]
 from datetime import datetime
@@ -31,7 +33,7 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
         # Get room name
         room_name_qp: Optional[str] = self.get_query_param("room", "default")
-        self.room_name = room_name_qp or "default"
+        self.room_name = urllib.parse.unquote(room_name_qp or "default")
 
         # Make sure that room is a valid room name
         try:
@@ -45,8 +47,13 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
             await self.close(code=4004)
             return
 
-        self.room_group_name = f"counter_{self.room_name}"
+        def _safe_channel_name(name: str) -> str:
+            # Create a safe channel name by hashing the room name
+            hash_object = hashlib.sha256(name.encode())
+            return hash_object.hexdigest()
 
+        self.room_group_name = f"counter_{_safe_channel_name(room_name_qp)}"  # Room-specific group which is safe for channel
+        print(self.room_group_name)
         # Join both room-specific group and global group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.channel_layer.group_add(self.global_group_name, self.channel_name)

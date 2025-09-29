@@ -108,3 +108,28 @@ class PersonCounterConcurrencyTests(TransactionTestCase):
         self.assertIsNotNone(last)
         assert last is not None
         self.assertEqual(last.count, workers * per_worker)
+
+class RoomCounterSpecialCharTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="special@example.com",
+            password="password123",
+            username="specialuser",
+        )
+        self.special_room_name = "hall/ä+?&=b:"
+        RoomModel.objects.create(name=self.special_room_name)
+
+    def test_room_with_special_characters(self):
+        room = RoomModel.objects.get(name=self.special_room_name)
+        self.assertIsNotNone(room)
+        self.assertEqual(room.name, self.special_room_name)
+
+        # Add a delta and verify
+        snapshot = PersonCounter.add_delta(room, 5, updated_by=self.user)
+        self.assertEqual(snapshot.count, 5)
+        self.assertEqual(snapshot.delta, 5)
+
+        last = PersonCounter.get_last(self.special_room_name)
+        self.assertIsNotNone(last)
+        assert last is not None
+        self.assertEqual(last.count, 5)
