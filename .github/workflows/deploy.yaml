@@ -94,6 +94,22 @@ jobs:
           PID=$!
           sleep 5
           kill $PID
+      
+
+      - name: Install Nginx
+        run: sudo apt-get update && sudo apt-get install -y nginx
+
+      - name: Copy Nginx config
+        run: sudo cp arkad/nginx.conf /etc/nginx/nginx.conf
+
+      - name: Test Nginx config
+        run: sudo nginx -t
+
+      - name: Start Nginx
+        run: sudo systemctl start nginx
+
+      - name: Check Nginx status
+        run: sudo systemctl status nginx
 
       - name: Run tests
         env:
