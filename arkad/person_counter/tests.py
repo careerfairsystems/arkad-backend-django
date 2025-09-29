@@ -109,6 +109,7 @@ class PersonCounterConcurrencyTests(TransactionTestCase):
         assert last is not None
         self.assertEqual(last.count, workers * per_worker)
 
+
 class RoomCounterSpecialCharTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
