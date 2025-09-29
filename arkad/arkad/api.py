@@ -94,3 +94,4 @@ def get_public_key(request: AuthenticatedRequest):
         "-----BEGIN PUBLIC KEY-----"
     ) or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----"):
         raise jwt.InvalidTokenError("Something went very wrong")
+    return PublicKeySchema(public_key=PUBLIC_KEY)
