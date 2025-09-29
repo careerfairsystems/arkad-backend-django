@@ -21,7 +21,7 @@ class TestCache(TestCase):
     def test_cache(self):
         from django.core.cache import cache
 
-        cache.set("test_key", "test_value", timeout=1)
+        cache.set("test_key", "test_value", timeout=0.5)
         value = cache.get("test_key")
         self.assertEqual(value, "test_value")
         time.sleep(1)
