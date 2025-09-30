@@ -1,0 +1,73 @@
+services:
+  db:
+    restart: unless-stopped
+    image: postgres:16
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=arkad_db_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=arkad
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arkad_db_user -d arkad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app_network
+
+  web:
+    restart: unless-stopped
+    build: ../../arkad
+    command: sh -c "
+      python manage.py collectstatic --no-input &&
+      python manage.py createcachetable &&
+      python manage.py migrate &&
+      gunicorn --workers 8 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
+      "
+    volumes:
+      - /home/ec2-user/arkad-backend/arkad/static:/app/arkad/static:ro  # source for collectstatic
+      - static_volume:/app/arkad/static_root  # destination for collectstatic
+      - media_volume:/app/arkad/media
+      - ./config:/app/arkad/config
+      - ./private:/app/arkad/private
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  nginx:
+    restart: unless-stopped
+    image: nginx:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-production.rule=Host(`backend.arkadtlth.se`)"
+      - "traefik.http.routers.app-production.entrypoints=websecure"
+      - "traefik.http.routers.app-production.tls=true"
+      - "traefik.http.routers.app-production.tls.certresolver=production"
+    volumes:
+      - static_volume:/app/arkad/static:ro  # serve collected static files
+      - media_volume:/app/arkad/media:rw
+      - ../nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - "8080:80"
+    expose:
+      - 80
+    depends_on:
+      - web
+    networks:
+      - app_network
+      - traefik
+
+volumes:
+  media_volume:
+  static_volume:
+
+networks:
+  app_network:
+    driver: bridge
+  traefik:
+    external: true

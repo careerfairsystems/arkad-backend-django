@@ -14,10 +14,10 @@ else
   echo "Warning: Secrets file not found at $SECRETS_FILE"
   exit 1
 fi
-ENVIRONMENT="staging"
+ENVIRONMENT="production"
 PROJECT_NAME="arkad-backend"
+git checkout master
 
-git checkout staging
 echo "Starting deployment for $PROJECT_NAME in $ENVIRONMENT environment..."
 git pull
 
@@ -36,10 +36,10 @@ docker compose up -d
 # Get deployment status
 if [ $? -eq 0 ]; then
   DEPLOY_STATUS="success"
-  MESSAGE="✅ **$PROJECT_NAME** has been successfully deployed to **$ENVIRONMENT**.\nCommit: \`$LAST_COMMIT_HASH\`\nMessage: \`$COMMIT_MESSAGE\`"
+  MESSAGE="✅ **$PROJECT_NAME** has been successfully deployed to **$ENVIRONMENT** (backend.arkadtlth.se).\nCommit: \`$LAST_COMMIT_HASH\`\nMessage: \`$COMMIT_MESSAGE\`"
 else
   DEPLOY_STATUS="failure"
-  MESSAGE="❌ Failed to deploy **$PROJECT_NAME** to **$ENVIRONMENT**.\nCommit: \`$LAST_COMMIT_HASH\`\nMessage: \`$COMMIT_MESSAGE\`"
+  MESSAGE="❌ Failed to deploy **$PROJECT_NAME** to **$ENVIRONMENT** (backend.arkadtlth.se).\nCommit: \`$LAST_COMMIT_HASH\`\nMessage: \`$COMMIT_MESSAGE\`"
 fi
 
 # Send Discord notification
@@ -49,3 +49,4 @@ curl -H "Content-Type: application/json" \
   $DISCORD_WEBHOOK_URL
 
 echo "Deployment script completed."
+
