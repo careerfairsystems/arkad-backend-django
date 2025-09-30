@@ -2,8 +2,7 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, QuerySet, UniqueConstraint, CheckConstraint
-from django.utils import timezone
+from django.db.models import Q, UniqueConstraint, CheckConstraint
 
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
@@ -67,13 +66,3 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
-
-    @staticmethod
-    def available_filter() -> Q:
-        return Q(
-            start_time__gte=timezone.now(),
-        )
-
-    @classmethod
-    def available_events(cls) -> QuerySet["Event"]:
-        return cls.objects.filter(cls.available_filter()).all()

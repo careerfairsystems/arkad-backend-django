@@ -1,7 +1,7 @@
 from functools import partial
 
 from django.db import models
-from django.db.models import Q, UniqueConstraint
+from django.db.models import UniqueConstraint
 from django.utils import timezone
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
@@ -134,13 +134,6 @@ class StudentSession(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    @staticmethod
-    def available_filter() -> Q:
-        return Q(
-            start_time__gte=timezone.now(),
-            booking_close_time__gte=timezone.now(),
-        )
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"

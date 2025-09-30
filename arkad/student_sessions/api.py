@@ -315,10 +315,11 @@ def apply_for_session(
         return 409, str(e.errors())
 
     try:
+        now = timezone.now()
         session: StudentSession = StudentSession.objects.get(
-            company_id=data.company_id,
-            booking_close_time__gte=timezone.now(),
-            booking_open_time__lte=timezone.now(),
+            Q(company_id=data.company_id)
+            & (Q(booking_close_time__isnull=True) | Q(booking_close_time__gte=now))
+            & Q(booking_open_time__isnull=False, booking_open_time__lte=now)
         )
     except StudentSession.DoesNotExist:
         return 404, "Session not found, or booking has closed or not yet opened"
