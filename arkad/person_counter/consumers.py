@@ -272,9 +272,8 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
     async def counter_update_event(self, event: Dict[str, Any]) -> None:
         """Handles counter_update events broadcast to the group."""
-        # FIX: Align the event type with the Pydantic model's expected type
-        event["type"] = "counter_update"
         is_my_room = event["room"] == self.room_name
+        event["type"] = "counter_update"
         message = CounterUpdateMessage(**event, is_my_room=is_my_room)
         await self.send_pydantic(message)
 
