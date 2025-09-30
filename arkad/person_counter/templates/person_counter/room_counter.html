@@ -134,6 +134,12 @@
             border-radius: 10px;
             width: 100%;
             font-size: 16px;
+            cursor: pointer;
+        }
+
+        .select:disabled {
+            opacity: .5;
+            cursor: not-allowed;
         }
 
         hr {
@@ -162,6 +168,7 @@
             margin-top: 8px;
             font-size: 14px;
             font-weight: 500;
+            min-height: 21px; /* Prevents layout shift */
         }
 
         .controls {
@@ -213,7 +220,7 @@
     </style>
 </head>
 <body>
-<div id="disconnectAlert" class="alert">Disconnected. Attempting to reconnect…</div>
+<div id="disconnectAlert" class="alert">Disconnected. Please select a room to connect.</div>
 <div class="container">
     <header>
         <div class="title">
@@ -241,8 +248,8 @@
         <hr>
 
         <div class="counter">
-            <div id="counterValue" class="counter-value">0</div>
-            <div id="roomInfo" class="room-info">Room: —</div>
+            <div id="counterValue" class="counter-value">—</div>
+            <div id="roomInfo" class="room-info">No room selected</div>
         </div>
         <div class="controls">
             <button id="decrementBtn" class="btn-minus" disabled>−</button>
@@ -275,14 +282,29 @@
         const decrementBtn = document.getElementById('decrementBtn');
         const resetBtn = document.getElementById('resetBtn');
 
+        function updateControlsState() {
+            const isConnected = socket && socket.readyState === WebSocket.OPEN;
+            const isRoomSelected = !!selectedRoom;
+
+            incrementBtn.disabled = !isConnected || !isRoomSelected;
+            decrementBtn.disabled = !isConnected || !isRoomSelected;
+            resetBtn.disabled = !isConnected || !isRoomSelected;
+
+            // Allow selecting a room even when offline to initiate a connection.
+            roomSelect.disabled = roomSelect.options.length <= 1; // Disabled if only placeholder exists.
+        }
+
         function setConnected(connected) {
             connBadge.textContent = connected ? 'Connected' : 'Disconnected';
             connBadge.className = `badge ${connected ? 'ok' : 'err'}`;
-            incrementBtn.disabled = !connected;
-            decrementBtn.disabled = !connected;
-            resetBtn.disabled = !connected;
-            roomSelect.disabled = false;
             disconnectAlert.style.display = connected ? 'none' : 'block';
+            if (!connected) {
+                disconnectAlert.textContent = 'Disconnected. Attempting to reconnect…';
+                if (!selectedRoom) {
+                    disconnectAlert.textContent = 'Disconnected. Please select a room to connect.';
+                }
+            }
+            updateControlsState();
         }
 
         function setHeartbeat() {
@@ -303,11 +325,14 @@
         }
 
         function updateRoomInfo() {
-            roomInfo.textContent = `Room: ${selectedRoom}`;
+            roomInfo.textContent = selectedRoom ? `Room: ${selectedRoom}` : 'No room selected';
+            if (!selectedRoom) {
+                counterValue.textContent = '—';
+            }
         }
 
         function scheduleReconnect() {
-            if (reconnectTimer) return;
+            if (reconnectTimer || !selectedRoom) return; // Don't reconnect if no room is selected
             reconnectTimer = setTimeout(() => {
                 reconnectTimer = null;
                 connect();
@@ -320,24 +345,23 @@
             hbTimer = setInterval(() => {
                 if (!socket || socket.readyState !== WebSocket.OPEN) return;
                 try {
-                    socket.send(JSON.stringify({type: 'ping'}));
+                    socket.send(JSON.stringify({ type: 'ping' }));
                 } catch (_) {
                 }
             }, 10000);
-            hbUpdateTimer = setInterval(() => {
-                setHeartbeat();
-            }, 1000);
+            hbUpdateTimer = setInterval(setHeartbeat, 1000);
         }
 
         function stopHeartbeat() {
-            if (hbTimer) clearInterval(hbTimer);
+            clearInterval(hbTimer);
             hbTimer = null;
-            if (hbUpdateTimer) clearInterval(hbUpdateTimer);
+            clearInterval(hbUpdateTimer);
             hbUpdateTimer = null;
         }
 
         function connect() {
-            if (socket && socket.readyState === WebSocket.OPEN) return;
+            if (!selectedRoom || (socket && socket.readyState === WebSocket.OPEN)) return;
+
             const url = `${wsScheme}://${window.location.host}${wsPath}?room=${encodeURIComponent(selectedRoom)}`;
             socket = new WebSocket(url);
 
@@ -390,17 +414,25 @@
         }
 
         function disconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
             if (socket) {
                 try {
                     socket.close(1000, "Changing room");
                 } catch (_) {
                 }
+                socket = null;
             }
+            setConnected(false);
+            stopHeartbeat();
+            setHeartbeat();
         }
 
         function send(type) {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({type, room: selectedRoom}));
+                socket.send(JSON.stringify({ type, room: selectedRoom }));
             }
         }
 
@@ -411,10 +443,11 @@
 
         async function fetchRooms() {
             try {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+                const csrfToken = csrfTokenEl ? csrfTokenEl.getAttribute('content') : null;
                 const res = await fetch('/api/counter/rooms', {
                     credentials: 'same-origin',
-                    headers: {'X-CSRFToken': csrfToken}
+                    headers: { 'X-CSRFToken': csrfToken }
                 });
                 if (!res.ok) throw new Error('Failed to fetch rooms');
                 const data = await res.json();
@@ -422,42 +455,49 @@
                 applyRooms(names);
             } catch (e) {
                 console.error(e);
-                applyRooms(['default']);
+                applyRooms([]); // Populate with no rooms on failure
             }
         }
 
         function applyRooms(names) {
-            const current = selectedRoom || 'default';
+            const preservedRoom = selectedRoom;
             roomSelect.innerHTML = '';
-            const unique = Array.from(new Set(names.length ? names : ['default']));
+
+            const placeholder = document.createElement('option');
+            placeholder.value = "";
+            placeholder.textContent = "Select a room...";
+            placeholder.disabled = true;
+            roomSelect.appendChild(placeholder);
+
+            const unique = Array.from(new Set(names));
             unique.forEach(name => {
                 const opt = document.createElement('option');
                 opt.value = name;
                 opt.textContent = name;
-                if (name === current) opt.selected = true;
                 roomSelect.appendChild(opt);
             });
-            if (!unique.includes(current)) {
-                selectedRoom = unique[0];
-                updateRoomInfo();
-                if (socket && socket.readyState === WebSocket.OPEN) {
+
+            if (preservedRoom && unique.includes(preservedRoom)) {
+                roomSelect.value = preservedRoom;
+            } else {
+                roomSelect.value = "";
+                if (selectedRoom) { // If a room was selected but is now gone
+                    selectedRoom = null;
                     disconnect();
-                    connect();
+                    updateRoomInfo();
                 }
             }
-        }
-
-        function reconnectToRoom() {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                disconnect();
-                connect();
-            }
+            updateControlsState();
         }
 
         roomSelect.addEventListener('change', () => {
-            selectedRoom = roomSelect.value || 'default';
-            updateRoomInfo();
-            reconnectToRoom();
+            const newRoom = roomSelect.value;
+            if (newRoom && newRoom !== selectedRoom) {
+                selectedRoom = newRoom;
+                updateRoomInfo();
+                disconnect(); // Disconnect from old room first
+                connect(); // Then connect to the new one
+            }
         });
 
         incrementBtn.addEventListener('click', () => send('increment'));
@@ -476,9 +516,11 @@
             }
         });
 
-        // Initialize
+        // --- Initialize ---
         updateRoomInfo();
-        fetchRooms().finally(connect);
+        setConnected(false); // Set initial UI state to disconnected
+        updateControlsState(); // Set initial button states
+        fetchRooms(); // Fetch rooms to populate the selector
     })();
 </script>
 </body>
