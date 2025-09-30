@@ -258,7 +258,7 @@
         const wsPath = '/ws/counter/';
 
         let socket = null;
-        let selectedRoom = 'default';
+        let selectedRoom = null;
         let lastPong = 0;
         let hbTimer = null;
         let hbUpdateTimer = null;
@@ -321,7 +321,8 @@
                 if (!socket || socket.readyState !== WebSocket.OPEN) return;
                 try {
                     socket.send(JSON.stringify({type: 'ping'}));
-                } catch (_) {}
+                } catch (_) {
+                }
             }, 10000);
             hbUpdateTimer = setInterval(() => {
                 setHeartbeat();
@@ -370,7 +371,8 @@
                             setHeartbeat();
                             break;
                     }
-                } catch (_) {}
+                } catch (_) {
+                }
             };
 
             socket.onclose = () => {
@@ -438,13 +440,18 @@
             if (!unique.includes(current)) {
                 selectedRoom = unique[0];
                 updateRoomInfo();
-                if (socket && socket.readyState === WebSocket.OPEN) reconnectToRoom();
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    disconnect();
+                    connect();
+                }
             }
         }
 
         function reconnectToRoom() {
-            disconnect();
-            setTimeout(connect, 150);
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                disconnect();
+                connect();
+            }
         }
 
         roomSelect.addEventListener('change', () => {
