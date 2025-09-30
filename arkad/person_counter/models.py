@@ -28,7 +28,7 @@ class PersonCounter(models.Model):
     delta = models.IntegerField(default=0)
 
     updated_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=False
+        User, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     @classmethod
