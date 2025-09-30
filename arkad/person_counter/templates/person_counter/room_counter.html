@@ -179,6 +179,12 @@
             margin-top: 24px;
         }
 
+        .reset-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
         button {
             flex-grow: 1;
             font-size: 18px;
@@ -216,6 +222,11 @@
         .btn-reset {
             background: rgba(245, 158, 11, 0.14);
             border-color: rgba(245, 158, 11, 0.35);
+            flex-grow: 0;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -253,8 +264,10 @@
         </div>
         <div class="controls">
             <button id="decrementBtn" class="btn-minus" disabled>−</button>
-            <button id="resetBtn" class="btn-reset" disabled>Reset</button>
             <button id="incrementBtn" class="btn-plus" disabled>+</button>
+        </div>
+        <div class="reset-controls">
+            <button id="resetBtn" class="btn-reset" disabled>Reset</button>
         </div>
     </div>
 </div>
@@ -502,7 +515,11 @@
 
         incrementBtn.addEventListener('click', () => send('increment'));
         decrementBtn.addEventListener('click', () => send('decrement'));
-        resetBtn.addEventListener('click', () => send('reset'));
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset the counter to 0?')) {
+                send('reset');
+            }
+        });
 
         document.addEventListener('keydown', (e) => {
             if (incrementBtn.disabled) return;
