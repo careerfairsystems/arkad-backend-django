@@ -3,7 +3,7 @@ services:
     restart: unless-stopped
     image: postgres:16
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data/
+      - ${PWD}/postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=arkad_db_user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -42,8 +42,8 @@ services:
     volumes:
       - static_volume:/app/arkad/static_root
       - media_volume:/app/arkad/media
-      - ./config:/app/arkad/config
-      - ./private:/app/arkad/private
+      - ${PWD}/config:/app/arkad/config
+      - ${PWD}/private:/app/arkad/private
     env_file:
       - .env
     depends_on:
@@ -67,8 +67,8 @@ services:
         condition: service_healthy
     volumes:
       - media_volume:/app/arkad/media
-      - ./config:/app/arkad/config
-      - ./private:/app/arkad/private
+      - ${PWD}/config:/app/arkad/config
+      - ${PWD}/private:/app/arkad/private
     networks:
       - app_network
 
@@ -85,8 +85,8 @@ services:
         condition: service_healthy
     volumes:
       - media_volume:/app/arkad/media
-      - ./config:/app/arkad/config
-      - ./private:/app/arkad/private
+      - ${PWD}/config:/app/arkad/config
+      - ${PWD}/private:/app/arkad/private
       - celery_beat_schedule:/app/arkad/celerybeat
     networks:
       - app_network
@@ -96,8 +96,8 @@ services:
     build: ../arkad
     command: sh -c "daphne -b 0.0.0.0 -p 8001 arkad.asgi:application"
     volumes:
-      - ./config:/app/arkad/config
-      - ./private:/app/arkad/private
+      - ${PWD}/config:/app/arkad/config
+      - ${PWD}/private:/app/arkad/private
     env_file:
       - .env
     depends_on:
@@ -114,7 +114,7 @@ services:
     volumes:
       - static_volume:/app/arkad/static_root:ro
       - media_volume:/app/arkad/media:rw
-      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ${PWD}/nginx/conf.d:/etc/nginx/conf.d
     depends_on:
       - web
       - websocket
