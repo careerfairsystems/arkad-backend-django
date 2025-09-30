@@ -8,7 +8,7 @@ set -e
 PROJECT_NAME="arkad-backend"
 
 # Source secrets file if it exists
-SECRETS_FILE="../secrets.sh"
+SECRETS_FILE="../../secrets.sh"
 if [ -f "$SECRETS_FILE" ]; then
   source "$SECRETS_FILE"
   echo "Loaded secrets from $SECRETS_FILE"
