@@ -96,6 +96,7 @@ def get_student_sessions(request: AuthenticatedRequest):
                 field_modifications=s.field_modifications,
                 description=s.description,
                 disclaimer=s.disclaimer,
+                booking_open_time=s.booking_open_time,
             )
             for s in sessions
         ],
@@ -315,10 +316,12 @@ def apply_for_session(
 
     try:
         session: StudentSession = StudentSession.objects.get(
-            company_id=data.company_id, booking_close_time__gte=timezone.now()
+            company_id=data.company_id,
+            booking_close_time__gte=timezone.now(),
+            booking_open_time__lte=timezone.now(),
         )
     except StudentSession.DoesNotExist:
-        return 404, "Session not found, or booking has closed"
+        return 404, "Session not found, or booking has closed or not yet opened"
 
     request.user.programme = data.programme
     request.user.linkedin = data.linkedin

@@ -58,6 +58,7 @@ class CreateStudentSessionSchema(Schema):
 class StudentSessionNormalUserSchema(Schema):
     company_id: int
     booking_close_time: datetime | None
+    booking_open_time: datetime | None
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
     description: str | None

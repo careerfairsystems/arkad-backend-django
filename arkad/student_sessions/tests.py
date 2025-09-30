@@ -62,6 +62,7 @@ class StudentSessionTests(TestCase):
         return StudentSession.objects.create(
             company=company,
             booking_close_time=timezone.now() + datetime.timedelta(days=1),
+            booking_open_time=timezone.now() - datetime.timedelta(days=1),
         )
 
     @staticmethod
@@ -98,6 +99,33 @@ class StudentSessionTests(TestCase):
 
         data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
+
+    def test_book_unopened_session(self):
+        """Test that booking is not allowed for sessions that are not yet open"""
+        session = StudentSession.objects.create(
+            company=self.company_user1.company,
+            booking_open_time=timezone.now()
+            + datetime.timedelta(days=1),  # Opens in the future
+            booking_close_time=timezone.now() + datetime.timedelta(days=2),
+        )
+
+        application_data = {
+            "companyId": session.company.id,
+            "motivation_text": "Early application",
+            "update_profile": True,
+            "programme": "Computer Science",
+            "study_year": 3,
+            "linkedin": "linkedin.com/in/student0",
+            "master_title": "Software Engineering",
+        }
+
+        resp = self.client.post(
+            "/api/student-session/apply",
+            data=application_data,
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
 
     def test_get_sessions_authed_with_application_status(self):
         """Test getting all sessions with authentication and with a application status"""

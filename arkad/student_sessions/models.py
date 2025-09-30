@@ -112,7 +112,9 @@ class StudentSession(models.Model):
         related_name="company_representative",
     )
     booking_open_time = models.DateTimeField(
-        null=True, default=None, verbose_name="The time the student session is released/bookable"
+        null=True,
+        default=None,
+        verbose_name="The time the student session is released/bookable",
     )
 
     booking_close_time = models.DateTimeField(null=True, blank=True)
