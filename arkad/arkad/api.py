@@ -67,11 +67,7 @@ def on_invalid_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     )
 
 
-@api.exception_handler(
-    jwt.expired_signature_error
-    if hasattr(jwt, "expired_signature_error")
-    else jwt.ExpiredSignatureError
-)
+@api.exception_handler(jwt.ExpiredSignatureError)
 def on_expired_token(request: HttpRequest, exc: Exception) -> HttpResponse:
     return api.create_response(
         request, {"detail": "Expired token supplied"}, status=401

@@ -11,12 +11,10 @@ router = Router(tags=["Person Counter"])
 
 @router.get("rooms", auth=SessionAuthIsStaff())
 def list_rooms(request: HttpRequest):
-    """List available rooms.
+    """
+    Lists available rooms and their current person count.
 
-    Public endpoint: returns a list of rooms for everyone. If the requester is
-    an authenticated staff user, include the current counter value for each
-    room under the "counter" key. Non-staff/anonymous users receive objects
-    containing only the "name" field.
+    Requires staff authentication.
     """
     rooms: List[Dict[str, Union[str, int]]] = []
     for room in RoomModel.objects.all():

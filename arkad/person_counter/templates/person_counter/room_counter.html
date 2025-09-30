@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Room Counter</title>
     <style>
         :root {
@@ -12,9 +13,11 @@
             --card: #111827;
             --muted: #6b7280;
         }
+
         * {
             box-sizing: border-box;
         }
+
         body {
             margin: 0;
             font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -22,33 +25,39 @@
             background: linear-gradient(180deg, var(--bg), #0d1730 60%);
             min-height: 100vh;
         }
+
         .container {
             max-width: 500px;
             margin: 0 auto;
             padding: 24px 16px 64px;
         }
+
         header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 24px;
         }
+
         .title {
             display: flex;
             gap: 12px;
             align-items: center;
         }
+
         .title h1 {
             margin: 0;
             font-size: 24px;
             font-weight: 700;
             color: #fff;
         }
+
         .subtitle {
             margin: 0;
             color: var(--muted);
             font-size: 14px;
         }
+
         .user-chip {
             color: #cbd5e1;
             font-size: 13px;
@@ -58,6 +67,7 @@
             border: 1px solid rgba(30, 58, 138, 0.35);
             white-space: nowrap;
         }
+
         .alert {
             display: none;
             position: sticky;
@@ -71,6 +81,7 @@
             border-bottom: 1px solid rgba(239, 68, 68, 0.35);
             backdrop-filter: blur(6px);
         }
+
         .card {
             background: radial-gradient(1200px 400px at 20% -20%, rgba(30, 58, 138, 0.20), transparent 70%), var(--card);
             border: 1px solid rgba(255, 255, 255, 0.06);
@@ -78,6 +89,7 @@
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
         }
+
         .status-bar {
             display: flex;
             align-items: center;
@@ -85,6 +97,7 @@
             flex-wrap: wrap;
             margin-bottom: 20px;
         }
+
         .badge {
             font-size: 12px;
             padding: 4px 10px;
@@ -92,22 +105,26 @@
             border: 1px solid rgba(255, 255, 255, 0.16);
             color: #d1d5db;
         }
+
         .badge.ok {
             background: rgba(16, 185, 129, 0.15);
             border-color: rgba(16, 185, 129, 0.45);
             color: #a7f3d0;
         }
+
         .badge.err {
             background: rgba(239, 68, 68, 0.15);
             border-color: rgba(239, 68, 68, 0.45);
             color: #fecaca;
         }
+
         .room-selector {
             display: flex;
             flex-direction: column;
             gap: 8px;
             width: 100%;
         }
+
         .select {
             appearance: none;
             background: rgba(17, 24, 39, 0.8);
@@ -118,15 +135,18 @@
             width: 100%;
             font-size: 16px;
         }
+
         hr {
             border: none;
             height: 1px;
             background-color: rgba(255, 255, 255, 0.08);
             margin: 24px 0;
         }
+
         .counter {
             text-align: center;
         }
+
         .counter-value {
             font-size: 80px;
             font-weight: 800;
@@ -136,12 +156,14 @@
             margin: 0;
             transition: transform .12s ease;
         }
+
         .room-info {
             color: #cbd5e1;
             margin-top: 8px;
             font-size: 14px;
             font-weight: 500;
         }
+
         .controls {
             display: flex;
             gap: 12px;
@@ -149,6 +171,7 @@
             align-items: center;
             margin-top: 24px;
         }
+
         button {
             flex-grow: 1;
             font-size: 18px;
@@ -163,21 +186,26 @@
             transition: transform .08s ease, background .2s ease, box-shadow .2s ease;
             -webkit-tap-highlight-color: transparent;
         }
+
         button:active:not(:disabled) {
             transform: scale(0.96);
         }
+
         button:disabled {
             opacity: .5;
             cursor: not-allowed;
         }
+
         .btn-minus {
             background: rgba(239, 68, 68, 0.14);
             border-color: rgba(239, 68, 68, 0.35);
         }
+
         .btn-plus {
             background: rgba(16, 185, 129, 0.14);
             border-color: rgba(16, 185, 129, 0.35);
         }
+
         .btn-reset {
             background: rgba(245, 158, 11, 0.14);
             border-color: rgba(245, 158, 11, 0.35);
@@ -189,7 +217,9 @@
 <div class="container">
     <header>
         <div class="title">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/></svg>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/>
+            </svg>
             <div>
                 <h1>Counter</h1>
                 <p class="subtitle">Real-time & Shared</p>
@@ -284,9 +314,10 @@
             hbTimer = setInterval(() => {
                 if (!socket || socket.readyState !== WebSocket.OPEN) return;
                 try {
-                    socket.send(JSON.stringify({ type: 'ping' }));
+                    socket.send(JSON.stringify({type: 'ping'}));
                     if (lastPong > 0) setHeartbeat(Date.now() - lastPong < 20000);
-                } catch (_) {}
+                } catch (_) {
+                }
             }, 10000);
         }
 
@@ -330,7 +361,8 @@
                             setHeartbeat(true);
                             break;
                     }
-                } catch (_) {}
+                } catch (_) {
+                }
             };
 
             socket.onclose = () => {
@@ -351,13 +383,14 @@
             if (socket) {
                 try {
                     socket.close(1000, "Changing room");
-                } catch (_) {}
+                } catch (_) {
+                }
             }
         }
 
         function send(type) {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type, room: selectedRoom }));
+                socket.send(JSON.stringify({type, room: selectedRoom}));
             }
         }
 
@@ -368,7 +401,11 @@
 
         async function fetchRooms() {
             try {
-                const res = await fetch('/api/counter/rooms', { credentials: 'same-origin' });
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                const res = await fetch('/api/counter/rooms', {
+                    credentials: 'same-origin',
+                    headers: {'X-CSRFToken': csrfToken}
+                });
                 if (!res.ok) throw new Error('Failed to fetch rooms');
                 const data = await res.json();
                 const names = (data.rooms || []).map(r => r.name).sort();
@@ -414,9 +451,14 @@
 
         document.addEventListener('keydown', (e) => {
             if (incrementBtn.disabled) return;
-            if (e.key === '+' || e.key === '=') { e.preventDefault(); send('increment'); }
-            if (e.key === '-') { e.preventDefault(); send('decrement'); }
-            if (e.key === 'r' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send('reset'); }
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                send('increment');
+            }
+            if (e.key === '-') {
+                e.preventDefault();
+                send('decrement');
+            }
         });
 
         // Initialize
