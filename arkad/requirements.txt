@@ -56,6 +56,7 @@ pyOpenSSL==25.0.0
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
+pytz==2025.2
 redis==6.4.0
 requests==2.32.3
 ruff==0.9.6
@@ -68,6 +69,7 @@ sqlparse==0.5.3
 tomli==2.2.1
 Twisted==24.11.0
 txaio==23.1.1
+types-pytz==2025.2.0.20250809
 types-PyYAML==6.0.12.20241230
 typing_extensions==4.12.2
 tzdata==2025.2

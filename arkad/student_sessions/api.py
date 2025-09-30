@@ -254,7 +254,7 @@ def confirm_student_session(
         with transaction.atomic():
             timeslot: StudentSessionTimeslot = (
                 StudentSessionTimeslot.objects.select_for_update().get(
-                    id=timeslot_id, selected=None
+                    id=timeslot_id, selected=None, booking_closes_at__gte=timezone.now()
                 )
             )
             timeslot.selected = applicant
