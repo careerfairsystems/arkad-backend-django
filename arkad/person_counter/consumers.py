@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional, Callable, Awaitable
 
-from channels.db import database_sync_to_async
+from channels.db import database_sync_to_async  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field, ValidationError
 
 from person_counter.models import RoomModel, PersonCounter
@@ -17,8 +17,10 @@ from arkad.consumers import AuthenticatedAsyncWebsocketConsumer
 # Pydantic Models for WebSocket Message Payloads
 # =============================================================================
 
+
 class BaseWebsocketMessage(BaseModel):
     """Base model for all websocket messages with a timestamp."""
+
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Config:
@@ -27,6 +29,7 @@ class BaseWebsocketMessage(BaseModel):
 
 
 # --- Outgoing Message Models (Server -> Client) ---
+
 
 class ErrorMessage(BaseWebsocketMessage):
     type: Literal["error"] = "error"
@@ -80,6 +83,7 @@ class PongMessage(BaseWebsocketMessage):
 
 # --- Incoming Message Models (Client -> Server) ---
 
+
 class BaseIncomingMessage(BaseModel):
     type: str
     room: Optional[str] = None
@@ -88,6 +92,7 @@ class BaseIncomingMessage(BaseModel):
 # =============================================================================
 # Room Counter Consumer
 # =============================================================================
+
 
 class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
     # Global group for all connected users
@@ -124,7 +129,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
         if not room:
             await self.accept()
-            await self.send_pydantic(ErrorMessage(message=f"Invalid room: {self.room_name}"))
+            await self.send_pydantic(
+                ErrorMessage(message=f"Invalid room: {self.room_name}")
+            )
             await self.close(code=4004)
             return
 
@@ -163,8 +170,12 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
     async def disconnect(self, close_code: int) -> None:
         if self.room_group_name:
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-        await self.channel_layer.group_discard(self.global_group_name, self.channel_name)
+            await self.channel_layer.group_discard(
+                self.room_group_name, self.channel_name
+            )
+        await self.channel_layer.group_discard(
+            self.global_group_name, self.channel_name
+        )
 
         if hasattr(self, "user") and self.room_name:
             await self.channel_layer.group_send(
@@ -177,7 +188,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
                 },
             )
 
-    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
+    async def receive(
+        self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None
+    ) -> None:
         if not text_data:
             return
 
@@ -198,10 +211,14 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
             await handler(data)
 
         except (json.JSONDecodeError, ValidationError) as e:
-            await self.send_pydantic(ErrorMessage(message=f"Invalid message format: {e}"))
+            await self.send_pydantic(
+                ErrorMessage(message=f"Invalid message format: {e}")
+            )
         except Exception as e:
             logging.exception("Error processing message in RoomCounterConsumer")
-            await self.send_pydantic(ErrorMessage(message=f"An internal error occurred: {e}"))
+            await self.send_pydantic(
+                ErrorMessage(message=f"An internal error occurred: {e}")
+            )
 
     # --- Incoming Message Handlers ---
 
@@ -233,7 +250,9 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
         current_counter = await self._get_current_counter(self.room_name)
         all_rooms = await self._get_all_room_counters()
         await self.send_pydantic(
-            CounterValueMessage(counter=current_counter, room=self.room_name, all_rooms=all_rooms)
+            CounterValueMessage(
+                counter=current_counter, room=self.room_name, all_rooms=all_rooms
+            )
         )
 
     async def handle_get_all_rooms(self, data: Dict[str, Any]) -> None:
@@ -245,14 +264,16 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
 
     async def handle_unknown_type(self, data: Dict[str, Any]) -> None:
         msg_type = data.get("type", "unknown")
-        await self.send_pydantic(ErrorMessage(message=f"Unknown message type: {msg_type}"))
+        await self.send_pydantic(
+            ErrorMessage(message=f"Unknown message type: {msg_type}")
+        )
 
     # --- Group Event Handlers ---
 
     async def counter_update_event(self, event: Dict[str, Any]) -> None:
         """Handles counter_update events broadcast to the group."""
         # FIX: Align the event type with the Pydantic model's expected type
-        event['type'] = 'counter_update'
+        event["type"] = "counter_update"
         is_my_room = event["room"] == self.room_name
         message = CounterUpdateMessage(**event, is_my_room=is_my_room)
         await self.send_pydantic(message)
@@ -304,34 +325,41 @@ class RoomCounterConsumer(AuthenticatedAsyncWebsocketConsumer):
             },
         )
 
-    @database_sync_to_async
+    @database_sync_to_async  # type: ignore[misc]
     def _get_room(self, room_name: str) -> Optional[RoomModel]:
         return RoomModel.objects.filter(name=room_name).first()
 
-    @database_sync_to_async
+    @database_sync_to_async  # type: ignore[misc]
     def _get_current_counter(self, room_name: str) -> int:
         counter = PersonCounter.get_last(room_name)
         return counter.count if counter else 0
 
-    @database_sync_to_async
+    @database_sync_to_async  # type: ignore[misc]
     def _get_all_room_counters(self) -> Dict[str, int]:
         return {
-            room.name: (PersonCounter.get_last(room.name).count if PersonCounter.get_last(room.name) else 0)
+            room.name: (
+                c.count if (c := PersonCounter.get_last(room.name)) is not None else 0
+            )
             for room in RoomModel.objects.all()
         }
 
-    @database_sync_to_async
-    def _apply_delta(self, room: RoomModel, delta: int, updated_by: Optional[User] = None) -> PersonCounter:
+    @database_sync_to_async  # type: ignore[misc]
+    def _apply_delta(
+        self, room: RoomModel, delta: int, updated_by: Optional[User] = None
+    ) -> PersonCounter:
         return PersonCounter.add_delta(room, delta, updated_by=updated_by)
 
-    @database_sync_to_async
-    def _reset_counter(self, room: RoomModel, updated_by: Optional[User] = None) -> PersonCounter:
+    @database_sync_to_async  # type: ignore[misc]
+    def _reset_counter(
+        self, room: RoomModel, updated_by: Optional[User] = None
+    ) -> PersonCounter:
         return PersonCounter.reset_to_zero(room, updated_by=updated_by)
 
 
 # =============================================================================
 # Ping Consumer (Legacy/Utility)
 # =============================================================================
+
 
 class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
     heartbeat_task: Optional[asyncio.Task[None]] = None
@@ -342,7 +370,11 @@ class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
             return
 
         await self.accept()
-        await self.send(text_data=json.dumps({"type": "connection", "message": "Connection established"}))
+        await self.send(
+            text_data=json.dumps(
+                {"type": "connection", "message": "Connection established"}
+            )
+        )
 
     async def disconnect(self, close_code: int) -> None:
         if self.heartbeat_task and not self.heartbeat_task.done():
@@ -354,7 +386,9 @@ class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
                 logging.info("Heartbeat task successfully cancelled.")
         await super().disconnect(close_code)
 
-    async def receive(self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None) -> None:
+    async def receive(
+        self, text_data: Optional[str] = None, bytes_data: Optional[bytes] = None
+    ) -> None:
         if not text_data:
             return
 
@@ -368,10 +402,14 @@ class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
                 if not self.heartbeat_task or self.heartbeat_task.done():
                     self.heartbeat_task = asyncio.create_task(self._heartbeat_loop())
             else:
-                await self.send(text_data=json.dumps({"type": "error", "message": "Unknown type"}))
+                await self.send(
+                    text_data=json.dumps({"type": "error", "message": "Unknown type"})
+                )
 
         except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({"type": "error", "message": "Invalid JSON"}))
+            await self.send(
+                text_data=json.dumps({"type": "error", "message": "Invalid JSON"})
+            )
 
     async def _heartbeat_loop(self) -> None:
         """Sends a heartbeat message every 10 seconds until cancelled."""
@@ -380,7 +418,10 @@ class PingConsumer(AuthenticatedAsyncWebsocketConsumer):
                 await asyncio.sleep(10)
                 await self.send(
                     text_data=json.dumps(
-                        {"type": "heartbeat", "timestamp": datetime.now(timezone.utc).isoformat()}
+                        {
+                            "type": "heartbeat",
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
                     )
                 )
             except asyncio.CancelledError:
