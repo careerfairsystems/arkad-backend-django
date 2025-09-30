@@ -114,7 +114,7 @@ services:
     volumes:
       - static_volume:/app/arkad/static_root:ro
       - media_volume:/app/arkad/media:rw
-      - ${PWD}/nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/conf.d:/etc/nginx/conf.d
     depends_on:
       - web
       - websocket
