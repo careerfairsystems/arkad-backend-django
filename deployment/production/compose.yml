@@ -55,8 +55,6 @@ services:
       - "traefik.http.routers.app-production.entrypoints=websecure"
       - "traefik.http.routers.app-production.tls=true"
       - "traefik.http.routers.app-production.tls.certresolver=production"
-    ports:
-      - "8080:80"
     expose:
       - 80
 

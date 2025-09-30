@@ -53,8 +53,6 @@ services:
       - "traefik.http.routers.app-staging.entrypoints=websecure"
       - "traefik.http.routers.app-staging.tls=true"
       - "traefik.http.routers.app-staging.tls.certresolver=production"
-    ports:
-      - "8081:80"
     expose:
       - 80
 
