@@ -261,6 +261,7 @@
         let selectedRoom = 'default';
         let lastPong = 0;
         let hbTimer = null;
+        let hbUpdateTimer = null;
         let reconnectTimer = null;
         let reconnectDelay = 1000;
 
@@ -284,10 +285,15 @@
             disconnectAlert.style.display = connected ? 'none' : 'block';
         }
 
-        function setHeartbeat(ok) {
-            const agoSec = Math.max(0, Math.floor((Date.now() - lastPong) / 1000));
-            hbBadge.textContent = ok ? `Heartbeat: ${agoSec}s ago` : 'Heartbeat: —';
-            hbBadge.className = 'badge' + (ok ? ' ok' : '');
+        function setHeartbeat() {
+            if (lastPong > 0) {
+                const agoSec = Math.max(0, Math.floor((Date.now() - lastPong) / 1000));
+                hbBadge.textContent = `Heartbeat: ${agoSec}s ago`;
+                hbBadge.className = 'badge' + (agoSec < 20 ? ' ok' : '');
+            } else {
+                hbBadge.textContent = 'Heartbeat: —';
+                hbBadge.className = 'badge';
+            }
         }
 
         function updateCounter(v) {
@@ -315,15 +321,18 @@
                 if (!socket || socket.readyState !== WebSocket.OPEN) return;
                 try {
                     socket.send(JSON.stringify({type: 'ping'}));
-                    if (lastPong > 0) setHeartbeat(Date.now() - lastPong < 20000);
-                } catch (_) {
-                }
+                } catch (_) {}
             }, 10000);
+            hbUpdateTimer = setInterval(() => {
+                setHeartbeat();
+            }, 1000);
         }
 
         function stopHeartbeat() {
             if (hbTimer) clearInterval(hbTimer);
             hbTimer = null;
+            if (hbUpdateTimer) clearInterval(hbUpdateTimer);
+            hbUpdateTimer = null;
         }
 
         function connect() {
@@ -334,7 +343,7 @@
             socket.onopen = () => {
                 setConnected(true);
                 lastPong = Date.now();
-                setHeartbeat(true);
+                setHeartbeat();
                 startHeartbeat();
                 reconnectDelay = 1000;
             };
@@ -358,24 +367,23 @@
                             break;
                         case 'pong':
                             lastPong = Date.now();
-                            setHeartbeat(true);
+                            setHeartbeat();
                             break;
                     }
-                } catch (_) {
-                }
+                } catch (_) {}
             };
 
             socket.onclose = () => {
                 setConnected(false);
                 stopHeartbeat();
-                setHeartbeat(false);
+                setHeartbeat();
                 scheduleReconnect();
             };
 
             socket.onerror = () => {
                 setConnected(false);
                 stopHeartbeat();
-                setHeartbeat(false);
+                setHeartbeat();
             };
         }
 
