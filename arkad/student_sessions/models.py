@@ -111,6 +111,10 @@ class StudentSession(models.Model):
         null=False,
         related_name="company_representative",
     )
+    booking_open_time = models.DateTimeField(
+        null=True, default=None, verbose_name="The time the student session is released/bookable"
+    )
+
     booking_close_time = models.DateTimeField(null=True, blank=True)
     field_modifications: list[FieldModificationSchema] = SchemaField(
         schema=list[FieldModificationSchema],
