@@ -1,12 +1,54 @@
-include:
-  - ../shared-compose.yaml
+name: "arkad-backend-production"
+
+networks:
+  traefik:
+    external: true
+  app_network:
 
 services:
+  db:
+    extends:
+      file: ../shared-compose.yaml
+      service: db
+    container_name: arkad-production-db
+
+  redis:
+    extends:
+      file: ../shared-compose.yaml
+      service: redis
+    container_name: arkad-production-redis
+
   web:
+    extends:
+      file: ../shared-compose.yaml
+      service: web
+    container_name: arkad-production-web
     volumes:
       - /home/ec2-user/arkad-backend/arkad/static:/app/arkad/static:ro
 
+  celery-worker:
+    extends:
+      file: ../shared-compose.yaml
+      service: celery-worker
+    container_name: arkad-production-celery-worker
+
+  celery-beat:
+    extends:
+      file: ../shared-compose.yaml
+      service: celery-beat
+    container_name: arkad-production-celery-beat
+
+  websocket:
+    extends:
+      file: ../shared-compose.yaml
+      service: websocket
+    container_name: arkad-production-websocket
+
   nginx:
+    extends:
+      file: ../shared-compose.yaml
+      service: nginx
+    container_name: arkad-production-nginx
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app-production.rule=Host(`backend.arkadtlth.se`)"
@@ -17,3 +59,9 @@ services:
       - "8080:80"
     expose:
       - 80
+
+volumes:
+  media_volume:
+  static_volume:
+  redis_data:
+  celery_beat_schedule:
