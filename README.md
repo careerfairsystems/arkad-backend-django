@@ -31,7 +31,7 @@ You must use Python 3.13 to run this project as we are using some very new typin
 10. Create migrations: `python manage.py makemigrations`
 11. Migrate the database: `python manage.py migrate`
 12. Create the cache database `python manage.py createcachetable`
-13. Run the server: `python manage.py runserver`
+13. Run the server: `python manage.py runserver` or if testing ws functionality use daphne: Start daphne with `daphne -p 8000 arkad.asgi:application`
 14. Open your browser and go to `http://127.0.0.1:8000/api/docs` to see the API documentation.
 
 # Arkad backend

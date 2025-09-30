@@ -94,7 +94,7 @@ jobs:
           PID=$!
           sleep 5
           kill $PID
-
+      
       - name: Run tests
         env:
           DEBUG: True
