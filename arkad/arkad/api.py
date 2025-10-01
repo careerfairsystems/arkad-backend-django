@@ -57,11 +57,8 @@ api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
 api.add_router("company", company_router)
 api.add_router("events", event_booking_router)
-<<<<<<< HEAD
 api.add_router("notifications", notifications_router)
-=======
 api.add_router("counter", person_counter_router)
->>>>>>> master
 
 
 @api.exception_handler(jwt.InvalidKeyError)
