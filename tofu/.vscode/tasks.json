@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+	{
+	  "label": "Tofu Init",
+	  "type": "shell",
+	  "command": "tofu init",
+	  "group": "build",
+	  "problemMatcher": []
+	},
+	{
+	  "label": "Tofu Plan",
+	  "type": "shell",
+	  "command": "tofu plan",
+	  "group": "build",
+	  "problemMatcher": []
+	},
+	{
+	  "type": "shell",
+	  "label": "Tofu Apply",
+	  "command": "tofu apply",
+	  "args": [],
+	  "group": "build",
+	  "isBackground": false,
+	  "problemMatcher": []
+	}
+  ]
+}
