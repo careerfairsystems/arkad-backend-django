@@ -2,45 +2,42 @@ from arkad.celery import app
 
 
 @app.task(bind=True)
-def check_notifications(self):  # type: ignore[no-untyped-def]
-    print("Checking notifications!")
-
-
-@app.task(bind=True)
-def check_events_closing_within_24h(self):
-    # Find all events with registration closing withing 24 hrs
+def schedule_notification_event_closing_in_24h(self):
+    # Run every 48h at 12:00
+    # Find all events with registration closing within 48 hours
+    # with spots available
 
     # for event in events
-        # Notify all users about this
+        # find all users
+        # Schedule a task to send a notification to all users at closing time - 24 hours
+
         # Anmälan för YYY med XXX stänger imorgon. Kom ihåg att avboka din plats om du inte kan komma!
         # Notis (+ Mail)
     pass
 
 
 @app.task(bind=True)
-def check_registered_events_tomorrow(self):
-    # Run once daily?
-    
-    # Get all events that are tomorrow
+def schedule_notification_event_tomorrow(self):
+    # Run every other day?
+    # Get all events that are within 48 hours
 
     # for event in events
         # Get company
         # Find all users registered for that event
+
         # for user in users
             # Get their FCM token
+            # Schedule a task to send a notification to the user at event time minus 24 hours
 
-            # Send notification
-            # "Du har anmält dig till YYY med XXX är imorgon"
-            # - notis ( + mail)
+            # "Du har anmält dig till YYY med XXX är imorgon" - notis ( + mail)
 
     pass
 
 
 @app.task(bind=True)
-def check_registered_events_in_one_hour(self):
-    # Run hourly at every whole hour between 07-17?
-    
-    # Find get all events that are in within 1h 
+def schedule_notification_event_in_one_hour(self):
+    # Run every two hours between 07-17?
+    # Find get all events that are in within 2h 
 
     # for event in events
         # Get company
@@ -49,7 +46,7 @@ def check_registered_events_in_one_hour(self):
         # for user in users
             # Get their FCM token
             # Send notification
-            # "Du har anmält dig till YYY som är med XXX är om en timme"
-            # - Notis
+            # Schedule a task to send a notification to the user at event time minus 1 hour
+            # "Du har anmält dig till YYY som är med XXX är om en timme" - Notis
     pass
 
