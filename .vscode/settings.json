@@ -1,0 +1,19 @@
+{
+	"i18n-ally.localesPaths": [
+		"venv/lib/python3.13/site-packages/django/contrib/messages",
+		"venv/lib/python3.13/site-packages/django/conf/locale",
+		"venv/lib/python3.13/site-packages/django-stubs/contrib/messages",
+		"venv/lib/python3.13/site-packages/django-stubs/conf/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/auth/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/admindocs/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/flatpages/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/admin/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/contenttypes/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/gis/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/redirects/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/humanize/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/sessions/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/postgres/locale",
+		"venv/lib/python3.13/site-packages/django/contrib/sites/locale"
+	]
+}

@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SESAccess",
+      "Effect": "Allow",
+      "Action": ["ses:SendEmail", "ses:SendRawEmail"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageOwnAccessKeys",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:UpdateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:ListAccessKeys"
+      ],
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
+    }
+  ]
+}
