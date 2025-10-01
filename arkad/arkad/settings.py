@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "email_app",
     "jexpo_sync",
     "person_counter",
+    "notifications",
 ]
 
 MIDDLEWARE = [
