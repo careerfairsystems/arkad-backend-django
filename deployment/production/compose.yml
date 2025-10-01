@@ -11,6 +11,8 @@ services:
       file: ../shared-compose.yaml
       service: db
     container_name: arkad-production-db
+    ports:
+      - "5432:5432"
 
   redis:
     extends:
