@@ -466,6 +466,40 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(resp.status_code, 404)  # Timeslot not found or already taken
 
+    def test_get_timeslots_some_no_longer_bookable(self):
+        """Test that students can see which timeslots are no longer bookable"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create timeslots, one of which is no longer bookable
+        self._create_timeslot(session)
+        self._create_timeslot(
+            session,
+            booking_closes_at=timezone.now() - datetime.timedelta(hours=1),
+        )
+        self._create_timeslot(session)
+        self._create_timeslot(
+            session,
+            booking_closes_at=timezone.now() - datetime.timedelta(days=1),
+        )
+        # Make sure  that the user has applied and is accepted
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Now test get them with the get endpoint, check that the ones no longer bookable are not included
+        resp = self.client.get(
+            f"/api/student-session/timeslots?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        timeslots = [TimeslotSchemaUser(**t) for t in resp.json()]
+        self.assertEqual(len(timeslots), 2)
+        for t in timeslots:
+            self.assertGreater(t.booking_closes_at, timezone.now())
+
     def test_unbook_timeslot(self):
         """Test that students can unbook their timeslots"""
         session = self._create_student_session(self.company_user1.company)

@@ -28,6 +28,7 @@ class ApplicantSchema(Schema):
 
 class TimeslotSchema(Schema):
     start_time: datetime
+    booking_closes_at: datetime
     duration: int
     id: int
 

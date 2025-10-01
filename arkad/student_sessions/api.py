@@ -218,6 +218,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
     timeslots = StudentSessionTimeslot.objects.filter(
         Q(student_session__company_id=company_id)
         & (Q(selected__isnull=True) | Q(selected=application))
+        & Q(booking_closes_at__gte=timezone.now())
     ).all()
 
     return 200, [
@@ -228,6 +229,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
             status="bookedByCurrentUser"
             if timeslot.selected == application
             else "free",
+            booking_closes_at=timeslot.booking_closes_at,
         )
         for timeslot in timeslots
     ]
