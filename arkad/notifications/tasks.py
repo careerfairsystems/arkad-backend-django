@@ -1,4 +1,4 @@
-from arkad.celery import app # type: ignore[import-untyped]
+from arkad.celery import app  # type: ignore[import-untyped]
 
 
 @app.task(bind=True)
