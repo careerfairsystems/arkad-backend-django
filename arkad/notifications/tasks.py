@@ -1,8 +1,10 @@
+from notifications import handlers
 from arkad.celery import app
 
 
 @app.task(bind=True)
-def schedule_notification_event_closing_in_24h(self):
+def schedule_notification_event_registration_in_24h(self):
+    #handlers.send_event_one_hour()
     # Run every 48h at 12:00
     # Find all events with registration closing within 48 hours
     # with spots available
