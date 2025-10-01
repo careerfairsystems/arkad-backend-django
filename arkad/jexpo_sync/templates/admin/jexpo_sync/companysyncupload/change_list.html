@@ -1,0 +1,22 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="upload-companies/" class="addlink">
+            {% trans 'Quick Upload' %}
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}
+
+{% block content_title %}
+    <h1>Company Sync Uploads</h1>
+    <div class="module">
+        <p>
+            This section manages JSON file uploads for company synchronization.
+            You can upload JSON files containing exhibitor data, and they will be automatically processed
+            to create or update company records in the database.
+        </p>
+    </div>
+{% endblock %}

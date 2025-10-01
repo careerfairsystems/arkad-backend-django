@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from arkad.auth import OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router, ListType
@@ -10,6 +11,7 @@ from event_booking.schemas import (
     TicketSchema,
     UseTicketSchema,
     EventUserInformation,
+    EventUserStatus,
 )
 
 router = Router(tags=["Events"])
@@ -20,13 +22,33 @@ def get_events(request: AuthenticatedRequest):
     """
     Returns a list of all events
     """
-    return Event.objects.all()
+    if not request.user.is_authenticated:
+        return Event.objects.all()
+    events: QuerySet[Event] = Event.objects.prefetch_related("tickets").all()
+    result: list[EventSchema] = []
+    for event in events:
+        schema = EventSchema.from_orm(event)
+        user_ticket: Ticket | None = event.tickets.filter(
+            user_id=request.user.id
+        ).first()
+        if user_ticket is not None:
+            schema.status = user_ticket.status()
+        result.append(schema)
+    return result
 
 
 @router.get("booked-events", response={200: ListType[EventSchema]})
 def get_booked_events(request: AuthenticatedRequest):
     ts: QuerySet[Ticket] = request.user.ticket_set.prefetch_related("event").all()
-    return [t.event for t in ts]
+
+    result: list = []
+    for ticket in ts:
+        event: Event = ticket.event
+        schema = EventSchema.from_orm(event)
+        schema.status = ticket.status()
+        result.append(schema)
+
+    return result
 
 
 @router.get("{event_id}/", response={200: EventSchema, 404: str}, auth=OPTIONAL_AUTH)
@@ -35,7 +57,15 @@ def get_event(request: AuthenticatedRequest, event_id: int):
     Returns a single event
     """
     try:
-        return Event.objects.get(id=event_id)
+        event = Event.objects.get(id=event_id)
+        schema = EventSchema.from_orm(event)
+        if request.user.is_authenticated:
+            user_ticket: Ticket | None = event.tickets.filter(
+                user_id=request.user.id
+            ).first()
+            if user_ticket is not None:
+                schema.status = user_ticket.status()
+        return schema
     except Event.DoesNotExist:
         return 404, "Event not found"
 
@@ -88,7 +118,7 @@ def verify_ticket(request: AuthenticatedRequest, ticket: UseTicketSchema):
     ).update(used=True)
     if modified_tickets == 1:
         # uuid is unique so we can safely assume we got the ticket
-        return 200, Ticket.objects.get(uuid=ticket.uuid)
+        return 200, Ticket.objects.prefetch_related("user").get(uuid=ticket.uuid)
     return 404, "Ticket not found or already used"
 
 
@@ -104,6 +134,12 @@ def book_event(request: AuthenticatedRequest, event_id: int):
             event: Event = (
                 Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
             )
+            if event.release_time is None:
+                return 409, "Event release date not yet scheduled"
+            if event.release_time >= timezone.now():
+                return 409, "Event not yet released"
+            if event.end_time <= timezone.now():
+                return 409, "Event already ended"
         except Event.DoesNotExist:
             return 404, "Event not found"
         if event.number_booked < event.capacity:
@@ -113,7 +149,10 @@ def book_event(request: AuthenticatedRequest, event_id: int):
             event.number_booked += 1
             event.tickets.add(ticket)
             event.save()
-            return 200, event
+
+            schema = EventSchema.from_orm(event)
+            schema.status = ticket.status()
+            return 200, schema
         else:
             return 409, "Event already fully booked"
 
@@ -132,7 +171,9 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
             return 404, "Event not found"
 
         # Delete the ticket
-        deleted_count, _ = event.tickets.filter(user_id=request.user.id).delete()
+        deleted_count, _ = event.tickets.filter(
+            user_id=request.user.id, used=False
+        ).delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"
@@ -141,4 +182,6 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
         event.number_booked -= 1
         event.save()
 
-        return 200, event
+        schema = EventSchema.from_orm(event)
+        schema.status = EventUserStatus.NOT_BOOKED
+        return 200, schema

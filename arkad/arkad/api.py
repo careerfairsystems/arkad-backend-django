@@ -15,6 +15,7 @@ from student_sessions.api import router as student_sessions_router
 from companies.api import router as company_router
 from event_booking.api import router as event_booking_router
 from notifications.api import router as notifications_router
+from person_counter.api import router as person_counter_router
 
 
 class CustomNinjaAPI(NinjaAPI):
@@ -56,7 +57,11 @@ api.add_router("user", user_router)
 api.add_router("student-session", student_sessions_router)
 api.add_router("company", company_router)
 api.add_router("events", event_booking_router)
+<<<<<<< HEAD
 api.add_router("notifications", notifications_router)
+=======
+api.add_router("counter", person_counter_router)
+>>>>>>> master
 
 
 @api.exception_handler(jwt.InvalidKeyError)
@@ -90,5 +95,4 @@ def get_public_key(request: AuthenticatedRequest):
         "-----BEGIN PUBLIC KEY-----"
     ) or not PUBLIC_KEY.strip().endswith("-----END PUBLIC KEY-----"):
         raise jwt.InvalidTokenError("Something went very wrong")
-
     return PublicKeySchema(public_key=PUBLIC_KEY)

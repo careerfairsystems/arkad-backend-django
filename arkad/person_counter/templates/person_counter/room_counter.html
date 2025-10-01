@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Room Counter</title>
+    <style>
+        :root {
+            --primary: #1f2937;
+            --secondary: #1e3a8a;
+            --bg: #0b1220;
+            --card: #111827;
+            --muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            color: #e5e7eb;
+            background: linear-gradient(180deg, var(--bg), #0d1730 60%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 24px 16px 64px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .title {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .title h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .user-chip {
+            color: #cbd5e1;
+            font-size: 13px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(30, 58, 138, 0.15);
+            border: 1px solid rgba(30, 58, 138, 0.35);
+            white-space: nowrap;
+        }
+
+        .alert {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(239, 68, 68, 0.1);
+            color: #fecaca;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.35);
+            backdrop-filter: blur(6px);
+        }
+
+        .card {
+            background: radial-gradient(1200px 400px at 20% -20%, rgba(30, 58, 138, 0.20), transparent 70%), var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #d1d5db;
+        }
+
+        .badge.ok {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #a7f3d0;
+        }
+
+        .badge.err {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.45);
+            color: #fecaca;
+        }
+
+        .room-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .select {
+            appearance: none;
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .select:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.08);
+            margin: 24px 0;
+        }
+
+        .counter {
+            text-align: center;
+        }
+
+        .counter-value {
+            font-size: 80px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 1px;
+            color: #fff;
+            margin: 0;
+            transition: transform .12s ease;
+        }
+
+        .room-info {
+            color: #cbd5e1;
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            min-height: 21px; /* Prevents layout shift */
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 24px;
+        }
+
+        .reset-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        button {
+            flex-grow: 1;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            padding: 16px;
+            border-radius: 12px;
+            color: #e5e7eb;
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: transform .08s ease, background .2s ease, box-shadow .2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .btn-minus {
+            background: rgba(239, 68, 68, 0.14);
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-plus {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-reset {
+            background: rgba(245, 158, 11, 0.14);
+            border-color: rgba(245, 158, 11, 0.35);
+            flex-grow: 0;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+<div id="disconnectAlert" class="alert">Disconnected. Please select a room to connect.</div>
+<div class="container">
+    <header>
+        <div class="title">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z"/>
+            </svg>
+            <div>
+                <h1>Counter</h1>
+                <p class="subtitle">Real-time & Shared</p>
+            </div>
+        </div>
+        <div class="user-chip">{{ request.user.email }}</div>
+    </header>
+
+    <div class="card">
+        <div class="status-bar">
+            <div id="connBadge" class="badge err">Offline</div>
+            <div id="hbBadge" class="badge">Heartbeat: —</div>
+        </div>
+        <div class="room-selector">
+            <label for="roomSelect" class="subtitle">Select Room</label>
+            <select id="roomSelect" class="select"></select>
+        </div>
+
+        <hr>
+
+        <div class="counter">
+            <div id="counterValue" class="counter-value">—</div>
+            <div id="roomInfo" class="room-info">No room selected</div>
+        </div>
+        <div class="controls">
+            <button id="decrementBtn" class="btn-minus" disabled>−</button>
+            <button id="incrementBtn" class="btn-plus" disabled>+</button>
+        </div>
+        <div class="reset-controls">
+            <button id="resetBtn" class="btn-reset" disabled>Reset</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsPath = '/ws/counter/';
+
+        let socket = null;
+        let selectedRoom = null;
+        let lastPong = 0;
+        let hbTimer = null;
+        let hbUpdateTimer = null;
+        let reconnectTimer = null;
+        let reconnectDelay = 1000;
+
+        const connBadge = document.getElementById('connBadge');
+        const hbBadge = document.getElementById('hbBadge');
+        const disconnectAlert = document.getElementById('disconnectAlert');
+        const roomSelect = document.getElementById('roomSelect');
+        const counterValue = document.getElementById('counterValue');
+        const roomInfo = document.getElementById('roomInfo');
+        const incrementBtn = document.getElementById('incrementBtn');
+        const decrementBtn = document.getElementById('decrementBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function updateControlsState() {
+            const isConnected = socket && socket.readyState === WebSocket.OPEN;
+            const isRoomSelected = !!selectedRoom;
+
+            incrementBtn.disabled = !isConnected || !isRoomSelected;
+            decrementBtn.disabled = !isConnected || !isRoomSelected;
+            resetBtn.disabled = !isConnected || !isRoomSelected;
+
+            // Allow selecting a room even when offline to initiate a connection.
+            roomSelect.disabled = roomSelect.options.length <= 1; // Disabled if only placeholder exists.
+        }
+
+        function setConnected(connected) {
+            connBadge.textContent = connected ? 'Connected' : 'Disconnected';
+            connBadge.className = `badge ${connected ? 'ok' : 'err'}`;
+            disconnectAlert.style.display = connected ? 'none' : 'block';
+            if (!connected) {
+                disconnectAlert.textContent = 'Disconnected. Attempting to reconnect…';
+                if (!selectedRoom) {
+                    disconnectAlert.textContent = 'Disconnected. Please select a room to connect.';
+                }
+            }
+            updateControlsState();
+        }
+
+        function setHeartbeat() {
+            if (lastPong > 0) {
+                const agoSec = Math.max(0, Math.floor((Date.now() - lastPong) / 1000));
+                hbBadge.textContent = `Heartbeat: ${agoSec}s ago`;
+                hbBadge.className = 'badge' + (agoSec < 20 ? ' ok' : '');
+            } else {
+                hbBadge.textContent = 'Heartbeat: —';
+                hbBadge.className = 'badge';
+            }
+        }
+
+        function updateCounter(v) {
+            counterValue.textContent = v;
+            counterValue.style.transform = 'scale(1.05)';
+            setTimeout(() => counterValue.style.transform = 'scale(1)', 120);
+        }
+
+        function updateRoomInfo() {
+            roomInfo.textContent = selectedRoom ? `Room: ${selectedRoom}` : 'No room selected';
+            if (!selectedRoom) {
+                counterValue.textContent = '—';
+            }
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimer || !selectedRoom) return; // Don't reconnect if no room is selected
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                connect();
+                reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+            }, reconnectDelay);
+        }
+
+        function startHeartbeat() {
+            stopHeartbeat();
+            hbTimer = setInterval(() => {
+                if (!socket || socket.readyState !== WebSocket.OPEN) return;
+                try {
+                    socket.send(JSON.stringify({ type: 'ping' }));
+                } catch (_) {
+                }
+            }, 10000);
+            hbUpdateTimer = setInterval(setHeartbeat, 1000);
+        }
+
+        function stopHeartbeat() {
+            clearInterval(hbTimer);
+            hbTimer = null;
+            clearInterval(hbUpdateTimer);
+            hbUpdateTimer = null;
+        }
+
+        function connect() {
+            if (!selectedRoom || (socket && socket.readyState === WebSocket.OPEN)) return;
+
+            const url = `${wsScheme}://${window.location.host}${wsPath}?room=${encodeURIComponent(selectedRoom)}`;
+            socket = new WebSocket(url);
+
+            socket.onopen = () => {
+                setConnected(true);
+                lastPong = Date.now();
+                setHeartbeat();
+                startHeartbeat();
+                reconnectDelay = 1000;
+            };
+
+            socket.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    switch (data.type) {
+                        case 'connection':
+                        case 'counter_update':
+                        case 'counter_value':
+                            if (data.room === selectedRoom) {
+                                updateCounter(data.counter);
+                            }
+                            if (data.all_rooms) {
+                                populateRoomsFromMap(data.all_rooms);
+                            }
+                            break;
+                        case 'all_rooms_update':
+                            if (data.all_rooms) populateRoomsFromMap(data.all_rooms);
+                            break;
+                        case 'pong':
+                            lastPong = Date.now();
+                            setHeartbeat();
+                            break;
+                    }
+                } catch (_) {
+                }
+            };
+
+            socket.onclose = () => {
+                setConnected(false);
+                stopHeartbeat();
+                setHeartbeat();
+                scheduleReconnect();
+            };
+
+            socket.onerror = () => {
+                setConnected(false);
+                stopHeartbeat();
+                setHeartbeat();
+            };
+        }
+
+        function disconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            if (socket) {
+                try {
+                    socket.close(1000, "Changing room");
+                } catch (_) {
+                }
+                socket = null;
+            }
+            setConnected(false);
+            stopHeartbeat();
+            setHeartbeat();
+        }
+
+        function send(type) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type, room: selectedRoom }));
+            }
+        }
+
+        function populateRoomsFromMap(map) {
+            const names = Object.keys(map).sort();
+            applyRooms(names);
+        }
+
+        async function fetchRooms() {
+            try {
+                const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+                const csrfToken = csrfTokenEl ? csrfTokenEl.getAttribute('content') : null;
+                const res = await fetch('/api/counter/rooms', {
+                    credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': csrfToken }
+                });
+                if (!res.ok) throw new Error('Failed to fetch rooms');
+                const data = await res.json();
+                const names = (data.rooms || []).map(r => r.name).sort();
+                applyRooms(names);
+            } catch (e) {
+                console.error(e);
+                applyRooms([]); // Populate with no rooms on failure
+            }
+        }
+
+        function applyRooms(names) {
+            const preservedRoom = selectedRoom;
+            roomSelect.innerHTML = '';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = "";
+            placeholder.textContent = "Select a room...";
+            placeholder.disabled = true;
+            roomSelect.appendChild(placeholder);
+
+            const unique = Array.from(new Set(names));
+            unique.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                roomSelect.appendChild(opt);
+            });
+
+            if (preservedRoom && unique.includes(preservedRoom)) {
+                roomSelect.value = preservedRoom;
+            } else {
+                roomSelect.value = "";
+                if (selectedRoom) { // If a room was selected but is now gone
+                    selectedRoom = null;
+                    disconnect();
+                    updateRoomInfo();
+                }
+            }
+            updateControlsState();
+        }
+
+        roomSelect.addEventListener('change', () => {
+            const newRoom = roomSelect.value;
+            if (newRoom && newRoom !== selectedRoom) {
+                selectedRoom = newRoom;
+                updateRoomInfo();
+                disconnect(); // Disconnect from old room first
+                connect(); // Then connect to the new one
+            }
+        });
+
+        incrementBtn.addEventListener('click', () => send('increment'));
+        decrementBtn.addEventListener('click', () => send('decrement'));
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset the counter to 0?')) {
+                send('reset');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (incrementBtn.disabled) return;
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                send('increment');
+            }
+            if (e.key === '-') {
+                e.preventDefault();
+                send('decrement');
+            }
+        });
+
+        // --- Initialize ---
+        updateRoomInfo();
+        setConnected(false); // Set initial UI state to disconnected
+        updateControlsState(); // Set initial button states
+        fetchRooms(); // Fetch rooms to populate the selector
+    })();
+</script>
+</body>
+</html>

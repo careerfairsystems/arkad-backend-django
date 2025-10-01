@@ -31,7 +31,8 @@ class Command(BaseCommand):
         try:
             with open(file_path, "r") as f:
                 exhibitors: list[ExhibitorSchema] = [
-                    ExhibitorSchema(**d) for d in json.load(f)
+                    ExhibitorSchema(**ExhibitorSchema.preprocess(d))
+                    for d in json.load(f)
                 ]
             self.stdout.write(f"Extracted {len(exhibitors)} companies from the file.")
 

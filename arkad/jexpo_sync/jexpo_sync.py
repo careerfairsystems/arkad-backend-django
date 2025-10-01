@@ -82,12 +82,8 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             if schema.studentsession
             else None,
             "days_with_studentsession": parse_session_days,
-            "employees_locally": int(profile.employeesLocal.replace(".", ""))
-            if profile.employeesLocal
-            else None,
-            "employees_globally": int(profile.employeesGlobal.replace(".", ""))
-            if profile.employeesGlobal
-            else None,
+            "employees_locally": profile.employeesLocal,
+            "employees_globally": profile.employeesGlobal,
         },
     )
     if (

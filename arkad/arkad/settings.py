@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -27,11 +28,17 @@ if not DEBUG:
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
         traces_sample_rate=1.0,  # Adjust this value in production
+        # Set profile_session_sample_rate to 1.0 to profile 100%
+        # of profile sessions.
+        profile_session_sample_rate=1.0,
+        # Set profile_lifecycle to "trace" to automatically
+        # run the profiler on when there is an active transaction
+        profile_lifecycle="trace",
+        enable_logs=True,
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -41,7 +48,6 @@ SECRET_KEY: str = os.environ.get("DJANGO_SECRET_KEY", UNSAFE_SECRET_KEY)
 
 if not DEBUG and (SECRET_KEY == UNSAFE_SECRET_KEY):
     raise ValueError("You must set DJANGO_SECRET_KEY to a good secret value")
-
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
@@ -58,6 +64,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "static_root"
 MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -66,6 +73,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_celery_beat",
     "companies",
     "user_models",
     "student_sessions",
@@ -73,6 +81,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "email_app",
     "jexpo_sync",
+    "person_counter",
 ]
 
 MIDDLEWARE = [
@@ -106,7 +115,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "arkad.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -122,7 +130,6 @@ DATABASES = {
         "PORT": "5432",  # Default PostgreSQL port
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -142,7 +149,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -154,7 +160,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
@@ -165,7 +170,6 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "user_models.User"
 
-
 AWS_SES_REGION_NAME = "eu-north-1"
 EMAIL_BACKEND = "django_ses.SESBackend"
 AWS_SES_REGION_ENDPOINT = f"email.{AWS_SES_REGION_NAME}.amazonaws.com"
@@ -173,9 +177,49 @@ EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = "Arkad No Reply <no-reply@arkadtlth.se>"
 
+# Celery / Redis configuration
+REDIS_URL: str | None = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+CELERY_BROKER_URL: str | None = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND: str | None = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL)
+
 CACHES = {
-    "default": {  # This is slow, if using caches in greater capacity, use Redis
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "arkad_db_cache_table",
-    }
+    "default": (
+        {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "KEY_PREFIX": "arkad",
+        }
+        if REDIS_URL
+        else {
+            # Fallback to db cache if REDIS_URL not set (e.g., initial local setup)
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "arkad_db_cache_table",
+        }
+    )
 }
+
+# Channels configuration
+if REDIS_URL and not DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+    }
+
+# Celery specific settings (kept minimal; tune later)
+if CELERY_BROKER_URL:
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+    CELERY_BROKER_CONNECTION_MAX_RETRIES = 0
+else:
+    logging.warning("CELERY_BROKER_URL is not set, Celery will not work!")

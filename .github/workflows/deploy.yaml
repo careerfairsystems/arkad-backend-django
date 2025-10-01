@@ -53,6 +53,10 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
@@ -83,12 +87,14 @@ jobs:
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
           DJANGO_SECRET_KEY: INSECURETESTSECRETKEY
+          REDIS_URL: redis://localhost:6379/0
+
         run: |
           gunicorn arkad.wsgi:application --bind 127.0.0.1:8000 --timeout 5 &
           PID=$!
           sleep 5
           kill $PID
-
+      
       - name: Run tests
         env:
           DEBUG: True
@@ -96,9 +102,24 @@ jobs:
           DB_HOST: localhost
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
+          REDIS_URL: redis://localhost:6379/0
         run: (cd arkad && python manage.py test)
 
-  deploy:
+  deploy-staging:
+    if: github.ref == 'refs/heads/staging'  # Only run on the staging branch
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to staging
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@51.21.44.86 'cd /home/ec2-user/arkad-backend/deployment/staging/ && bash deploy.sh'
+
+  deploy-production:
     if: github.ref == 'refs/heads/master'  # Only run on the master branch
     needs: test
     runs-on: ubuntu-latest
@@ -108,6 +129,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy to server
+      - name: Deploy to production
         run: |
-          ssh -o StrictHostKeyChecking=no ec2-user@51.21.44.86 'cd /home/ec2-user/arkad-backend/deployment/staging/ && bash deploy.sh'
+          ssh -o StrictHostKeyChecking=no ec2-user@51.21.44.86 'cd /home/ec2-user/arkad-backend/deployment/production/ && bash deploy.sh'

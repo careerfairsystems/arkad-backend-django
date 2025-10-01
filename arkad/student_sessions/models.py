@@ -3,10 +3,11 @@ from functools import partial
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
-
 from arkad.utils import unique_file_upload_path
+from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
 from companies.models import Company
+from django_pydantic_field import SchemaField
 
 
 class StudentSessionApplication(models.Model):
@@ -111,6 +112,22 @@ class StudentSession(models.Model):
         related_name="company_representative",
     )
     booking_close_time = models.DateTimeField(null=True, blank=True)
+    field_modifications: list[FieldModificationSchema] = SchemaField(
+        schema=list[FieldModificationSchema],
+        default=FieldModificationSchema.student_session_modifications_default,
+    )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Description of the student session, shown to students when applying",
+    )
+    disclaimer = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Disclaimer shown to students when applying (example SAAB requiring ONLY swedish citizens)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     @staticmethod
     def available_filter() -> Q:

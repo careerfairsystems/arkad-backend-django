@@ -6,6 +6,7 @@ from django.db.models import Q, QuerySet, UniqueConstraint, CheckConstraint
 from django.utils import timezone
 
 from companies.models import Company
+from event_booking.schemas import EventUserStatus
 from user_models.models import User
 
 EVENT_TYPES: dict[str, str] = {"ce": "Company event", "lu": "Lunch", "ba": "Banquet"}
@@ -25,6 +26,9 @@ class Ticket(models.Model):
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
+    def status(self) -> EventUserStatus:
+        return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
+
 
 class Event(models.Model):
     name = models.CharField(max_length=100)
@@ -35,6 +39,10 @@ class Event(models.Model):
     language = models.CharField(max_length=100, default="Swedish")
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
+
+    release_time = models.DateTimeField(
+        null=True, default=None, verbose_name="The time the event is released"
+    )
 
     start_time = models.DateTimeField(null=False)
     end_time = models.DateTimeField(null=False)

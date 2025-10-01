@@ -12,7 +12,7 @@ def get_companies(request: AuthenticatedRequest):
     """
     Returns all mostly public information about companies (days with student sessions are also included).
     """
-    return Company.objects.all()
+    return Company.objects.prefetch_related("jobs").all()
 
 
 # We should probably not be able to change company information by api here, instead require Jexpo update.
