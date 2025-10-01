@@ -67,6 +67,8 @@ class User(AbstractUser):
     master_title = models.CharField(max_length=255, blank=True, null=True)
     study_year = models.IntegerField(blank=True, null=True)
 
+    fcm_token = models.TextField(null=True, blank=True)
+
     @property
     def is_company(self) -> bool:
         return self.company is not None
