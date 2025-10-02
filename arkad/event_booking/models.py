@@ -1,8 +1,10 @@
 import uuid
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, UniqueConstraint, CheckConstraint
+from django.utils import timezone
 
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
@@ -63,6 +65,10 @@ class Event(models.Model):
         if self.end_time <= self.start_time:
             raise ValidationError("End time must be after start time.")
         return super().clean()
+
+    def unbook_allowed(self) -> bool:
+        """Unbooking is only allowed if there is longer than 1 week until the event starts."""
+        return self.start_time - timezone.now() > timedelta(weeks=1)
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"

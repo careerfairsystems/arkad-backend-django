@@ -270,7 +270,7 @@ def confirm_student_session(
         return 404, "Timeslot not found or already taken"
 
 
-@router.post("/unbook", response={200: str, 401: str, 404: str})
+@router.post("/unbook", response={200: str, 401: str, 404: str, 409: str})
 def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     """
     Unbook a timeslot from some student sessions
@@ -280,6 +280,7 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
         application = StudentSessionApplication.objects.get(
             student_session__company_id=company_id, user_id=request.user.id
         )
+
         if not application.is_accepted():
             return 409, "Applicant not accepted"
     except StudentSessionApplication.DoesNotExist:
@@ -289,6 +290,10 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
         timeslot: StudentSessionTimeslot = StudentSessionTimeslot.objects.get(
             selected=application
         )
+
+        if timeslot.booking_closes_at <= timezone.now():
+            return 409, "Unbooking period has expired"
+
         timeslot.selected = None
         timeslot.time_booked = None
         timeslot.save()

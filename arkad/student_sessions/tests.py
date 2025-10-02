@@ -650,6 +650,33 @@ class StudentSessionTests(TestCase):
             resp.status_code, 404
         )  # Forbidden due to not owning the booking
 
+    def test_unbook_timeslot_after_booking_close_time(self):
+        """Test that unbooking is not allowed after booking_close_time"""
+        session = self._create_student_session(self.company_user1.company)
+        session.booking_close_time = timezone.now() - datetime.timedelta(hours=1)
+        session.save()
+
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create timeslot and assign it to the student
+        timeslot = self._create_timeslot(session)
+        timeslot.selected = application
+        timeslot.time_booked = timezone.now()
+        timeslot.save()
+
+        # Attempt to unbook after booking_close_time
+        resp = self.client.post(
+            f"/api/student-session/unbook?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409)
+
     def test_timeslot_selection_by_another_company(self):
         """Test that a company cannot select timeslot for a session it does not own"""
         session = self._create_student_session(self.company_user1.company)

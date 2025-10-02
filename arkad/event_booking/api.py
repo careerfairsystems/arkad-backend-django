@@ -167,6 +167,8 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
     with transaction.atomic():
         try:
             event: Event = Event.objects.select_for_update().get(id=event_id)
+            if not event.unbook_allowed():
+                return 409, "Unbooking period has expired"
         except Event.DoesNotExist:
             return 404, "Event not found"
 

@@ -279,3 +279,21 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.json(), "You do not have a ticket for this event")
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
+
+    def test_unbook_owned_ticket_past_unbook_limit(self):
+        """Ensure users cannot unbook tickets past the unbooking limit."""
+        self.event.start_time = timezone.now() + datetime.timedelta(hours=25)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        Ticket.objects.create(user=self.user, event=self.event)
+        self.event.number_booked += 1
+        self.event.save()
+
+        # User tries to unbook the ticket past the unbooking limit (7 days)
+        response = self.client.post(
+            f"/api/events/remove-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Unbooking period has expired")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.number_booked, 1)
