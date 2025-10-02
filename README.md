@@ -154,3 +154,17 @@ For more information see the [Django documentation](https://docs.djangoproject.c
 
 It is also possible to create actions which take input, they can be seen here: [Stack Overflow](https://stackoverflow.com/a/63644851/11836881).
 
+## Student sessions
+
+Student sessions have a release time and a close time.
+Student session applications have a closing time after which it is not possible to apply anymore.
+
+The same applies for cancelling an application (as they will be sent to companies).
+
+There is then an opening for applying to timeslots for student session, this also has a closing time after which you can not unbook.
+
+## Events
+
+Events have an time when they are made visible, a time when they are open for registration and a time when they are closed for registration.
+
+They are possible to unbook until one week before the event.
