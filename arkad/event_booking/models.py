@@ -18,6 +18,10 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
+    # Notification ID so it can be revoked later
+    notify_event_tmrw_id = models.CharField()
+    notify_event_one_hour_id = models.CharField()
+
     class Meta:
         constraints = [
             UniqueConstraint(name="one_ticket_per_user_event", fields=("user", "event"))
