@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -13,6 +15,7 @@ from event_booking.schemas import (
     EventUserInformation,
     EventUserStatus,
 )
+from notifications import tasks
 
 router = Router(tags=["Events"])
 
@@ -142,6 +145,7 @@ def book_event(request: AuthenticatedRequest, event_id: int):
                 return 409, "Event already ended"
         except Event.DoesNotExist:
             return 404, "Event not found"
+
         if event.number_booked < event.capacity:
             if event.tickets.filter(user_id=request.user.id).exists():
                 return 409, "You have already booked this event"
@@ -152,6 +156,21 @@ def book_event(request: AuthenticatedRequest, event_id: int):
 
             schema = EventSchema.from_orm(event)
             schema.status = ticket.status()
+
+            # Schedule notifications.
+            task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
+                args=[ticket.user, ticket.event],
+                eta=ticket.event.start_time - timedelta(hours=24)
+            )
+            ticket.notify_event_tmrw_id = task_notify_event_tmrw.id
+
+            task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
+                args=[ticket.user, ticket.event],
+                eta=ticket.event.start_time - timedelta(hours=24)
+            )
+            ticket.notify_event_one_hour_id = task_notify_event_one_hour.id
+            ticket.save()
+
             return 200, schema
         else:
             return 409, "Event already fully booked"
