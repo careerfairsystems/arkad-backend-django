@@ -313,3 +313,15 @@ class EventBookingTestCase(TestCase):
         headers = self._get_auth_headers(self.user)
         response = self.client.get(f"/api/events/{self.event.id}/", headers=headers)
         self.assertEqual(response.status_code, 404)
+
+    def test_acquire_ticket_after_deadline(self):
+        self.event.release_time = timezone.now() - datetime.timedelta(days=10)
+        self.event.start_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.end_time = timezone.now() + datetime.timedelta(days=2)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.post(
+            f"/api/events/acquire-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Booking period has expired")

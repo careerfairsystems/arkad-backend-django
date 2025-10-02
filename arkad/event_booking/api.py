@@ -138,6 +138,8 @@ def book_event(request: AuthenticatedRequest, event_id: int):
             event: Event = (
                 Event.objects.filter(id=event_id).select_for_update().get(id=event_id)
             )
+            if not event.booking_change_allowed():
+                return 409, "Booking period has expired"
             if event.release_time is None:
                 return 409, "Event release date not yet scheduled"
             if event.release_time >= timezone.now():
@@ -171,7 +173,7 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
     with transaction.atomic():
         try:
             event: Event = Event.objects.select_for_update().get(id=event_id)
-            if not event.unbook_allowed():
+            if not event.booking_change_allowed():
                 return 409, "Unbooking period has expired"
         except Event.DoesNotExist:
             return 404, "Event not found"

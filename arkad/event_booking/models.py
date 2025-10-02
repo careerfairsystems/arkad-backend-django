@@ -74,9 +74,14 @@ class Event(models.Model):
             raise ValidationError("End time must be after start time.")
         return super().clean()
 
-    def unbook_allowed(self) -> bool:
+    @staticmethod
+    def booking_change_deadline_delta() -> timedelta:
+        """Returns the timedelta before the event start time when unbooking is no longer allowed."""
+        return timedelta(weeks=1)
+
+    def booking_change_allowed(self) -> bool:
         """Unbooking is only allowed if there is longer than 1 week until the event starts."""
-        return self.start_time - timezone.now() > timedelta(weeks=1)
+        return self.start_time - timezone.now() > self.booking_change_deadline_delta()
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
