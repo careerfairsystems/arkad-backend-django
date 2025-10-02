@@ -4,6 +4,19 @@ from arkad.celery import app
 # Tasks schedulers that schedule other tasks
 
 @app.task(bind=True)
+def schedule_notify_registration_opening(self):
+    # Run every 48h at 12:00
+    # Find all events with registration opening within 24 hours
+    # with spots available
+
+    # for event in events
+        # Schedule a task to send a notification to all users at closing time - 24 hours
+
+        # Anmälan för YYY med XXX har öppnat
+        # Notis (+ Mail)
+    pass
+
+@app.task(bind=True)
 def schedule_notify_registration_closing(self):
     #handlers.send_event_one_hour()
     # Run every 48h at 12:00

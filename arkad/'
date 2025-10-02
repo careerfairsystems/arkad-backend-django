@@ -25,5 +25,4 @@ def send_event_registration_open(event: Event | StudentSession):
 
 
 def send_application_accepted(user: User, event: Event | StudentSession):
-    # Not a scheduled notification - this is triggered
     pass
