@@ -24,7 +24,7 @@ def get_events(request: AuthenticatedRequest):
     """
     if not request.user.is_authenticated:
         return Event.objects.all()
-    events: QuerySet[Event] = Event.objects.prefetch_related("tickets").all()
+    events: QuerySet[Event] = Event.objects.prefetch_related("tickets").filter(visible_time__lte=timezone.now()).all()
     result: list[EventSchema] = []
     for event in events:
         schema = EventSchema.from_orm(event)
@@ -57,7 +57,7 @@ def get_event(request: AuthenticatedRequest, event_id: int):
     Returns a single event
     """
     try:
-        event = Event.objects.get(id=event_id)
+        event = Event.objects.get(id=event_id, visible_time__lte=timezone.now())
         schema = EventSchema.from_orm(event)
         if request.user.is_authenticated:
             user_ticket: Ticket | None = event.tickets.filter(

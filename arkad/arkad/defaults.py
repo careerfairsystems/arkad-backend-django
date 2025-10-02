@@ -49,3 +49,13 @@ COMPANY_SCHEDULE_RECEIVE_UTC = company_schedule_receive_sweden_time.astimezone(p
 NAIVE_COMPANY_VISITS_CLOSE = datetime.datetime(2025, 11, 12, 23, 59, 0)
 company_visits_close_sweden_time = SWEDEN_TIMEZONE.localize(NAIVE_COMPANY_VISITS_CLOSE)
 COMPANY_VISITS_CLOSE_UTC = company_visits_close_sweden_time.astimezone(pytz.utc)
+
+# Default visible time for events (15 oktober 00:00)
+DEFAULT_VISIBLE_TIME_EVENT = SWEDEN_TIMEZONE.localize(
+    datetime.datetime(2025, 10, 20, 0, 0, 0)
+).astimezone(pytz.utc)
+
+# Default release time for events (18 oktober 00:00)
+DEFAULT_RELEASE_TIME_EVENT = SWEDEN_TIMEZONE.localize(
+    datetime.datetime(2025, 10, 25, 0, 0, 0)
+).astimezone(pytz.utc)

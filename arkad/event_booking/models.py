@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Q, UniqueConstraint, CheckConstraint
 from django.utils import timezone
 
+from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVENT
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
 from user_models.models import User
@@ -41,8 +42,12 @@ class Event(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
 
+
+    visible_time = models.DateTimeField(
+        null=False, default=DEFAULT_VISIBLE_TIME_EVENT, verbose_name="The time the event becomes visible"
+    )
     release_time = models.DateTimeField(
-        null=True, default=None, verbose_name="The time the event is released"
+        null=True, default=DEFAULT_RELEASE_TIME_EVENT, verbose_name="The time the event is released"
     )
 
     start_time = models.DateTimeField(null=False)

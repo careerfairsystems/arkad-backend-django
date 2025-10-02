@@ -10,7 +10,6 @@ from event_booking.schemas import UseTicketSchema, EventSchema
 
 User = get_user_model()
 
-
 class EventBookingTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -32,8 +31,9 @@ class EventBookingTestCase(TestCase):
             company=self.company,
             release_time=timezone.now()
             - datetime.timedelta(days=1),  # So they have been released
-            start_time=timezone.now() + datetime.timedelta(days=1),
-            end_time=timezone.now() + datetime.timedelta(days=2),
+            start_time=timezone.now() + datetime.timedelta(days=9),
+            end_time=timezone.now() + datetime.timedelta(days=11),
+            visible_time=timezone.now() - datetime.timedelta(days=9),
             capacity=100,
         )
 
@@ -275,7 +275,7 @@ class EventBookingTestCase(TestCase):
         response = self.client.post(
             f"/api/events/remove-ticket/{self.event.id}", headers=headers
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 404, response.content)
         self.assertEqual(response.json(), "You do not have a ticket for this event")
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
@@ -297,3 +297,18 @@ class EventBookingTestCase(TestCase):
         self.assertEqual(response.json(), "Unbooking period has expired")
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
+
+    def test_get_events_not_visible(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get("/api/events", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 0)  # No events should be visible
+
+    def test_get_event_not_visible(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get(f"/api/events/{self.event.id}/", headers=headers)
+        self.assertEqual(response.status_code, 404)
