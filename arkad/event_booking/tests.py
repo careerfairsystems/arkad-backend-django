@@ -32,8 +32,9 @@ class EventBookingTestCase(TestCase):
             company=self.company,
             release_time=timezone.now()
             - datetime.timedelta(days=1),  # So they have been released
-            start_time=timezone.now() + datetime.timedelta(days=1),
-            end_time=timezone.now() + datetime.timedelta(days=2),
+            start_time=timezone.now() + datetime.timedelta(days=9),
+            end_time=timezone.now() + datetime.timedelta(days=11),
+            visible_time=timezone.now() - datetime.timedelta(days=9),
             capacity=100,
         )
 
@@ -275,7 +276,52 @@ class EventBookingTestCase(TestCase):
         response = self.client.post(
             f"/api/events/remove-ticket/{self.event.id}", headers=headers
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 404, response.content)
         self.assertEqual(response.json(), "You do not have a ticket for this event")
         self.event.refresh_from_db()
         self.assertEqual(self.event.number_booked, 1)
+
+    def test_unbook_owned_ticket_past_unbook_limit(self):
+        """Ensure users cannot unbook tickets past the unbooking limit."""
+        self.event.start_time = timezone.now() + datetime.timedelta(hours=25)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        Ticket.objects.create(user=self.user, event=self.event)
+        self.event.number_booked += 1
+        self.event.save()
+
+        # User tries to unbook the ticket past the unbooking limit (7 days)
+        response = self.client.post(
+            f"/api/events/remove-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Unbooking period has expired")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.number_booked, 1)
+
+    def test_get_events_not_visible(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get("/api/events", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 0)  # No events should be visible
+
+    def test_get_event_not_visible(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get(f"/api/events/{self.event.id}/", headers=headers)
+        self.assertEqual(response.status_code, 404)
+
+    def test_acquire_ticket_after_deadline(self):
+        self.event.release_time = timezone.now() - datetime.timedelta(days=10)
+        self.event.start_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.end_time = timezone.now() + datetime.timedelta(days=2)
+        self.event.save()
+        headers = self._get_auth_headers(self.user)
+        response = self.client.post(
+            f"/api/events/acquire-ticket/{self.event.id}", headers=headers
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), "Booking period has expired")

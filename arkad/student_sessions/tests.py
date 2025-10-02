@@ -62,6 +62,7 @@ class StudentSessionTests(TestCase):
         return StudentSession.objects.create(
             company=company,
             booking_close_time=timezone.now() + datetime.timedelta(days=1),
+            booking_open_time=timezone.now() - datetime.timedelta(days=1),
         )
 
     @staticmethod
@@ -98,6 +99,33 @@ class StudentSessionTests(TestCase):
 
         data = StudentSessionNormalUserListSchema(**resp.json())
         self.assertEqual(data.numElements, 2)
+
+    def test_book_unopened_session(self):
+        """Test that booking is not allowed for sessions that are not yet open"""
+        session = StudentSession.objects.create(
+            company=self.company_user1.company,
+            booking_open_time=timezone.now()
+            + datetime.timedelta(days=1),  # Opens in the future
+            booking_close_time=timezone.now() + datetime.timedelta(days=2),
+        )
+
+        application_data = {
+            "companyId": session.company.id,
+            "motivation_text": "Early application",
+            "update_profile": True,
+            "programme": "Computer Science",
+            "study_year": 3,
+            "linkedin": "linkedin.com/in/student0",
+            "master_title": "Software Engineering",
+        }
+
+        resp = self.client.post(
+            "/api/student-session/apply",
+            data=application_data,
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
 
     def test_get_sessions_authed_with_application_status(self):
         """Test getting all sessions with authentication and with a application status"""
@@ -438,6 +466,40 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(resp.status_code, 404)  # Timeslot not found or already taken
 
+    def test_get_timeslots_some_no_longer_bookable(self):
+        """Test that students can see which timeslots are no longer bookable"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create timeslots, one of which is no longer bookable
+        self._create_timeslot(session)
+        self._create_timeslot(
+            session,
+            booking_closes_at=timezone.now() - datetime.timedelta(hours=1),
+        )
+        self._create_timeslot(session)
+        self._create_timeslot(
+            session,
+            booking_closes_at=timezone.now() - datetime.timedelta(days=1),
+        )
+        # Make sure  that the user has applied and is accepted
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Now test get them with the get endpoint, check that the ones no longer bookable are not included
+        resp = self.client.get(
+            f"/api/student-session/timeslots?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        timeslots = [TimeslotSchemaUser(**t) for t in resp.json()]
+        self.assertEqual(len(timeslots), 2)
+        for t in timeslots:
+            self.assertGreater(t.booking_closes_at, timezone.now())
+
     def test_unbook_timeslot(self):
         """Test that students can unbook their timeslots"""
         session = self._create_student_session(self.company_user1.company)
@@ -587,6 +649,31 @@ class StudentSessionTests(TestCase):
         self.assertEqual(
             resp.status_code, 404
         )  # Forbidden due to not owning the booking
+
+    def test_unbook_timeslot_after_booking_close_time(self):
+        """Test that unbooking is not allowed after booking_close_time"""
+        session = self._create_student_session(self.company_user1.company)
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create timeslot and assign it to the student
+        timeslot: StudentSessionTimeslot = self._create_timeslot(session)
+        timeslot.selected = application
+        timeslot.time_booked = timezone.now()
+        timeslot.booking_closes_at = timezone.now() - datetime.timedelta(hours=1)
+        timeslot.save()
+
+        # Attempt to unbook after booking_close_time
+        resp = self.client.post(
+            f"/api/student-session/unbook?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409, resp.content)
 
     def test_timeslot_selection_by_another_company(self):
         """Test that a company cannot select timeslot for a session it does not own"""
