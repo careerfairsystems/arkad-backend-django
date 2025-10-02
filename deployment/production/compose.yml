@@ -27,24 +27,32 @@ services:
     container_name: arkad-production-web
     volumes:
       - /home/ec2-user/arkad-backend/arkad/static:/app/arkad/static:ro
+    environment:
+      - SENTRY_ENVIRONMENT=production
 
   celery-worker:
     extends:
       file: ../shared-compose.yaml
       service: celery-worker
     container_name: arkad-production-celery-worker
+    environment:
+      - SENTRY_ENVIRONMENT=production
 
   celery-beat:
     extends:
       file: ../shared-compose.yaml
       service: celery-beat
     container_name: arkad-production-celery-beat
+    environment:
+      - SENTRY_ENVIRONMENT=production
 
   websocket:
     extends:
       file: ../shared-compose.yaml
       service: websocket
     container_name: arkad-production-websocket
+    environment:
+      - SENTRY_ENVIRONMENT=production
 
   nginx:
     extends:

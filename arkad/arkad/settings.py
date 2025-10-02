@@ -35,6 +35,7 @@ if not DEBUG:
         # run the profiler on when there is an active transaction
         profile_lifecycle="trace",
         enable_logs=True,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT"),
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
