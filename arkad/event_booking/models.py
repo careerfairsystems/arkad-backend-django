@@ -42,12 +42,15 @@ class Event(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
 
-
     visible_time = models.DateTimeField(
-        null=False, default=DEFAULT_VISIBLE_TIME_EVENT, verbose_name="The time the event becomes visible"
+        null=False,
+        default=DEFAULT_VISIBLE_TIME_EVENT,
+        verbose_name="The time the event becomes visible",
     )
     release_time = models.DateTimeField(
-        null=True, default=DEFAULT_RELEASE_TIME_EVENT, verbose_name="The time the event is released"
+        null=True,
+        default=DEFAULT_RELEASE_TIME_EVENT,
+        verbose_name="The time the event is released",
     )
 
     start_time = models.DateTimeField(null=False)

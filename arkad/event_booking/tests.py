@@ -10,6 +10,7 @@ from event_booking.schemas import UseTicketSchema, EventSchema
 
 User = get_user_model()
 
+
 class EventBookingTestCase(TestCase):
     def setUp(self):
         self.client = Client()

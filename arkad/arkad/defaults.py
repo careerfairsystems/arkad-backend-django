@@ -34,7 +34,7 @@ NAIVE_STUDENT_SLOT_BOOKING_CLOSE = datetime.datetime(2025, 11, 5, 23, 59, 0)
 student_slot_booking_close_sweden_time = SWEDEN_TIMEZONE.localize(
     NAIVE_STUDENT_SLOT_BOOKING_CLOSE
 )
-STUDENT_SLOT_BOOKING_CLOSE_UTC = student_slot_booking_close_sweden_time.astimezone(
+STUDENT_TIMESLOT_BOOKING_CLOSE_UTC = student_slot_booking_close_sweden_time.astimezone(
     pytz.utc
 )
 

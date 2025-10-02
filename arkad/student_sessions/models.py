@@ -7,7 +7,7 @@ from django.utils import timezone
 from arkad.defaults import (
     STUDENT_SESSIONS_OPEN_UTC,
     STUDENT_SESSIONS_CLOSE_UTC,
-    STUDENT_SLOT_BOOKING_CLOSE_UTC,
+    STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
 )
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
@@ -99,7 +99,7 @@ class StudentSessionTimeslot(models.Model):
     time_booked = models.DateTimeField(null=True, blank=True)
 
     booking_closes_at = models.DateTimeField(
-        default=STUDENT_SLOT_BOOKING_CLOSE_UTC,
+        default=STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
         null=True,
         help_text="The time the timeslot is no longer bookable",
     )
