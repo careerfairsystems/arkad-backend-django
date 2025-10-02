@@ -19,8 +19,8 @@ class Ticket(models.Model):
     used = models.BooleanField(default=False)
 
     # Notification ID so it can be revoked later
-    notify_event_tmrw_id = models.CharField()
-    notify_event_one_hour_id = models.CharField()
+    notify_event_tmrw_id = models.CharField(null=True)
+    notify_event_one_hour_id = models.CharField(null= True) 
 
     class Meta:
         constraints = [
