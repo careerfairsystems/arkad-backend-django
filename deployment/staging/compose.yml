@@ -23,6 +23,8 @@ services:
       file: ../shared-compose.yaml
       service: web
     container_name: arkad-staging-web
+    environment:
+      - SENTRY_ENVIRONMENT=staging
 
   celery-worker:
     extends:

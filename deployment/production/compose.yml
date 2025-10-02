@@ -25,6 +25,8 @@ services:
     container_name: arkad-production-web
     volumes:
       - /home/ec2-user/arkad-backend/arkad/static:/app/arkad/static:ro
+    environment:
+      - SENTRY_ENVIRONMENT=production
 
   celery-worker:
     extends:
