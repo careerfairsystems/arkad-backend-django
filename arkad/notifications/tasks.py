@@ -1,54 +1,20 @@
-from notifications import handlers
-from arkad.celery import app
+from user_models.models import User
+from event_booking.models import Event
 
+# These are the tasks ot send notifications that are scheduled by scheduler.py
 
-@app.task(bind=True)
-def schedule_notification_event_registration_in_24h(self):
-    #handlers.send_event_one_hour()
-    # Run every 48h at 12:00
-    # Find all events with registration closing within 48 hours
-    # with spots available
-
-    # for event in events
-        # find all users
-        # Schedule a task to send a notification to all users at closing time - 24 hours
-
-        # Anmälan för YYY med XXX stänger imorgon. Kom ihåg att avboka din plats om du inte kan komma!
-        # Notis (+ Mail)
+def send_registration_closing_tomorrow(event: Event):
+    # Defence companies (SAAB and FMV, any more?), append "only for swedish students"
     pass
 
 
-@app.task(bind=True)
-def schedule_notification_event_tomorrow(self):
-    # Run every other day?
-    # Get all events that are within 48 hours
-
-    # for event in events
-        # Get company
-        # Find all users registered for that event
-
-        # for user in users
-            # Get their FCM token
-            # Schedule a task to send a notification to the user at event time minus 24 hours
-
-            # "Du har anmält dig till YYY med XXX är imorgon" - notis ( + mail)
-
+def send_event_tomorrow(user: User, event: Event):
     pass
 
 
-@app.task(bind=True)
-def schedule_notification_event_in_one_hour(self):
-    # Run every two hours between 07-17?
-    # Find get all events that are in within 2h 
-
-    # for event in events
-        # Get company
-        # Find all users registered for that event
-
-        # for user in users
-            # Get their FCM token
-            # Send notification
-            # Schedule a task to send a notification to the user at event time minus 1 hour
-            # "Du har anmält dig till YYY som är med XXX är om en timme" - Notis
+def send_event_one_hour(user: User, event: Event):
+    # token = user.fcm_token
     pass
 
+def send_lunch_registration_open(event: Event):
+    pass
