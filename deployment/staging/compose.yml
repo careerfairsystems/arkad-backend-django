@@ -31,18 +31,24 @@ services:
       file: ../shared-compose.yaml
       service: celery-worker
     container_name: arkad-staging-celery-worker
+    environment:
+      - SENTRY_ENVIRONMENT=staging
 
   celery-beat:
     extends:
       file: ../shared-compose.yaml
       service: celery-beat
     container_name: arkad-staging-celery-beat
+    environment:
+      - SENTRY_ENVIRONMENT=staging
 
   websocket:
     extends:
       file: ../shared-compose.yaml
       service: websocket
     container_name: arkad-staging-websocket
+    environment:
+      - SENTRY_ENVIRONMENT=staging
 
   nginx:
     extends:
