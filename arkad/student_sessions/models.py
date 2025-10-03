@@ -1,8 +1,11 @@
+from datetime import timedelta
 from functools import partial
 
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
+from celery.result import AsyncResult
+
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
@@ -92,6 +95,9 @@ class StudentSessionTimeslot(models.Model):
 
     time_booked = models.DateTimeField(null=True, blank=True)
 
+    notify_tmrw_id = models.CharField(default=None, null=True)
+    notify_one_hour_id = models.CharField(default=None, null=True)
+
     class Meta:
         constraints = [
             UniqueConstraint(
@@ -102,6 +108,43 @@ class StudentSessionTimeslot(models.Model):
 
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
+
+    def save(self, *args, **kwargs):
+        # Override the save method of the model
+        # Schedule a notification task
+        if self.selected:
+            self._remove_notifications()
+            self._schedule_notifications()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self._remove_notifications()
+        return super().delete(*args, **kwargs)
+
+    def _schedule_notifications(self):
+        from notifications import tasks
+        #(Du har anmält dig till) YYY (som är) med XXX är imorgon
+        task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
+            args=[self.selected.user, self.student_session],
+            eta=self.start_time - timedelta(hours=24)
+        )
+        self.notify_tmrw_id = task_notify_tmrw.id
+
+        #(Du har anmält dig till) YYY (som är) med XXX är om en timme
+        task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
+            args=[self.selected.user, self.student_session],
+            eta=self.start_time - timedelta(hours=1)
+        )
+        self.notify_one_hour_id = task_notify_one_hour.id
+    
+    def _remove_notifications(self):
+        if self.notify_tmrw_id:
+            AsyncResult(self.notify_tmrw_id).revoke()
+            self.notify_tmrw_id = None
+ 
+        if self.notify_tmrw_id:
+            AsyncResult(self.notify_tmrw_id).revoke()
+            self.notify_one_day_id = None
 
 
 class StudentSession(models.Model):
@@ -138,3 +181,4 @@ class StudentSession(models.Model):
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
+
