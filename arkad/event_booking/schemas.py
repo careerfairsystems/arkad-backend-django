@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, cast
 from uuid import UUID
 from arkad.customized_django_ninja import Schema
 

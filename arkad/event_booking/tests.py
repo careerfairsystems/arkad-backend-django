@@ -334,15 +334,15 @@ class EventBookingTestCase(TestCase):
             # 1. Handle the microsecond precision. strptime requires exact match for fractional seconds.
             #    We'll truncate the string to 6 decimal places (microseconds) if it has more.
             #    If it has fewer, strptime will still work, but we need to ensure the format string matches.
-            if '.' in iso_string:
-                base, fractional_z = iso_string.split('.')
-                fractional = fractional_z.rstrip('Z')
+            if "." in iso_string:
+                base, fractional_z = iso_string.split(".")
+                fractional = fractional_z.rstrip("Z")
                 # Truncate fractional seconds to 6 digits (microseconds) or pad with zeros
-                fractional_padded = fractional.ljust(6, '0')[:6]
+                fractional_padded = fractional.ljust(6, "0")[:6]
                 string_to_parse = f"{base}.{fractional_padded}"
                 format_string = "%Y-%m-%dT%H:%M:%S.%f"
             else:
-                string_to_parse = iso_string.rstrip('Z')
+                string_to_parse = iso_string.rstrip("Z")
                 format_string = "%Y-%m-%dT%H:%M:%S"
 
             # 2. Parse the time string (it will be naive, without timezone info)
@@ -350,7 +350,6 @@ class EventBookingTestCase(TestCase):
 
             # 3. Attach the UTC timezone (since the original string ended in 'Z')
             return naive_dt.replace(tzinfo=pytz.utc)
-
 
         # 1. API Call and Initial Assertions
         headers = self._get_auth_headers(self.user)
@@ -361,7 +360,9 @@ class EventBookingTestCase(TestCase):
 
         # 2. Calculate the Expected Time
         # Ensure self.event.start_time is a timezone-aware datetime object
-        expected_dt_object = self.event.start_time - Event.booking_change_deadline_delta()
+        expected_dt_object = (
+            self.event.start_time - Event.booking_change_deadline_delta()
+        )
 
         # We need to generate the ISO string to pass it to the parser,
         # as it will ensure microsecond precision is included if necessary.
@@ -375,8 +376,10 @@ class EventBookingTestCase(TestCase):
             actual_dt = parse_iso_z_compatible(actual_freeze_time_str)
             expected_dt = parse_iso_z_compatible(expected_freeze_time_str)
         except ValueError as e:
-            self.fail(f"Could not parse datetime strings using strptime: {e}. "
-                      f"Actual: '{actual_freeze_time_str}', Expected: '{expected_freeze_time_str}'")
+            self.fail(
+                f"Could not parse datetime strings using strptime: {e}. "
+                f"Actual: '{actual_freeze_time_str}', Expected: '{expected_freeze_time_str}'"
+            )
 
         # 5. Define Tolerance (1 second)
         tolerance = datetime.timedelta(seconds=1)
@@ -387,6 +390,6 @@ class EventBookingTestCase(TestCase):
         self.assertTrue(
             time_difference < tolerance,
             msg=f"Booking freeze times are not within {tolerance}. "
-                f"Difference: {time_difference}. "
-                f"Expected: {expected_dt}, Actual: {actual_dt}"
+            f"Difference: {time_difference}. "
+            f"Expected: {expected_dt}, Actual: {actual_dt}",
         )
