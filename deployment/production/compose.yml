@@ -29,6 +29,8 @@ services:
       - /home/ec2-user/arkad-backend/arkad/static:/app/arkad/static:ro
     environment:
       - SENTRY_ENVIRONMENT=production
+    env_file:
+      - .env
 
   celery-worker:
     extends:
@@ -37,6 +39,8 @@ services:
     container_name: arkad-production-celery-worker
     environment:
       - SENTRY_ENVIRONMENT=production
+    env_file:
+      - .env
 
   celery-beat:
     extends:
@@ -45,6 +49,8 @@ services:
     container_name: arkad-production-celery-beat
     environment:
       - SENTRY_ENVIRONMENT=production
+    env_file:
+      - .env
 
   websocket:
     extends:
@@ -53,6 +59,8 @@ services:
     container_name: arkad-production-websocket
     environment:
       - SENTRY_ENVIRONMENT=production
+    env_file:
+      - .env
 
   nginx:
     extends:
