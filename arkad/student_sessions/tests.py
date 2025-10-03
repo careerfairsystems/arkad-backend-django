@@ -109,7 +109,7 @@ class StudentSessionTests(TestCase):
         session = StudentSession.objects.create(
             company=self.company_user1.company,
             booking_open_time=timezone.now()
-                              + datetime.timedelta(days=1),  # Opens in the future
+            + datetime.timedelta(days=1),  # Opens in the future
             booking_close_time=timezone.now() + datetime.timedelta(days=2),
         )
 
@@ -759,7 +759,7 @@ class StudentSessionApplicationResourceTest(TestCase):
             master_title="AI and Machine Learning",
             linkedin="https://linkedin.com/in/teststudent",
             cv=cls.user_cv_file,
-            username="student@example.com"
+            username="student@example.com",
         )
         cls.company = Company.objects.create(name="TestCorp")
         cls.student_session = StudentSession.objects.create(company=cls.company)
@@ -776,9 +776,11 @@ class StudentSessionApplicationResourceTest(TestCase):
     def setUp(self):
         """Set up objects that may be modified by tests."""
         # The request factory is essential for testing absolute URL generation
-        self.factory = RequestFactory(SERVER_NAME='testserver')
+        self.factory = RequestFactory(SERVER_NAME="testserver")
         # Create a mock request object
-        self.request = self.factory.get('/admin/student_sessions/studentsessionapplication/')
+        self.request = self.factory.get(
+            "/admin/student_sessions/studentsessionapplication/"
+        )
 
         # Instantiate the resource, passing the mock request
         self.resource = StudentSessionApplicationResource(request=self.request)
@@ -790,9 +792,19 @@ class StudentSessionApplicationResourceTest(TestCase):
 
         # 1. Test Headers
         expected_headers = [
-            'id', 'Company', 'Status', 'First Name', 'Last Name', 'Email',
-            'Motivation', 'Programme', 'Study Year', 'Master Title',
-            'LinkedIn', 'CV', 'Application Time'
+            "id",
+            "Company",
+            "Status",
+            "First Name",
+            "Last Name",
+            "Email",
+            "Motivation",
+            "Programme",
+            "Study Year",
+            "Master Title",
+            "LinkedIn",
+            "CV",
+            "Application Time",
         ]
         self.assertEqual(dataset.headers, expected_headers)
 
@@ -800,33 +812,33 @@ class StudentSessionApplicationResourceTest(TestCase):
         self.assertEqual(len(dataset), 1)  # We should have one application
         exported_row = dataset.dict[0]
 
-        self.assertEqual(int(exported_row['id']), self.application.id)
-        self.assertEqual(exported_row['Company'], self.company.name)
-        self.assertEqual(exported_row['Status'], 'pending')
-        self.assertEqual(exported_row['First Name'], self.user.first_name)
-        self.assertEqual(exported_row['Email'], self.user.email)
-        self.assertEqual(exported_row['Motivation'], self.application.motivation_text)
-        self.assertEqual(exported_row['LinkedIn'], self.user.linkedin)
+        self.assertEqual(int(exported_row["id"]), self.application.id)
+        self.assertEqual(exported_row["Company"], self.company.name)
+        self.assertEqual(exported_row["Status"], "pending")
+        self.assertEqual(exported_row["First Name"], self.user.first_name)
+        self.assertEqual(exported_row["Email"], self.user.email)
+        self.assertEqual(exported_row["Motivation"], self.application.motivation_text)
+        self.assertEqual(exported_row["LinkedIn"], self.user.linkedin)
 
     def test_export_cv_url_is_absolute(self):
         """Verify that the CV URL is a full, absolute URL."""
         queryset = StudentSessionApplication.objects.filter(pk=self.application.pk)
         dataset = self.resource.export(queryset)
 
-        exported_cv_url = dataset.dict[0]['CV']
+        exported_cv_url = dataset.dict[0]["CV"]
 
         # build_absolute_uri creates a URL like 'http://testserver/media/...'
         expected_url = self.request.build_absolute_uri(self.application.cv.url)
 
         self.assertEqual(exported_cv_url, expected_url)
-        self.assertTrue(exported_cv_url.startswith('http://'))
+        self.assertTrue(exported_cv_url.startswith("http://"))
 
     def test_import_successfully_updates_status(self):
         """Verify that importing a file correctly updates the Status field."""
-        self.assertEqual(self.application.status, 'pending')  # Pre-condition
+        self.assertEqual(self.application.status, "pending")  # Pre-condition
 
-        headers = ('id', 'Status')
-        row = (self.application.id, 'accepted')
+        headers = ("id", "Status")
+        row = (self.application.id, "accepted")
         dataset = tablib.Dataset(row, headers=headers)
 
         # Import data, with dry_run=False to commit changes to the DB
@@ -834,7 +846,7 @@ class StudentSessionApplicationResourceTest(TestCase):
 
         # Refresh the object from the database to see the changes
         self.application.refresh_from_db()
-        self.assertEqual(self.application.status, 'accepted')
+        self.assertEqual(self.application.status, "accepted")
 
     def test_import_only_changes_status_field(self):
         """
@@ -843,8 +855,8 @@ class StudentSessionApplicationResourceTest(TestCase):
         original_motivation = self.application.motivation_text
         self.assertNotEqual(original_motivation, "This should not be saved")
 
-        headers = ('id', 'Status', 'Motivation')
-        row = (self.application.id, 'rejected', 'This should not be saved')
+        headers = ("id", "Status", "Motivation")
+        row = (self.application.id, "rejected", "This should not be saved")
         dataset = tablib.Dataset(row, headers=headers)
 
         self.resource.import_data(dataset, dry_run=False, raise_errors=True)
@@ -852,17 +864,17 @@ class StudentSessionApplicationResourceTest(TestCase):
         self.application.refresh_from_db()
 
         # ASSERT: Status was changed
-        self.assertEqual(self.application.status, 'rejected')
+        self.assertEqual(self.application.status, "rejected")
         # ASSERT: Readonly field was NOT changed
         self.assertEqual(self.application.motivation_text, original_motivation)
 
     def test_import_with_invalid_status_fails(self):
         """Verify that importing a row with an invalid status choice results in an error."""
-        self.assertEqual(self.application.status, 'pending')
+        self.assertEqual(self.application.status, "pending")
 
-        headers = ('id', 'Status')
+        headers = ("id", "Status")
         # 'shortlisted' is not a valid choice in the model's status field
-        row = (self.application.id, 'shortlisted')
+        row = (self.application.id, "shortlisted")
         dataset = tablib.Dataset(row, headers=headers)
 
         result = self.resource.import_data(dataset, dry_run=True)
@@ -874,4 +886,4 @@ class StudentSessionApplicationResourceTest(TestCase):
 
         # Verify the database was not changed
         self.application.refresh_from_db()
-        self.assertEqual(self.application.status, 'pending')
+        self.assertEqual(self.application.status, "pending")

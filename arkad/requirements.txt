@@ -72,6 +72,7 @@ tablib==3.8.0
 tomli==2.2.1
 Twisted==24.11.0
 txaio==23.1.1
+types-django-import-export==4.3.0.20250822
 types-pytz==2025.2.0.20250809
 types-PyYAML==6.0.12.20241230
 typing_extensions==4.12.2

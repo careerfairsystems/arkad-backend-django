@@ -1,6 +1,5 @@
 from functools import partial
 
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils import timezone
@@ -15,6 +14,7 @@ from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
 from companies.models import Company
 from django_pydantic_field import SchemaField
+
 
 class StudentSessionApplication(models.Model):
     student_session = models.ForeignKey(
@@ -82,6 +82,7 @@ class StudentSessionApplication(models.Model):
     @staticmethod
     def get_valid_statuses() -> list[str]:
         return ["pending", "accepted", "rejected"]
+
 
 class StudentSessionTimeslot(models.Model):
     selected = models.OneToOneField(
