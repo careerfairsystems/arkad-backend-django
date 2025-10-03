@@ -68,8 +68,8 @@ class Ticket(models.Model):
             AsyncResult(self.notify_event_tmrw_id).revoke()
             self.notify_event_tmrw_id = None
  
-        if self.notify_event_one_day_id:
-            AsyncResult(self.notify_event_one_day_id).revoke()
+        if self.notify_event_tmrw_id:
+            AsyncResult(self.notify_event_tmrw_id).revoke()
             self.notify_event_one_day_id = None
 
 
@@ -139,7 +139,7 @@ class Event(models.Model):
         #Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
         task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
             args=[self],
-            eta=self.release_time - timedelta(hours=1)
+            eta=self.release_time
         )
         self.notify_registration_open_id = task_notify_registration_open.id
 
