@@ -58,6 +58,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # Change this later
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
+    ALLOWED_HOSTS.append("0.0.0.0")
     print("DEBUG ENABLED")
 
 STATICFILES_DIRS = [

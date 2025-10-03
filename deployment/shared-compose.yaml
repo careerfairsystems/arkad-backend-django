@@ -3,7 +3,7 @@ services:
     restart: unless-stopped
     image: postgres:16
     volumes:
-      - ${PWD}/postgres_data:/var/lib/postgresql/data/
+      - ../postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=arkad_db_user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -42,10 +42,8 @@ services:
     volumes:
       - static_volume:/app/arkad/static_root
       - media_volume:/app/arkad/media
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
-    env_file:
-      - .env
+      - ../config:/app/arkad/config
+      - ../private:/app/arkad/private
     depends_on:
       db:
         condition: service_healthy
@@ -58,8 +56,6 @@ services:
     build: ../arkad
     restart: unless-stopped
     command: celery -A arkad worker -l info --concurrency=4
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -67,8 +63,8 @@ services:
         condition: service_healthy
     volumes:
       - media_volume:/app/arkad/media
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
+      - ../config:/app/arkad/config
+      - ../private:/app/arkad/private
     networks:
       - app_network
 
@@ -76,8 +72,6 @@ services:
     build: ../arkad
     restart: unless-stopped
     command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info -S django"
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -85,8 +79,8 @@ services:
         condition: service_healthy
     volumes:
       - media_volume:/app/arkad/media
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
+      - ../config:/app/arkad/config
+      - ../private:/app/arkad/private
       - celery_beat_schedule:/app/arkad/celerybeat
     networks:
       - app_network
@@ -96,10 +90,8 @@ services:
     build: ../arkad
     command: sh -c "daphne -b 0.0.0.0 -p 8001 arkad.asgi:application"
     volumes:
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
-    env_file:
-      - .env
+      - ../config:/app/arkad/config
+      - ../private:/app/arkad/private
     depends_on:
       db:
         condition: service_healthy

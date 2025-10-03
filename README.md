@@ -1,3 +1,21 @@
+# Recommended: Use Docker Compose for Development
+
+For the easiest and most consistent development experience, use Docker Compose. This will start all required services (database, redis, Django web server in debug mode, Celery worker/beat, websocket, nginx) with live code reload and all dependencies preconfigured.
+
+**Quick Start:**
+1. Ensure Docker and Docker Compose are installed.
+2. Copy `example.env` to `.env` in the arkad folder.
+3. From the project root, run:
+   ```bash
+   docker compose -f arkad/compose.yaml up --build
+   ```
+4. Your code changes in the arkad folder will be reflected immediately (thanks to volume mounting).
+5. Access the API docs at [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs).
+
+For advanced usage or troubleshooting, the manual setup instructions are provided below.
+
+---
+
 # Get started with Python
 
 ## Python version
@@ -73,22 +91,35 @@ You should also set a good postgres password.
 
 ### Creating a superuser in docker
 
-Enter the bash with: `docker compose run web bash`
-- Add periodic tasks by creating (or editing) `arkad/celery.py` or a dedicated module and using Celery signals, e.g.:
-  ```python
-  from celery.schedules import crontab
-  from .celery import app
+To create a superuser, first enter the running `web` container:
+```bash
+docker compose -f arkad/compose.yaml exec web bash
+```
+Then, run the createsuperuser command and follow the prompts:
+```bash
+python manage.py createsuperuser
+```
 
-  app.conf.beat_schedule = {
-      "example-task-every-minute": {
-          "task": "email_app.tasks.example_task",
-          "schedule": crontab(minute="*"),
-          "args": (1, 2),
-      }
-  }
-  ```
-  (Adjust task path / schedule as needed.)
-Follow the instructions.
+### Running migrations in docker
+
+To create or apply database migrations, you first need to get a shell inside the running `web` container.
+
+1.  **Enter the container:**
+    ```bash
+    docker compose -f arkad/compose.yaml exec web bash
+    ```
+
+2.  **Create migrations:**
+    If you have made changes to your models, create new migration files. Because the `arkad` directory is mounted as a volume, these new migration files will appear in your local project directory.
+    ```bash
+    python manage.py makemigrations
+    ```
+
+3.  **Apply migrations:**
+    To apply pending migrations to the database, run:
+    ```bash
+    python manage.py migrate
+    ```
 
 ### Update company information
 
