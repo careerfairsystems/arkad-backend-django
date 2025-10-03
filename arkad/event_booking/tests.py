@@ -1,6 +1,7 @@
 import datetime
 from uuid import uuid4
 
+import pytz
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -325,3 +326,67 @@ class EventBookingTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json(), "Booking period has expired")
+
+    def test_get_events_returns_booking_freezes_at(self):
+        # Helper function to parse ISO 8601 strings with 'Z' into timezone-aware datetime objects
+        # This uses strptime for compatibility with Python < 3.7
+        def parse_iso_z_compatible(iso_string):
+            # 1. Handle the microsecond precision. strptime requires exact match for fractional seconds.
+            #    We'll truncate the string to 6 decimal places (microseconds) if it has more.
+            #    If it has fewer, strptime will still work, but we need to ensure the format string matches.
+            if '.' in iso_string:
+                base, fractional_z = iso_string.split('.')
+                fractional = fractional_z.rstrip('Z')
+                # Truncate fractional seconds to 6 digits (microseconds) or pad with zeros
+                fractional_padded = fractional.ljust(6, '0')[:6]
+                string_to_parse = f"{base}.{fractional_padded}"
+                format_string = "%Y-%m-%dT%H:%M:%S.%f"
+            else:
+                string_to_parse = iso_string.rstrip('Z')
+                format_string = "%Y-%m-%dT%H:%M:%S"
+
+            # 2. Parse the time string (it will be naive, without timezone info)
+            naive_dt = datetime.datetime.strptime(string_to_parse, format_string)
+
+            # 3. Attach the UTC timezone (since the original string ended in 'Z')
+            return naive_dt.replace(tzinfo=pytz.utc)
+
+
+        # 1. API Call and Initial Assertions
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get("/api/events", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        events = response.json()
+        self.assertIn("bookingFreezesAt", events[0])
+
+        # 2. Calculate the Expected Time
+        # Ensure self.event.start_time is a timezone-aware datetime object
+        expected_dt_object = self.event.start_time - Event.booking_change_deadline_delta()
+
+        # We need to generate the ISO string to pass it to the parser,
+        # as it will ensure microsecond precision is included if necessary.
+        expected_freeze_time_str = expected_dt_object.isoformat().replace("+00:00", "Z")
+
+        # 3. Get the Actual Time
+        actual_freeze_time_str = events[0]["bookingFreezesAt"]
+
+        # 4. Convert to Datetime Objects using the compatible parser
+        try:
+            actual_dt = parse_iso_z_compatible(actual_freeze_time_str)
+            expected_dt = parse_iso_z_compatible(expected_freeze_time_str)
+        except ValueError as e:
+            self.fail(f"Could not parse datetime strings using strptime: {e}. "
+                      f"Actual: '{actual_freeze_time_str}', Expected: '{expected_freeze_time_str}'")
+
+        # 5. Define Tolerance (1 second)
+        tolerance = datetime.timedelta(seconds=1)
+
+        # 6. Assert the Difference is Within Tolerance
+        time_difference = abs(actual_dt - expected_dt)
+
+        self.assertTrue(
+            time_difference < tolerance,
+            msg=f"Booking freeze times are not within {tolerance}. "
+                f"Difference: {time_difference}. "
+                f"Expected: {expected_dt}, Actual: {actual_dt}"
+        )

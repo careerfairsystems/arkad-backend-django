@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -79,9 +79,14 @@ class Event(models.Model):
         """Returns the timedelta before the event start time when unbooking is no longer allowed."""
         return timedelta(weeks=1)
 
+    @property
+    def booking_freezes_at(self) -> datetime:
+        """Returns the time when booking/unbooking is no longer allowed."""
+        return self.start_time - self.booking_change_deadline_delta()
+
     def booking_change_allowed(self) -> bool:
         """Unbooking is only allowed if there is longer than 1 week until the event starts."""
-        return self.start_time - timezone.now() > self.booking_change_deadline_delta()
+        return timezone.now() < self.booking_freezes_at
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"

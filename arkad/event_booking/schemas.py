@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any, cast
 from uuid import UUID
 from arkad.customized_django_ninja import Schema
 
@@ -20,6 +21,8 @@ class EventSchema(Schema):
     release_time: datetime | None
     start_time: datetime
     end_time: datetime
+
+    booking_freezes_at: datetime
     capacity: int
     number_booked: int
     company_id: int | None
