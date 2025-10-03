@@ -21,7 +21,6 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    # Notification ID so it can be revoked later
     notify_event_tmrw_id = models.CharField(default=None, null=True)
     notify_event_one_hour_id = models.CharField(default=None, null=True)
 
