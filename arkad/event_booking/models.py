@@ -21,8 +21,8 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    notify_event_tmrw_id = models.CharField(default=None, null=True)
-    notify_event_one_hour_id = models.CharField(default=None, null=True)
+    notify_event_tmrw_id = models.CharField(default=None, null=True, blank=True)
+    notify_event_one_hour_id = models.CharField(default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -94,7 +94,7 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    notify_registration_open_id = models.CharField(default=None, null=True)
+    notify_registration_open_id = models.CharField(default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
