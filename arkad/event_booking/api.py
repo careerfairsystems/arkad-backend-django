@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -15,7 +13,7 @@ from event_booking.schemas import (
     EventUserInformation,
     EventUserStatus,
 )
-from notifications import tasks
+
 
 router = Router(tags=["Events"])
 
@@ -157,20 +155,6 @@ def book_event(request: AuthenticatedRequest, event_id: int):
             schema = EventSchema.from_orm(event)
             schema.status = ticket.status()
 
-            # Schedule notifications.
-            task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
-                args=[ticket.user, ticket.event],
-                eta=ticket.event.start_time - timedelta(hours=24)
-            )
-            ticket.notify_event_tmrw_id = task_notify_event_tmrw.id
-
-            task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
-                args=[ticket.user, ticket.event],
-                eta=ticket.event.start_time - timedelta(hours=24)
-            )
-            ticket.notify_event_one_hour_id = task_notify_event_one_hour.id
-            ticket.save()
-
             return 200, schema
         else:
             return 409, "Event already fully booked"
@@ -189,10 +173,11 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
         except Event.DoesNotExist:
             return 404, "Event not found"
 
-        # Delete the ticket
-        deleted_count, _ = event.tickets.filter(
+        ticket = event.tickets.filter(
             user_id=request.user.id, used=False
-        ).delete()
+        )
+        # Delete the ticket
+        deleted_count, _ = ticket.delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"

@@ -1,5 +1,7 @@
 import uuid
+from datetime import timedelta
 
+from celery.result import AsyncResult
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, QuerySet, UniqueConstraint, CheckConstraint
@@ -8,6 +10,7 @@ from django.utils import timezone
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
 from user_models.models import User
+
 
 EVENT_TYPES: dict[str, str] = {"ce": "Company event", "lu": "Lunch", "ba": "Banquet"}
 
@@ -19,8 +22,8 @@ class Ticket(models.Model):
     used = models.BooleanField(default=False)
 
     # Notification ID so it can be revoked later
-    notify_event_tmrw_id = models.CharField()
-    notify_event_one_hour_id = models.CharField()
+    notify_event_tmrw_id = models.CharField(default=None, null=True)
+    notify_event_one_hour_id = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
@@ -32,6 +35,42 @@ class Ticket(models.Model):
 
     def status(self) -> EventUserStatus:
         return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
+
+    def save(self, *args, **kwargs):
+        # Override the save method of the model
+        # Schedule a notification task
+        self._remove_notifications()
+        self._schedule_notifications()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self._remove_notifications()
+        return super().delete(*args, **kwargs)
+
+    def _schedule_notifications(self):
+        from notifications import tasks
+        #(Du har anmält dig till) YYY (som är) med XXX är imorgon
+        task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
+            args=[self.user, self.event],
+            eta=self.event.start_time - timedelta(hours=24)
+        )
+        self.notify_event_tmrw_id = task_notify_event_tmrw.id
+
+        #(Du har anmält dig till) YYY (som är) med XXX är om en timme
+        task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
+            args=[self.user, self.event],
+            eta=self.event.start_time - timedelta(hours=1)
+        )
+        self.notify_event_one_hour_id = task_notify_event_one_hour.id
+    
+    def _remove_notifications(self):
+        if self.notify_event_tmrw_id:
+            AsyncResult(self.notify_event_tmrw_id).revoke()
+            self.notify_event_tmrw_id = None
+ 
+        if self.notify_event_one_day_id:
+            AsyncResult(self.notify_event_one_day_id).revoke()
+            self.notify_event_one_day_id = None
 
 
 class Event(models.Model):
@@ -55,6 +94,8 @@ class Event(models.Model):
         default=0, null=False
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
+
+    notify_registration_open_id = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
@@ -81,3 +122,29 @@ class Event(models.Model):
     @classmethod
     def available_events(cls) -> QuerySet["Event"]:
         return cls.objects.filter(cls.available_filter()).all()
+
+    def save(self, *args, **kwargs):
+        # Override the save method of the model
+        # Schedule a notification task
+        self._remove_notifications()
+        self._schedule_notifications()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self._remove_notifications()
+        return super().delete(*args, **kwargs)
+
+    def _schedule_notifications(self):
+        from notifications import tasks
+        #Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
+        task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
+            args=[self],
+            eta=self.release_time - timedelta(hours=1)
+        )
+        self.notify_registration_open_id = task_notify_registration_open.id
+
+    def _remove_notifications(self):
+        if self.notify_registration_open_id:
+            AsyncResult(self.notify_registration_open_id).revoke()
+            self.notify_registration_open_id = None
+
