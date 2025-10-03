@@ -1,5 +1,6 @@
 from functools import partial
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils import timezone
@@ -15,7 +16,6 @@ from user_models.models import User
 from companies.models import Company
 from django_pydantic_field import SchemaField
 
-
 class StudentSessionApplication(models.Model):
     student_session = models.ForeignKey(
         "StudentSession", on_delete=models.CASCADE, null=False
@@ -30,7 +30,7 @@ class StudentSessionApplication(models.Model):
         null=True,
         blank=True,
     )
-    status = models.CharField(
+    status = models.CharField(  # Todo use an enum
         max_length=10,
         choices=[
             ("pending", "Pending"),
@@ -79,6 +79,9 @@ class StudentSessionApplication(models.Model):
     def is_pending(self) -> bool:
         return self.status == "pending"
 
+    @staticmethod
+    def get_valid_statuses() -> list[str]:
+        return ["pending", "accepted", "rejected"]
 
 class StudentSessionTimeslot(models.Model):
     selected = models.OneToOneField(

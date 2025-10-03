@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "import_export",
     "companies",
     "user_models",
     "student_sessions",
