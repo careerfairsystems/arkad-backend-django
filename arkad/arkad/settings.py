@@ -35,6 +35,7 @@ if not DEBUG:
         # run the profiler on when there is an active transaction
         profile_lifecycle="trace",
         enable_logs=True,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT"),
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -57,6 +58,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # Change this later
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     ALLOWED_HOSTS.append("127.0.0.1")
+    ALLOWED_HOSTS.append("0.0.0.0")
     print("DEBUG ENABLED")
 
 STATICFILES_DIRS = [
@@ -155,7 +157,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Stockholm"
 
 USE_I18N = True
 

@@ -20,6 +20,8 @@ class EventSchema(Schema):
     release_time: datetime | None
     start_time: datetime
     end_time: datetime
+
+    booking_freezes_at: datetime
     capacity: int
     number_booked: int
     company_id: int | None

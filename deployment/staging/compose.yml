@@ -11,6 +11,8 @@ services:
       file: ../shared-compose.yaml
       service: db
     container_name: arkad-staging-db
+    ports:
+      - "5433:5432"
 
   redis:
     extends:
@@ -23,25 +25,39 @@ services:
       file: ../shared-compose.yaml
       service: web
     container_name: arkad-staging-web
+    environment:
+      - SENTRY_ENVIRONMENT=staging
+    env_file:
+      - .env
 
   celery-worker:
     extends:
       file: ../shared-compose.yaml
       service: celery-worker
     container_name: arkad-staging-celery-worker
+    environment:
+      - SENTRY_ENVIRONMENT=staging
+    env_file:
+      - .env
 
   celery-beat:
     extends:
       file: ../shared-compose.yaml
       service: celery-beat
     container_name: arkad-staging-celery-beat
-
+    environment:
+      - SENTRY_ENVIRONMENT=staging
+    env_file:
+      - .env
   websocket:
     extends:
       file: ../shared-compose.yaml
       service: websocket
     container_name: arkad-staging-websocket
-
+    environment:
+      - SENTRY_ENVIRONMENT=staging
+    env_file:
+      - .env
   nginx:
     extends:
       file: ../shared-compose.yaml

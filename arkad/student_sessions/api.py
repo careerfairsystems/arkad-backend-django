@@ -96,6 +96,7 @@ def get_student_sessions(request: AuthenticatedRequest):
                 field_modifications=s.field_modifications,
                 description=s.description,
                 disclaimer=s.disclaimer,
+                booking_open_time=s.booking_open_time,
             )
             for s in sessions
         ],
@@ -217,6 +218,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
     timeslots = StudentSessionTimeslot.objects.filter(
         Q(student_session__company_id=company_id)
         & (Q(selected__isnull=True) | Q(selected=application))
+        & Q(booking_closes_at__gte=timezone.now())
     ).all()
 
     return 200, [
@@ -227,6 +229,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
             status="bookedByCurrentUser"
             if timeslot.selected == application
             else "free",
+            booking_closes_at=timeslot.booking_closes_at,
         )
         for timeslot in timeslots
     ]
@@ -253,7 +256,7 @@ def confirm_student_session(
         with transaction.atomic():
             timeslot: StudentSessionTimeslot = (
                 StudentSessionTimeslot.objects.select_for_update().get(
-                    id=timeslot_id, selected=None
+                    id=timeslot_id, selected=None, booking_closes_at__gte=timezone.now()
                 )
             )
             timeslot.selected = applicant
@@ -267,7 +270,7 @@ def confirm_student_session(
         return 404, "Timeslot not found or already taken"
 
 
-@router.post("/unbook", response={200: str, 401: str, 404: str})
+@router.post("/unbook", response={200: str, 401: str, 404: str, 409: str})
 def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     """
     Unbook a timeslot from some student sessions
@@ -277,6 +280,7 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
         application = StudentSessionApplication.objects.get(
             student_session__company_id=company_id, user_id=request.user.id
         )
+
         if not application.is_accepted():
             return 409, "Applicant not accepted"
     except StudentSessionApplication.DoesNotExist:
@@ -286,6 +290,10 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
         timeslot: StudentSessionTimeslot = StudentSessionTimeslot.objects.get(
             selected=application
         )
+
+        if timeslot.booking_closes_at <= timezone.now():
+            return 409, "Unbooking period has expired"
+
         timeslot.selected = None
         timeslot.time_booked = None
         timeslot.save()
@@ -314,11 +322,14 @@ def apply_for_session(
         return 409, str(e.errors())
 
     try:
+        now = timezone.now()
         session: StudentSession = StudentSession.objects.get(
-            company_id=data.company_id, booking_close_time__gte=timezone.now()
+            Q(company_id=data.company_id)
+            & (Q(booking_close_time__isnull=True) | Q(booking_close_time__gte=now))
+            & Q(booking_open_time__isnull=False, booking_open_time__lte=now)
         )
     except StudentSession.DoesNotExist:
-        return 404, "Session not found, or booking has closed"
+        return 404, "Session not found, or booking has closed or not yet opened"
 
     request.user.programme = data.programme
     request.user.linkedin = data.linkedin

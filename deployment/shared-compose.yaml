@@ -44,8 +44,6 @@ services:
       - media_volume:/app/arkad/media
       - ${PWD}/config:/app/arkad/config
       - ${PWD}/private:/app/arkad/private
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -58,8 +56,6 @@ services:
     build: ../arkad
     restart: unless-stopped
     command: celery -A arkad worker -l info --concurrency=4
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -76,8 +72,6 @@ services:
     build: ../arkad
     restart: unless-stopped
     command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info -S django"
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
@@ -98,8 +92,6 @@ services:
     volumes:
       - ${PWD}/config:/app/arkad/config
       - ${PWD}/private:/app/arkad/private
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy

@@ -28,6 +28,7 @@ class ApplicantSchema(Schema):
 
 class TimeslotSchema(Schema):
     start_time: datetime
+    booking_closes_at: datetime
     duration: int
     id: int
 
@@ -58,6 +59,7 @@ class CreateStudentSessionSchema(Schema):
 class StudentSessionNormalUserSchema(Schema):
     company_id: int
     booking_close_time: datetime | None
+    booking_open_time: datetime | None
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
     description: str | None

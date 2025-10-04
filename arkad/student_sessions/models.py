@@ -2,10 +2,14 @@ from datetime import timedelta
 from functools import partial
 
 from django.db import models
-from django.db.models import Q, UniqueConstraint
+from django.db.models import UniqueConstraint
 from django.utils import timezone
 from celery.result import AsyncResult
-
+from arkad.defaults import (
+    STUDENT_SESSIONS_OPEN_UTC,
+    STUDENT_SESSIONS_CLOSE_UTC,
+    STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
+)
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
@@ -97,6 +101,11 @@ class StudentSessionTimeslot(models.Model):
 
     notify_tmrw_id = models.CharField(default=None, null=True)
     notify_one_hour_id = models.CharField(default=None, null=True)
+    booking_closes_at = models.DateTimeField(
+        default=STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
+        null=True,
+        help_text="The time the timeslot is no longer bookable",
+    )
 
     class Meta:
         constraints = [
@@ -154,7 +163,15 @@ class StudentSession(models.Model):
         null=False,
         related_name="company_representative",
     )
-    booking_close_time = models.DateTimeField(null=True, blank=True)
+    booking_open_time = models.DateTimeField(
+        default=STUDENT_SESSIONS_OPEN_UTC,
+        verbose_name="The time the student session is released/bookable",
+    )
+
+    booking_close_time = models.DateTimeField(
+        default=STUDENT_SESSIONS_CLOSE_UTC,
+        verbose_name="The time the student session is no longer bookable",
+    )
     field_modifications: list[FieldModificationSchema] = SchemaField(
         schema=list[FieldModificationSchema],
         default=FieldModificationSchema.student_session_modifications_default,
@@ -171,13 +188,6 @@ class StudentSession(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-
-    @staticmethod
-    def available_filter() -> Q:
-        return Q(
-            start_time__gte=timezone.now(),
-            booking_close_time__gte=timezone.now(),
-        )
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
