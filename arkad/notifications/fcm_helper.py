@@ -22,7 +22,7 @@ class FCMHelper:
             token=token,
         )
         response = messaging.send(msg)
-        return response
+        return str(response)
     
     def send_to_topic(self, topic: str, title: str, body: str) -> str:
         message = messaging.Message(
@@ -34,7 +34,7 @@ class FCMHelper:
         )
         
         response = messaging.send(message)
-        return response
+        return str(response)
 
     
 fcm = FCMHelper(settings.BASE_DIR / "firebase_cert.json")

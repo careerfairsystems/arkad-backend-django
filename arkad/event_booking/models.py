@@ -36,18 +36,18 @@ class Ticket(models.Model):
     def status(self) -> EventUserStatus:
         return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
-    def _schedule_notifications(self):
+    def _schedule_notifications(self) -> None:
         from notifications import tasks
         #(Du har anmält dig till) YYY (som är) med XXX är imorgon
         task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
@@ -63,7 +63,7 @@ class Ticket(models.Model):
         )
         self.notify_event_one_hour_id = task_notify_event_one_hour.id
     
-    def _remove_notifications(self):
+    def _remove_notifications(self) -> None:
         if self.notify_event_tmrw_id:
             AsyncResult(self.notify_event_tmrw_id).revoke()
             self.notify_event_tmrw_id = None
@@ -144,18 +144,18 @@ class Event(models.Model):
     def available_events(cls) -> QuerySet["Event"]:
         return cls.objects.filter(cls.available_filter()).all()
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
-    def _schedule_notifications(self):
+    def _schedule_notifications(self) -> None:
         from notifications import tasks
         #Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
         task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
@@ -164,7 +164,7 @@ class Event(models.Model):
         )
         self.notify_registration_open_id = task_notify_registration_open.id
 
-    def _remove_notifications(self):
+    def _remove_notifications(self) -> None:
         if self.notify_registration_open_id:
             AsyncResult(self.notify_registration_open_id).revoke()
             self.notify_registration_open_id = None

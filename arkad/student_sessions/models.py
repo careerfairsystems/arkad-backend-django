@@ -118,7 +118,7 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         # Override the save method of the model
         # Schedule a notification task
         if self.selected:
@@ -126,27 +126,28 @@ class StudentSessionTimeslot(models.Model):
             self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
-    def _schedule_notifications(self):
+    def _schedule_notifications(self) -> None:
         from notifications import tasks
         #(Du har anmält dig till) YYY (som är) med XXX är imorgon
-        task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
-            args=[self.selected.user.id, self.student_session.id],
-            eta=self.start_time - timedelta(hours=24)
-        )
-        self.notify_tmrw_id = task_notify_tmrw.id
+        if self.selected is not None:
+            task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
+                args=[self.selected.user.id, self.student_session.id],
+                eta=self.start_time - timedelta(hours=24)
+            )
+            self.notify_tmrw_id = task_notify_tmrw.id
 
-        #(Du har anmält dig till) YYY (som är) med XXX är om en timme
-        task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
-            args=[self.selected.user.id, self.student_session.id],
-            eta=self.start_time - timedelta(hours=1)
-        )
-        self.notify_one_hour_id = task_notify_one_hour.id
+            #(Du har anmält dig till) YYY (som är) med XXX är om en timme
+            task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
+                args=[self.selected.user.id, self.student_session.id],
+                eta=self.start_time - timedelta(hours=1)
+            )
+            self.notify_one_hour_id = task_notify_one_hour.id
     
-    def _remove_notifications(self):
+    def _remove_notifications(self) -> None:
         if self.notify_tmrw_id:
             AsyncResult(self.notify_tmrw_id).revoke()
             self.notify_tmrw_id = None

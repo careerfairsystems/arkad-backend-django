@@ -1,8 +1,4 @@
-#from arkad.celery import app
 from celery import shared_task
-from event_booking.models import Event
-from student_sessions.models import StudentSession, StudentSessionTimeslot
-from user_models.models import User
 
 
 @shared_task
