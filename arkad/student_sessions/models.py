@@ -134,14 +134,14 @@ class StudentSessionTimeslot(models.Model):
         from notifications import tasks
         #(Du har anmält dig till) YYY (som är) med XXX är imorgon
         task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
-            args=[self.selected.user, self.student_session],
+            args=[self.selected.user.id, self.student_session.id],
             eta=self.start_time - timedelta(hours=24)
         )
         self.notify_tmrw_id = task_notify_tmrw.id
 
         #(Du har anmält dig till) YYY (som är) med XXX är om en timme
         task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
-            args=[self.selected.user, self.student_session],
+            args=[self.selected.user.id, self.student_session.id],
             eta=self.start_time - timedelta(hours=1)
         )
         self.notify_one_hour_id = task_notify_one_hour.id
