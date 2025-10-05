@@ -159,7 +159,7 @@ class Event(models.Model):
         from notifications import tasks
         #Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
         task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
-            args=[self],
+            args=[self.id],
             eta=self.release_time
         )
         self.notify_registration_open_id = task_notify_registration_open.id
