@@ -33,7 +33,9 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
         return obj.student_session.company.name
 
     # This method passes keyword arguments to the Resource class's constructor.
-    def get_export_resource_kwargs(self, request: HttpRequest, *args: Any, **kwargs: Any) -> dict[str, HttpRequest]:
+    def get_export_resource_kwargs(
+        self, request: HttpRequest, *args: Any, **kwargs: Any
+    ) -> dict[str, HttpRequest]:
         """
         Passes the request object to the resource.
         """

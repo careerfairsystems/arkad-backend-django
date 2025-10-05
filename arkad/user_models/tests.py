@@ -337,7 +337,7 @@ class DeleteAccountTestCase(TestCase):
 
         # Should redirect back to the delete page
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/user/delete-account/', response.url)
+        self.assertIn("/user/delete-account/", response.url)
 
         # Verify staff user still exists
         self.assertTrue(User.objects.filter(id=user_id).exists())
@@ -369,7 +369,7 @@ class DeleteAccountTestCase(TestCase):
 
         # Should redirect back to the delete page
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/user/delete-account/', response.url)
+        self.assertIn("/user/delete-account/", response.url)
 
         # Verify company user still exists
         self.assertTrue(User.objects.filter(id=user_id).exists())
@@ -394,7 +394,7 @@ class DeleteAccountTestCase(TestCase):
         user_id = self.regular_user.id
 
         # Delete account
-        response = self.client.post("/user/delete-account/")
+        self.client.post("/user/delete-account/")
 
         # Verify user and all data no longer exists
         self.assertFalse(User.objects.filter(id=user_id).exists())
@@ -424,14 +424,22 @@ class DeleteAccountTestCase(TestCase):
 
         # Verify files exist on filesystem
         self.assertTrue(os.path.exists(cv_path), "CV file should exist before deletion")
-        self.assertTrue(os.path.exists(profile_pic_path), "Profile picture should exist before deletion")
+        self.assertTrue(
+            os.path.exists(profile_pic_path),
+            "Profile picture should exist before deletion",
+        )
 
         # Delete account
-        response = self.client.post("/user/delete-account/")
+        self.client.post("/user/delete-account/")
 
         # Verify user no longer exists
         self.assertFalse(User.objects.filter(id=self.regular_user.id).exists())
 
         # Verify files are removed from filesystem
-        self.assertFalse(os.path.exists(cv_path), "CV file should be deleted from filesystem")
-        self.assertFalse(os.path.exists(profile_pic_path), "Profile picture should be deleted from filesystem")
+        self.assertFalse(
+            os.path.exists(cv_path), "CV file should be deleted from filesystem"
+        )
+        self.assertFalse(
+            os.path.exists(profile_pic_path),
+            "Profile picture should be deleted from filesystem",
+        )
