@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Any
+import os
 
 from django.contrib.auth.models import AbstractUser
 from pydantic import BaseModel, GetCoreSchemaHandler
@@ -143,6 +144,28 @@ class User(AbstractUser):
 
     def get_auth_headers(self) -> dict[str, str]:
         return {"Authorization": self.create_jwt_token()}
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        """Override delete to ensure uploaded files are removed from filesystem"""
+        # Delete CV file if it exists
+        if self.cv:
+            try:
+                if os.path.exists(self.cv.path):
+                    os.remove(self.cv.path)
+            except (ValueError, OSError):
+                # File might not exist or path might be invalid
+                pass
+
+        # Delete profile picture if it exists
+        if self.profile_picture:
+            try:
+                if os.path.exists(self.profile_picture.path):
+                    os.remove(self.profile_picture.path)
+            except (ValueError, OSError):
+                # File might not exist or path might be invalid
+                pass
+
+        return super().delete(*args, **kwargs)
 
 
 class PydanticUser:

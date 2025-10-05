@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 from arkad.settings import DEBUG
+from user_models.views import delete_account
 
 debugging_urls = [
     path(
@@ -33,5 +34,10 @@ urlpatterns = [
             template_name="password_reset_complete.html"
         ),
         name="password_reset_complete",
+    ),
+    path(
+        "delete-account/",
+        delete_account,
+        name="delete_account",
     ),
 ]
