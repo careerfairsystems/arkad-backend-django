@@ -9,8 +9,12 @@ For the easiest and most consistent development experience, use Docker Compose. 
    ```bash
    docker compose -f arkad/compose.yaml up --build
    ```
-4. Your code changes in the arkad folder will be reflected immediately (thanks to volume mounting).
-5. Access the API docs at [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs).
+4. Migrate with: 
+   ```bash
+   docker compose -f compose.yaml exec web python manage.py migrate
+   ```
+5. Your code changes in the arkad folder will be reflected immediately (thanks to volume mounting).
+6. Access the API docs at [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs).
 
 For advanced usage or troubleshooting, the manual setup instructions are provided below.
 
