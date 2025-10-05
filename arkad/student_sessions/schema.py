@@ -48,6 +48,7 @@ class StudentSessionApplicationSchemaAccepted(Schema):
 
 class ExhibitorTimeslotSchema(TimeslotSchema):
     selected: StudentSessionApplicationSchemaAccepted | None = None
+    selected_applications: List[StudentSessionApplicationSchemaAccepted] = []
 
 
 class CreateStudentSessionSchema(Schema):
@@ -66,6 +67,7 @@ class StudentSessionNormalUserSchema(Schema):
     disclaimer: str | None
     field_modifications: list[FieldModificationSchema]
     id: int
+    session_type: Literal["regular", "company_event"] = "regular"
 
 
 class StudentSessionNormalUserListSchema(Schema):

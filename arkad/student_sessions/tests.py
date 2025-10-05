@@ -441,7 +441,8 @@ class StudentSessionTests(TestCase):
         timeslot.refresh_from_db()
         application.refresh_from_db()
         self.assertEqual(application.status, "accepted", application.status)
-        self.assertEqual(timeslot.selected, application, timeslot)
+        self.assertEqual(timeslot.selected_applications.first(), application, timeslot)
+        self.assertEqual(timeslot.selected_applications.count(), 1)
         self.assertIsNotNone(timeslot.time_booked)
 
         # Test viewing timeslots and verifying that the user can see that they are accepted
@@ -518,7 +519,7 @@ class StudentSessionTests(TestCase):
 
         # Create timeslot and assign it to the student
         timeslot = self._create_timeslot(session)
-        timeslot.selected = application
+        timeslot.selected_applications.add(application)
         timeslot.time_booked = timezone.now()
         timeslot.save()
 
@@ -531,7 +532,7 @@ class StudentSessionTests(TestCase):
 
         # Check timeslot was updated
         timeslot.refresh_from_db()
-        self.assertIsNone(timeslot.selected)
+        self.assertEqual(timeslot.selected_applications.count(), 0)
         self.assertIsNone(timeslot.time_booked)
 
     def test_get_application(self):
@@ -641,7 +642,7 @@ class StudentSessionTests(TestCase):
 
         # Create timeslot and assign it to student 0
         timeslot = self._create_timeslot(session)
-        timeslot.selected = application
+        timeslot.selected_applications.add(application)
         timeslot.time_booked = timezone.now()
         timeslot.save()
 
@@ -667,7 +668,7 @@ class StudentSessionTests(TestCase):
 
         # Create timeslot and assign it to the student
         timeslot: StudentSessionTimeslot = self._create_timeslot(session)
-        timeslot.selected = application
+        timeslot.selected_applications.add(application)
         timeslot.time_booked = timezone.now()
         timeslot.booking_closes_at = timezone.now() - datetime.timedelta(hours=1)
         timeslot.save()
@@ -887,3 +888,443 @@ class StudentSessionApplicationResourceTest(TestCase):
         # Verify the database was not changed
         self.application.refresh_from_db()
         self.assertEqual(self.application.status, "pending")
+
+
+class CompanyEventSessionTests(TestCase):
+    """Test cases specifically for company event type student sessions."""
+
+    def setUp(self):
+        """Set up test data for company event tests."""
+        self.company_user = User.objects.create_user(
+            first_name="EventCompany",
+            last_name="EventCompany",
+            email="event@company.com",
+            password="PASSWORD",
+            username="EventCompany",
+            company=Company.objects.create(name="Event Corp"),
+        )
+
+        self.student_users = []
+        for i in range(5):
+            self.student_users.append(
+                User.objects.create_user(
+                    first_name=f"EventStudent{i}",
+                    last_name=f"EventStudent{i}",
+                    email=f"eventstudent{i}@student.com",
+                    password="PASSWORD",
+                    username=f"EventStudent{i}",
+                    is_student=True,
+                )
+            )
+        self.client = Client()
+
+    @staticmethod
+    def _get_auth_headers(user: User) -> dict:
+        return {"Authorization": user.create_jwt_token()}
+
+    @staticmethod
+    def _create_company_event_session(company):
+        """Create a company event type student session."""
+        return StudentSession.objects.create(
+            company=company,
+            booking_close_time=timezone.now() + datetime.timedelta(days=1),
+            booking_open_time=timezone.now() - datetime.timedelta(days=1),
+            session_type="company_event",
+        )
+
+    @staticmethod
+    def _create_regular_session(company):
+        """Create a regular student session."""
+        return StudentSession.objects.create(
+            company=company,
+            booking_close_time=timezone.now() + datetime.timedelta(days=1),
+            booking_open_time=timezone.now() - datetime.timedelta(days=1),
+            session_type="regular",
+        )
+
+    @staticmethod
+    def _create_timeslot(student_session, **kwargs):
+        """Create a timeslot for a student session."""
+        defaults = {
+            "start_time": timezone.now() + datetime.timedelta(hours=1),
+            "duration": 30,
+        }
+        defaults.update(kwargs)
+        return StudentSessionTimeslot.objects.create(
+            student_session=student_session, **defaults
+        )
+
+    def test_company_event_session_type_in_list(self):
+        """Test that company event sessions show correct session_type in the list."""
+        self._create_company_event_session(self.company_user.company)
+
+        resp = self.client.get("/api/student-session/all")
+        self.assertEqual(resp.status_code, 200)
+
+        data = StudentSessionNormalUserListSchema(**resp.json())
+        self.assertEqual(data.numElements, 1)
+        self.assertEqual(data.student_sessions[0].session_type, "company_event")
+
+    def test_multiple_students_can_book_same_company_event_timeslot(self):
+        """Test that multiple students can book the same timeslot for company events."""
+        session = self._create_company_event_session(self.company_user.company)
+        timeslot = self._create_timeslot(session)
+
+        # Create and accept applications for multiple students
+        applications = []
+        for i in range(3):
+            app = StudentSessionApplication.objects.create(
+                user=self.student_users[i],
+                student_session=session,
+                motivation_text=f"Application {i}",
+                status="accepted",
+            )
+            applications.append(app)
+
+        # Have all three students book the same timeslot
+        for i in range(3):
+            resp = self.client.post(
+                f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
+                headers=self._get_auth_headers(self.student_users[i]),
+            )
+            self.assertEqual(
+                resp.status_code, 200, f"Student {i} booking failed: {resp.content}"
+            )
+
+        # Verify all three applications are in selected_applications
+        timeslot.refresh_from_db()
+        self.assertEqual(timeslot.selected_applications.count(), 3)
+
+        # Verify all students see the timeslot as booked by them
+        for i in range(3):
+            resp = self.client.get(
+                f"/api/student-session/timeslots?company_id={session.company.id}",
+                headers=self._get_auth_headers(self.student_users[i]),
+            )
+            self.assertEqual(resp.status_code, 200)
+            timeslots = [TimeslotSchemaUser(**t) for t in resp.json()]
+            self.assertEqual(len(timeslots), 1)
+            self.assertEqual(timeslots[0].status, "bookedByCurrentUser")
+
+    def test_regular_session_only_allows_one_booking(self):
+        """Test that regular sessions still only allow one student per timeslot."""
+        session = self._create_regular_session(self.company_user.company)
+        timeslot = self._create_timeslot(session)
+
+        # Create and accept applications for two students
+        app1 = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="First application",
+            status="accepted",
+        )
+        StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=session,
+            motivation_text="Second application",
+            status="accepted",
+        )
+
+        # First student books the timeslot
+        resp = self.client.post(
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # Second student tries to book the same timeslot
+        resp = self.client.post(
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
+            headers=self._get_auth_headers(self.student_users[1]),
+        )
+        self.assertEqual(resp.status_code, 404)  # Should be rejected
+
+        # Verify only one application is selected
+        timeslot.refresh_from_db()
+        self.assertEqual(timeslot.selected_applications.first(), app1)
+        self.assertEqual(timeslot.selected_applications.count(), 1)
+
+    def test_company_event_shows_all_timeslots_to_students(self):
+        """Test that company events show all timeslots regardless of booking status."""
+        session = self._create_company_event_session(self.company_user.company)
+
+        # Create multiple timeslots
+        timeslot1 = self._create_timeslot(session)
+        self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+        self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=3)
+        )
+
+        # Create and accept application for student 0
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Application",
+            status="accepted",
+        )
+
+        # Student 0 books timeslot 1
+        resp = self.client.post(
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot1.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # Student 1 (accepted but not booked) should see all timeslots
+        StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=session,
+            motivation_text="Application 2",
+            status="accepted",
+        )
+
+        resp = self.client.get(
+            f"/api/student-session/timeslots?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[1]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        timeslots = resp.json()
+        self.assertEqual(len(timeslots), 3)  # Should see all 3 timeslots
+
+    def test_regular_session_hides_booked_timeslots(self):
+        """Test that regular sessions hide timeslots booked by other students."""
+        session = self._create_regular_session(self.company_user.company)
+
+        # Create multiple timeslots
+        timeslot1 = self._create_timeslot(session)
+        timeslot2 = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+        timeslot3 = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=3)
+        )
+
+        # Create and accept applications
+        app1 = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Application 1",
+            status="accepted",
+        )
+        StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=session,
+            motivation_text="Application 2",
+            status="accepted",
+        )
+
+        # Student 0 books timeslot 1
+        timeslot1.selected_applications.add(app1)
+        timeslot1.save()
+
+        # Student 1 should only see timeslots 2 and 3 (not 1)
+        resp = self.client.get(
+            f"/api/student-session/timeslots?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[1]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        timeslots = resp.json()
+        self.assertEqual(len(timeslots), 2)  # Should only see 2 free timeslots
+        timeslot_ids = [t["id"] for t in timeslots]
+        self.assertNotIn(timeslot1.id, timeslot_ids)
+        self.assertIn(timeslot2.id, timeslot_ids)
+        self.assertIn(timeslot3.id, timeslot_ids)
+
+    def test_student_cannot_book_multiple_timeslots_for_company_event(self):
+        """Test that a student can only book one timeslot per company event."""
+        session = self._create_company_event_session(self.company_user.company)
+        timeslot1 = self._create_timeslot(session)
+        timeslot2 = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+
+        # Create and accept application
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Application",
+            status="accepted",
+        )
+
+        # Book first timeslot
+        resp = self.client.post(
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot1.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # Try to book second timeslot
+        resp = self.client.post(
+            f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot2.id}",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409)  # Should fail with "already booked"
+
+    def test_unbook_from_company_event(self):
+        """Test that students can unbook from company event timeslots."""
+        session = self._create_company_event_session(self.company_user.company)
+        timeslot = self._create_timeslot(session)
+
+        # Create and accept applications for multiple students
+        for i in range(3):
+            StudentSessionApplication.objects.create(
+                user=self.student_users[i],
+                student_session=session,
+                motivation_text=f"Application {i}",
+                status="accepted",
+            )
+            # Book the timeslot
+            resp = self.client.post(
+                f"/api/student-session/accept?company_id={session.company.id}&timeslot_id={timeslot.id}",
+                headers=self._get_auth_headers(self.student_users[i]),
+            )
+            self.assertEqual(resp.status_code, 200)
+
+        # Verify 3 bookings
+        timeslot.refresh_from_db()
+        self.assertEqual(timeslot.selected_applications.count(), 3)
+
+        # Student 1 unbooks
+        resp = self.client.post(
+            f"/api/student-session/unbook?company_id={session.company.id}",
+            headers=self._get_auth_headers(self.student_users[1]),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # Verify only 2 bookings remain
+        timeslot.refresh_from_db()
+        self.assertEqual(timeslot.selected_applications.count(), 2)
+
+        # Verify student 1 is not in the list
+        app_users = [app.user for app in timeslot.selected_applications.all()]
+        self.assertNotIn(self.student_users[1], app_users)
+        self.assertIn(self.student_users[0], app_users)
+        self.assertIn(self.student_users[2], app_users)
+
+    def test_exhibitor_can_see_all_selected_applications(self):
+        """Test that exhibitors can see all selected applications for company events."""
+        session = self._create_company_event_session(self.company_user.company)
+        timeslot = self._create_timeslot(session)
+
+        # Create and accept applications, then book the timeslot
+        for i in range(3):
+            app = StudentSessionApplication.objects.create(
+                user=self.student_users[i],
+                student_session=session,
+                motivation_text=f"Application {i}",
+                status="accepted",
+            )
+            timeslot.selected_applications.add(app)
+
+        # Exhibitor views their sessions
+        resp = self.client.get(
+            "/api/student-session/exhibitor/sessions",
+            headers=self._get_auth_headers(self.company_user),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        timeslots = [ExhibitorTimeslotSchema(**t) for t in resp.json()]
+        self.assertEqual(len(timeslots), 1)
+        self.assertEqual(len(timeslots[0].selected_applications), 3)
+
+    def test_model_is_available_for_application_method(self):
+        """Test the is_available_for_application model method."""
+        # Test with company event
+        event_session = self._create_company_event_session(self.company_user.company)
+        event_timeslot = self._create_timeslot(event_session)
+
+        app1 = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=event_session,
+            status="accepted",
+        )
+
+        # Company event should always be available
+        self.assertTrue(event_timeslot.is_available_for_application(app1))
+
+        # Even after booking
+        event_timeslot.selected_applications.add(app1)
+        app2 = StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=event_session,
+            status="accepted",
+        )
+        self.assertTrue(event_timeslot.is_available_for_application(app2))
+
+        # Test with regular session
+        regular_session = self._create_regular_session(
+            Company.objects.create(name="Regular Company")
+        )
+        regular_timeslot = self._create_timeslot(regular_session)
+
+        app3 = StudentSessionApplication.objects.create(
+            user=self.student_users[2],
+            student_session=regular_session,
+            status="accepted",
+        )
+
+        # Regular session should be available when empty
+        self.assertTrue(regular_timeslot.is_available_for_application(app3))
+
+        # Not available after booking
+        regular_timeslot.selected_applications.add(app3)
+        regular_timeslot.save()
+
+        app4 = StudentSessionApplication.objects.create(
+            user=self.student_users[3],
+            student_session=regular_session,
+            status="accepted",
+        )
+        self.assertFalse(regular_timeslot.is_available_for_application(app4))
+
+    def test_model_add_remove_selection_methods(self):
+        """Test the add_selection and remove_selection model methods."""
+        # Test with company event
+        event_session = self._create_company_event_session(self.company_user.company)
+        event_timeslot = self._create_timeslot(event_session)
+
+        app1 = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=event_session,
+            status="accepted",
+        )
+        app2 = StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=event_session,
+            status="accepted",
+        )
+
+        # Add selections
+        event_timeslot.add_selection(app1)
+        event_timeslot.add_selection(app2)
+
+        self.assertEqual(event_timeslot.selected_applications.count(), 2)
+
+        # Remove selection
+        event_timeslot.remove_selection(app1)
+        self.assertEqual(event_timeslot.selected_applications.count(), 1)
+
+        # Test with regular session
+        regular_session = self._create_regular_session(
+            Company.objects.create(name="Regular Company 2")
+        )
+        regular_timeslot = self._create_timeslot(regular_session)
+
+        app3 = StudentSessionApplication.objects.create(
+            user=self.student_users[2],
+            student_session=regular_session,
+            status="accepted",
+        )
+
+        # Add selection for regular session
+        regular_timeslot.add_selection(app3)
+
+        # Should set both selected and selected_applications
+        self.assertEqual(regular_timeslot.selected_applications.count(), 1)
+
+        # Remove selection
+        regular_timeslot.remove_selection(app3)
+        regular_timeslot.refresh_from_db()
+        self.assertEqual(regular_timeslot.selected_applications.count(), 0)

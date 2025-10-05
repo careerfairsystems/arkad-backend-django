@@ -85,8 +85,11 @@ class StudentSessionApplication(models.Model):
 
 
 class StudentSessionTimeslot(models.Model):
-    selected = models.OneToOneField(
-        StudentSessionApplication, on_delete=models.SET_NULL, null=True, blank=True
+    selected_applications = models.ManyToManyField(
+        StudentSessionApplication,
+        related_name="selected_timeslots",
+        blank=True,
+        help_text="Selected applications for this timeslot - supports multiple for company events",
     )
     student_session = models.ForeignKey(
         "StudentSession",
@@ -119,6 +122,31 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
+    def is_available_for_application(
+        self, application: StudentSessionApplication
+    ) -> bool:
+        """Check if this timeslot is available for the given application."""
+        session_type = self.student_session.session_type
+
+        if session_type == "company_event":
+            # Company events allow multiple selections
+            return True
+        else:  # regular
+            # Regular sessions only allow one selection
+            return self.selected_applications.count() == 0
+
+    def add_selection(self, application: StudentSessionApplication) -> None:
+        """Add an application selection to this timeslot."""
+        self.selected_applications.add(application)
+
+    def remove_selection(self, application: StudentSessionApplication) -> None:
+        """Remove an application selection from this timeslot."""
+        self.selected_applications.remove(application)
+
+    def get_selected_application(self) -> StudentSessionApplication | None:
+        """Get the single selected application for regular sessions."""
+        return self.selected_applications.first()
+
 
 class StudentSession(models.Model):
     company = models.OneToOneField(
@@ -149,6 +177,15 @@ class StudentSession(models.Model):
         null=True,
         blank=True,
         help_text="Disclaimer shown to students when applying (example SAAB requiring ONLY swedish citizens)",
+    )
+    session_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("regular", "Regular"),
+            ("company_event", "Company Event"),
+        ],
+        default="regular",
+        help_text="The type of the student session",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
