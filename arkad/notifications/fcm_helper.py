@@ -37,4 +37,4 @@ class FCMHelper:
         return response
 
     
-fcm = FCMHelper(settings.BASE_DIR / "private/firebaseCert.json")
+fcm = FCMHelper(settings.BASE_DIR / "firebase_cert.json")

@@ -19,4 +19,4 @@ tofu/terraform.tfstate
 tofu/terraform.tfstate.backup
 tofu/.terraform.lock.hcl
 *.pem
-firebaseCert.json
+firebase_cert.json
