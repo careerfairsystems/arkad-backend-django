@@ -30,7 +30,7 @@ class StudentSessionApplication(models.Model):
         null=True,
         blank=True,
     )
-    status = models.CharField(
+    status = models.CharField(  # Todo use an enum
         max_length=10,
         choices=[
             ("pending", "Pending"),
@@ -78,6 +78,10 @@ class StudentSessionApplication(models.Model):
 
     def is_pending(self) -> bool:
         return self.status == "pending"
+
+    @staticmethod
+    def get_valid_statuses() -> list[str]:
+        return ["pending", "accepted", "rejected"]
 
 
 class StudentSessionTimeslot(models.Model):
