@@ -1,6 +1,5 @@
 from functools import partial
 from typing import Any
-import os
 
 from django.contrib.auth.models import AbstractUser
 from pydantic import BaseModel, GetCoreSchemaHandler
@@ -149,21 +148,11 @@ class User(AbstractUser):
         """Override delete to ensure uploaded files are removed from filesystem"""
         # Delete CV file if it exists
         if self.cv:
-            try:
-                if os.path.exists(self.cv.path):
-                    os.remove(self.cv.path)
-            except (ValueError, OSError):
-                # File might not exist or path might be invalid
-                pass
+            self.cv.delete(save=False)
 
         # Delete profile picture if it exists
         if self.profile_picture:
-            try:
-                if os.path.exists(self.profile_picture.path):
-                    os.remove(self.profile_picture.path)
-            except (ValueError, OSError):
-                # File might not exist or path might be invalid
-                pass
+            self.profile_picture.delete(save=False)
 
         return super().delete(*args, **kwargs)
 

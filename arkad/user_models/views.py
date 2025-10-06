@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from user_models.models import User
@@ -23,7 +24,7 @@ def delete_account(request: HttpRequest) -> HttpResponse:
                 request,
                 "Staff and company users cannot delete their accounts through this interface. Please contact a superadmin.",
             )
-            return redirect("/user/delete-account/")
+            return redirect(reverse("delete_account"))
 
         # Delete the user and all associated data
         user.delete()

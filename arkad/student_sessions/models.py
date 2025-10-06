@@ -1,5 +1,4 @@
 from functools import partial
-import os
 from typing import Any
 
 from django.db import models
@@ -88,12 +87,7 @@ class StudentSessionApplication(models.Model):
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Override delete to ensure CV file is removed from filesystem"""
         if self.cv:
-            try:
-                if os.path.exists(self.cv.path):
-                    os.remove(self.cv.path)
-            except (ValueError, OSError):
-                # File might not exist or path might be invalid
-                pass
+            self.cv.delete(save=False)
         return super().delete(*args, **kwargs)
 
 
