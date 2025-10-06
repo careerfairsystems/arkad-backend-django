@@ -87,6 +87,92 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
             return str(cv_file.url)
         return ""
 
+    def before_import_row(self, row: dict[str, Any], **kwargs: Any) -> None:
+        """
+        Store the original status before import to detect changes.
+        """
+        instance_id = row.get("id")
+        if instance_id:
+            try:
+                instance = StudentSessionApplication.objects.get(id=instance_id)
+                row["_original_status"] = instance.status
+            except StudentSessionApplication.DoesNotExist:
+                pass
+
+    def after_save_instance(  # type: ignore[override]
+        self,
+        instance: StudentSessionApplication,
+        using_transactions: bool,
+        dry_run: bool,
+    ) -> None:
+        """
+        Call accept() or deny() method when status changes during import.
+        This ensures the proper logic (like creating timeslots) is executed.
+        """
+        if dry_run:
+            return
+
+        # Get the new status from the instance
+        new_status = instance.status
+
+        # Get the original status if it was stored
+        original_status = getattr(instance, "_original_status", None)
+
+        # If status changed to accepted, call accept() method
+        if new_status == "accepted" and original_status != "accepted":
+            # We need to reload to avoid calling accept() on an already-accepted instance
+            instance.refresh_from_db()
+            if instance.status != "accepted":
+                # Status was changed back, so we call accept
+                instance.accept()
+            elif not instance.is_pending():
+                # Already accepted, but need to ensure timeslot logic runs
+                # Only run the timeslot creation part without re-saving
+                from .models import StudentSessionTimeslot, SessionType
+
+                if instance.student_session.session_type == SessionType.COMPANY_EVENT:
+                    if instance.student_session.company_event_at:
+                        timeslot, created = (
+                            StudentSessionTimeslot.objects.get_or_create(
+                                student_session=instance.student_session,
+                                start_time=instance.student_session.company_event_at,
+                                defaults={"duration": 480},
+                            )
+                        )
+                        if not timeslot.selected_applications.filter(
+                            id=instance.id
+                        ).exists():
+                            timeslot.add_selection(instance)
+        # If status changed to rejected, call deny() method
+        elif new_status == "rejected" and original_status != "rejected":
+            instance.refresh_from_db()
+            if instance.status != "rejected":
+                instance.deny()
+
+    def save_instance(  # type: ignore[override]
+        self,
+        instance: StudentSessionApplication,
+        using_transactions: bool = True,
+        dry_run: bool = False,
+    ) -> None:
+        """
+        Override save_instance to store the original status before saving.
+        """
+        # Store original status on the instance for later use
+        if instance.pk:
+            try:
+                original = StudentSessionApplication.objects.get(pk=instance.pk)
+                instance._original_status = original.status  # type: ignore[attr-defined]
+            except StudentSessionApplication.DoesNotExist:
+                instance._original_status = None  # type: ignore[attr-defined]
+        else:
+            instance._original_status = None  # type: ignore[attr-defined]
+
+        # Don't call accept()/deny() here as they will save()
+        # Just update the status field directly
+        if not dry_run:
+            instance.save()
+
     class Meta:
         model = StudentSessionApplication
 

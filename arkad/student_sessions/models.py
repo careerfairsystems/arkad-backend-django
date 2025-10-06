@@ -69,8 +69,8 @@ class StudentSessionApplication(models.Model):
                     student_session=self.student_session,
                     start_time=self.student_session.company_event_at,
                     defaults={
-                        'duration': 480,  # 8 hours in minutes
-                    }
+                        "duration": 480,  # 8 hours in minutes
+                    },
                 )
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
