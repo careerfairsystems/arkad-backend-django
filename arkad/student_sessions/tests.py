@@ -110,7 +110,7 @@ class StudentSessionTests(TestCase):
         session = StudentSession.objects.create(
             company=self.company_user1.company,
             booking_open_time=timezone.now()
-            + datetime.timedelta(days=1),  # Opens in the future
+                              + datetime.timedelta(days=1),  # Opens in the future
             booking_close_time=timezone.now() + datetime.timedelta(days=2),
         )
 
@@ -715,29 +715,337 @@ class StudentSessionTests(TestCase):
         )
         self.assertEqual(resp.status_code, 409)
 
-    def test_booking_after_close_time(self):
-        """Test that booking is not allowed after booking_close_time"""
+    def test_switch_timeslot_success(self):
+        """Test successful switching from one timeslot to another"""
         session = self._create_student_session(self.company_user1.company)
-        session.booking_close_time = timezone.now() - datetime.timedelta(hours=1)
-        session.save()
 
-        application_data = {
-            "companyId": session.company.id,
-            "motivation_text": "Late application",
-            "update_profile": True,
-            "programme": "Computer Science",
-            "study_year": 3,
-            "linkedin": "linkedin.com/in/student0",
-            "master_title": "Software Engineering",
-        }
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
 
+        # Create two timeslots
+        current_timeslot = self._create_timeslot(session)
+        new_timeslot = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+
+        # Book the current timeslot
+        current_timeslot.selected = application
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        # Switch to new timeslot
         resp = self.client.post(
-            "/api/student-session/apply",
-            data=application_data,
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": new_timeslot.id,
+            },
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
-        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.status_code, 200, resp.content)
+
+        # Verify the switch
+        current_timeslot.refresh_from_db()
+        new_timeslot.refresh_from_db()
+
+        self.assertIsNone(current_timeslot.selected)
+        self.assertIsNone(current_timeslot.time_booked)
+        self.assertEqual(new_timeslot.selected, application)
+        self.assertIsNotNone(new_timeslot.time_booked)
+
+    def test_switch_timeslot_without_current_booking(self):
+        """Test switching when user has no current booking"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept application
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create a timeslot but don't book it
+        new_timeslot = self._create_timeslot(session)
+
+        # Try to switch without having a current booking
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": new_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
+        self.assertIn("don't have a current booking", resp.json())
+
+    def test_switch_timeslot_to_same_timeslot(self):
+        """Test switching to the same timeslot (should fail)"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create and book a timeslot
+        current_timeslot = self._create_timeslot(session)
+        current_timeslot.selected = application
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        # Try to switch to the same timeslot
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": current_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409, resp.content)
+        self.assertIn("already booked for this timeslot", resp.json())
+
+    def test_switch_timeslot_to_already_taken(self):
+        """Test switching to a timeslot that's already taken by someone else"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept two applications
+        application1 = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+        application2 = StudentSessionApplication.objects.create(
+            user=self.student_users[1],
+            student_session=session,
+            motivation_text="Please accept me too",
+            status="accepted",
+        )
+
+        # Create two timeslots
+        current_timeslot = self._create_timeslot(session)
+        taken_timeslot = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+
+        # Book both timeslots
+        current_timeslot.selected = application1
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        taken_timeslot.selected = application2
+        taken_timeslot.time_booked = timezone.now()
+        taken_timeslot.save()
+
+        # Try to switch to the taken timeslot
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": taken_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
+        self.assertIn("not found, already taken, or booking has closed", resp.json())
+
+        # Verify nothing changed
+        current_timeslot.refresh_from_db()
+        taken_timeslot.refresh_from_db()
+        self.assertEqual(current_timeslot.selected, application1)
+        self.assertEqual(taken_timeslot.selected, application2)
+
+    def test_switch_timeslot_after_booking_close_time(self):
+        """Test switching when the current booking period has expired"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create timeslots
+        current_timeslot = self._create_timeslot(
+            session,
+            booking_closes_at=timezone.now() - datetime.timedelta(hours=1),
+        )
+        new_timeslot = self._create_timeslot(session)
+
+        # Book the current timeslot
+        current_timeslot.selected = application
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        # Try to switch after booking has closed
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": new_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409, resp.content)
+        self.assertIn("booking period has expired", resp.json())
+
+    def test_switch_timeslot_to_closed_timeslot(self):
+        """Test switching to a timeslot where booking has already closed"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create and accept application
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create timeslots
+        current_timeslot = self._create_timeslot(session)
+        closed_timeslot = self._create_timeslot(
+            session,
+            start_time=timezone.now() + datetime.timedelta(hours=2),
+            booking_closes_at=timezone.now() - datetime.timedelta(hours=1),
+        )
+
+        # Book the current timeslot
+        current_timeslot.selected = application
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        # Try to switch to a closed timeslot
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": closed_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
+
+    def test_switch_timeslot_not_accepted(self):
+        """Test switching when user is not accepted to the session"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create application with pending status
+        StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session,
+            motivation_text="Please accept me",
+            status="pending",
+        )
+
+        # Create timeslots
+        self._create_timeslot(session)
+        timeslot2 = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+
+        # Try to switch (shouldn't even have a booking, but let's test)
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": timeslot2.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 409, resp.content)
+        self.assertIn("not accepted", resp.json())
+
+    def test_switch_timeslot_no_application(self):
+        """Test switching when user has no application"""
+        session = self._create_student_session(self.company_user1.company)
+
+        # Create timeslots
+        self._create_timeslot(session)
+        timeslot2 = self._create_timeslot(
+            session, start_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+
+        # Try to switch without application
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": timeslot2.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
+        self.assertIn("Application not found", resp.json())
+
+    def test_switch_timeslot_to_different_company(self):
+        """Test switching to a timeslot from a different company's session"""
+        session1 = self._create_student_session(self.company_user1.company)
+        session2 = self._create_student_session(self.company_user2.company)
+
+        # Create and accept application for session1
+        application = StudentSessionApplication.objects.create(
+            user=self.student_users[0],
+            student_session=session1,
+            motivation_text="Please accept me",
+            status="accepted",
+        )
+
+        # Create timeslots
+        current_timeslot = self._create_timeslot(session1)
+        other_company_timeslot = self._create_timeslot(session2)
+
+        # Book the current timeslot
+        current_timeslot.selected = application
+        current_timeslot.time_booked = timezone.now()
+        current_timeslot.save()
+
+        # Try to switch to different company's timeslot (using company1's ID)
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session1.company.id,
+                "new_timeslot_id": other_company_timeslot.id,
+            },
+            content_type="application/json",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 404, resp.content)
+
+    def test_switch_timeslot_unauthenticated(self):
+        """Test switching timeslot without authentication"""
+        session = self._create_student_session(self.company_user1.company)
+        timeslot = self._create_timeslot(session)
+
+        resp = self.client.post(
+            "/api/student-session/switch-timeslot",
+            data={
+                "company_id": session.company.id,
+                "new_timeslot_id": timeslot.id,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 401, resp.content)
 
 
 class StudentSessionApplicationResourceTest(TestCase):

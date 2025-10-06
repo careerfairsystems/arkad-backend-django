@@ -85,3 +85,8 @@ class MotivationTextUpdateSchema(Schema):
 class UpdateStudentSessionApplicantStatus(Schema):
     applicant_user_id: int
     status: Literal["accepted", "rejected"]
+
+
+class SwitchStudentSessionTimeslot(Schema):
+    new_timeslot_id: int
+    company_id: int

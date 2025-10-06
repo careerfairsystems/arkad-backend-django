@@ -26,6 +26,7 @@ from student_sessions.schema import (
     StudentSessionApplicationOutSchema,
     ExhibitorTimeslotSchema,
     TimeslotSchemaUser,
+    SwitchStudentSessionTimeslot,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
@@ -353,6 +354,80 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     timeslot.save()
 
     return 200, "Student session unbooked"
+
+
+@router.post("/switch-timeslot", response={200: str, 401: str, 404: str, 409: str})
+def switch_student_session_timeslot(
+    request: AuthenticatedRequest, data: SwitchStudentSessionTimeslot
+):
+    """
+    Switch from current booked timeslot to a new timeslot in a concurrency-safe manner.
+
+    This endpoint atomically unbooks the current timeslot and books the new one,
+    preventing race conditions where the new timeslot might be taken by another user.
+    """
+
+    try:
+        application = StudentSessionApplication.objects.get(
+            student_session__company_id=data.company_id, user_id=request.user.id
+        )
+
+        if not application.is_accepted():
+            return 409, "Applicant not accepted"
+    except StudentSessionApplication.DoesNotExist:
+        return 404, "Application not found"
+
+    try:
+        with transaction.atomic():
+            # Lock both timeslots to prevent race conditions
+            current_timeslot = (
+                StudentSessionTimeslot.objects.select_for_update()
+                .filter(selected=application)
+                .first()
+            )
+
+            if not current_timeslot:
+                return 404, "You don't have a current booking to switch from"
+
+            if current_timeslot.booking_closes_at <= timezone.now():
+                return (
+                    409,
+                    "Your current booking period has expired and cannot be modified",
+                )
+
+            # Check if trying to switch to the same timeslot
+            if current_timeslot.id == data.new_timeslot_id:
+                return 409, "You are already booked for this timeslot"
+
+            # Try to lock and book the new timeslot
+            try:
+                new_timeslot: StudentSessionTimeslot = (
+                    StudentSessionTimeslot.objects.select_for_update().get(
+                        id=data.new_timeslot_id,
+                        student_session__company_id=data.company_id,
+                        selected=None,
+                        booking_closes_at__gte=timezone.now(),
+                    )
+                )
+            except StudentSessionTimeslot.DoesNotExist:
+                return (
+                    404,
+                    "New timeslot not found, already taken, or booking has closed",
+                )
+
+            # Perform the switch atomically
+            current_timeslot.selected = None
+            current_timeslot.time_booked = None
+            current_timeslot.save()
+
+            new_timeslot.selected = application
+            new_timeslot.time_booked = timezone.now()
+            new_timeslot.save()
+
+            return 200, "Timeslot switched successfully"
+
+    except IntegrityError:
+        return 409, "Failed to switch timeslot due to a database constraint violation"
 
 
 @router.post("/apply", response={404: str, 409: str, 200: str})
