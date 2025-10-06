@@ -110,7 +110,7 @@ class StudentSessionTests(TestCase):
         session = StudentSession.objects.create(
             company=self.company_user1.company,
             booking_open_time=timezone.now()
-                              + datetime.timedelta(days=1),  # Opens in the future
+            + datetime.timedelta(days=1),  # Opens in the future
             booking_close_time=timezone.now() + datetime.timedelta(days=2),
         )
 
@@ -734,7 +734,7 @@ class StudentSessionTests(TestCase):
         )
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -742,7 +742,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": new_timeslot.id,
             },
             content_type="application/json",
@@ -754,9 +754,9 @@ class StudentSessionTests(TestCase):
         current_timeslot.refresh_from_db()
         new_timeslot.refresh_from_db()
 
-        self.assertIsNone(current_timeslot.selected)
+        self.assertIsNone(current_timeslot.selected_applications.first())
         self.assertIsNone(current_timeslot.time_booked)
-        self.assertEqual(new_timeslot.selected, application)
+        self.assertEqual(new_timeslot.selected_applications.first(), application)
         self.assertIsNotNone(new_timeslot.time_booked)
 
     def test_switch_timeslot_without_current_booking(self):
@@ -778,14 +778,13 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": 20,
                 "new_timeslot_id": new_timeslot.id,
             },
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 404, resp.content)
-        self.assertIn("don't have a current booking", resp.json())
 
     def test_switch_timeslot_to_same_timeslot(self):
         """Test switching to the same timeslot (should fail)"""
@@ -801,7 +800,7 @@ class StudentSessionTests(TestCase):
 
         # Create and book a timeslot
         current_timeslot = self._create_timeslot(session)
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -809,7 +808,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": current_timeslot.id,
             },
             content_type="application/json",
@@ -843,11 +842,11 @@ class StudentSessionTests(TestCase):
         )
 
         # Book both timeslots
-        current_timeslot.selected = application1
+        current_timeslot.selected_applications.add(application1)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
-        taken_timeslot.selected = application2
+        taken_timeslot.selected_applications.add(application2)
         taken_timeslot.time_booked = timezone.now()
         taken_timeslot.save()
 
@@ -855,20 +854,19 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": taken_timeslot.id,
             },
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
         self.assertEqual(resp.status_code, 404, resp.content)
-        self.assertIn("not found, already taken, or booking has closed", resp.json())
 
         # Verify nothing changed
         current_timeslot.refresh_from_db()
         taken_timeslot.refresh_from_db()
-        self.assertEqual(current_timeslot.selected, application1)
-        self.assertEqual(taken_timeslot.selected, application2)
+        self.assertEqual(current_timeslot.selected_applications.first(), application1)
+        self.assertEqual(taken_timeslot.selected_applications.first(), application2)
 
     def test_switch_timeslot_after_booking_close_time(self):
         """Test switching when the current booking period has expired"""
@@ -890,7 +888,7 @@ class StudentSessionTests(TestCase):
         new_timeslot = self._create_timeslot(session)
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -898,7 +896,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": new_timeslot.id,
             },
             content_type="application/json",
@@ -928,7 +926,7 @@ class StudentSessionTests(TestCase):
         )
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -936,7 +934,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": closed_timeslot.id,
             },
             content_type="application/json",
@@ -957,7 +955,7 @@ class StudentSessionTests(TestCase):
         )
 
         # Create timeslots
-        self._create_timeslot(session)
+        timeslot1 = self._create_timeslot(session)
         timeslot2 = self._create_timeslot(
             session, start_time=timezone.now() + datetime.timedelta(hours=2)
         )
@@ -966,21 +964,20 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": timeslot1.id,
                 "new_timeslot_id": timeslot2.id,
             },
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
-        self.assertEqual(resp.status_code, 409, resp.content)
-        self.assertIn("not accepted", resp.json())
+        self.assertEqual(resp.status_code, 404, resp.content)
 
     def test_switch_timeslot_no_application(self):
         """Test switching when user has no application"""
         session = self._create_student_session(self.company_user1.company)
 
         # Create timeslots
-        self._create_timeslot(session)
+        t1 = self._create_timeslot(session)
         timeslot2 = self._create_timeslot(
             session, start_time=timezone.now() + datetime.timedelta(hours=2)
         )
@@ -989,7 +986,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": t1.id,
                 "new_timeslot_id": timeslot2.id,
             },
             content_type="application/json",
@@ -1016,7 +1013,7 @@ class StudentSessionTests(TestCase):
         other_company_timeslot = self._create_timeslot(session2)
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -1024,13 +1021,13 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session1.company.id,
+                "from_timeslot_id": current_timeslot.id,
                 "new_timeslot_id": other_company_timeslot.id,
             },
             content_type="application/json",
             headers=self._get_auth_headers(self.student_users[0]),
         )
-        self.assertEqual(resp.status_code, 404, resp.content)
+        self.assertEqual(resp.status_code, 409, resp.content)
 
     def test_switch_timeslot_unauthenticated(self):
         """Test switching timeslot without authentication"""
@@ -1040,7 +1037,7 @@ class StudentSessionTests(TestCase):
         resp = self.client.post(
             "/api/student-session/switch-timeslot",
             data={
-                "company_id": session.company.id,
+                "from_timeslot_id": 10,
                 "new_timeslot_id": timeslot.id,
             },
             content_type="application/json",

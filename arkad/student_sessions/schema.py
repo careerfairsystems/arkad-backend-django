@@ -89,4 +89,4 @@ class UpdateStudentSessionApplicantStatus(Schema):
 
 class SwitchStudentSessionTimeslot(Schema):
     new_timeslot_id: int
-    company_id: int
+    from_timeslot_id: int

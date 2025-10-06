@@ -14,6 +14,7 @@ from student_sessions.models import (
     StudentSessionApplication,
     StudentSessionTimeslot,
     SessionType,
+    ApplicationStatus,
 )
 from student_sessions.schema import (
     TimeslotSchema,
@@ -368,28 +369,21 @@ def switch_student_session_timeslot(
     """
 
     try:
-        application = StudentSessionApplication.objects.get(
-            student_session__company_id=data.company_id, user_id=request.user.id
-        )
-
-        if not application.is_accepted():
-            return 409, "Applicant not accepted"
-    except StudentSessionApplication.DoesNotExist:
-        return 404, "Application not found"
-
-    try:
         with transaction.atomic():
             # Lock both timeslots to prevent race conditions
-            current_timeslot = (
-                StudentSessionTimeslot.objects.select_for_update()
-                .filter(selected=application)
-                .first()
-            )
+            try:
+                current_timeslot: StudentSessionTimeslot = (
+                    StudentSessionTimeslot.objects.select_for_update().get(
+                        id=data.from_timeslot_id
+                    )
+                )
+            except StudentSessionTimeslot.DoesNotExist:
+                return 404, "Student session timeslot not found"
 
-            if not current_timeslot:
-                return 404, "You don't have a current booking to switch from"
-
-            if current_timeslot.booking_closes_at <= timezone.now():
+            if (
+                current_timeslot.booking_closes_at is not None
+                and current_timeslot.booking_closes_at <= timezone.now()
+            ):
                 return (
                     409,
                     "Your current booking period has expired and cannot be modified",
@@ -403,24 +397,43 @@ def switch_student_session_timeslot(
             try:
                 new_timeslot: StudentSessionTimeslot = (
                     StudentSessionTimeslot.objects.select_for_update().get(
+                        Q(booking_closes_at__gte=timezone.now())
+                        | Q(booking_closes_at__isnull=True),
                         id=data.new_timeslot_id,
-                        student_session__company_id=data.company_id,
-                        selected=None,
-                        booking_closes_at__gte=timezone.now(),
                     )
                 )
+
+                # Check if timeslot is available based on session type
+                if not new_timeslot.is_available_for_application():
+                    return 404, "Timeslot not found or already taken"
+
             except StudentSessionTimeslot.DoesNotExist:
                 return (
                     404,
                     "New timeslot not found, already taken, or booking has closed",
                 )
 
+            # Check so that the student session connected to the new_timeslot is the same as the current_timeslot
+            if new_timeslot.student_session_id != current_timeslot.student_session_id:
+                return 409, "Timeslots belong to different student sessions"
+
+            try:
+                application: StudentSessionApplication = (
+                    StudentSessionApplication.objects.get(
+                        student_session_id=current_timeslot.student_session_id,
+                        user_id=request.user.id,
+                        status=ApplicationStatus.ACCEPTED,
+                    )
+                )
+            except StudentSessionApplication.DoesNotExist:
+                return 404, "Application not found"
+
             # Perform the switch atomically
-            current_timeslot.selected = None
+            current_timeslot.selected_applications.remove(application)
             current_timeslot.time_booked = None
             current_timeslot.save()
 
-            new_timeslot.selected = application
+            new_timeslot.selected_applications.add(application)
             new_timeslot.time_booked = timezone.now()
             new_timeslot.save()
 
