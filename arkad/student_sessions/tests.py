@@ -734,7 +734,7 @@ class StudentSessionTests(TestCase):
         )
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -754,9 +754,9 @@ class StudentSessionTests(TestCase):
         current_timeslot.refresh_from_db()
         new_timeslot.refresh_from_db()
 
-        self.assertIsNone(current_timeslot.selected)
+        self.assertIsNone(current_timeslot.selected_applications.first())
         self.assertIsNone(current_timeslot.time_booked)
-        self.assertEqual(new_timeslot.selected, application)
+        self.assertEqual(new_timeslot.selected_applications.first(), application)
         self.assertIsNotNone(new_timeslot.time_booked)
 
     def test_switch_timeslot_without_current_booking(self):
@@ -801,7 +801,7 @@ class StudentSessionTests(TestCase):
 
         # Create and book a timeslot
         current_timeslot = self._create_timeslot(session)
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -843,11 +843,11 @@ class StudentSessionTests(TestCase):
         )
 
         # Book both timeslots
-        current_timeslot.selected = application1
+        current_timeslot.selected_applications.add(application1)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
-        taken_timeslot.selected = application2
+        taken_timeslot.selected_applications.add(application2)
         taken_timeslot.time_booked = timezone.now()
         taken_timeslot.save()
 
@@ -867,8 +867,8 @@ class StudentSessionTests(TestCase):
         # Verify nothing changed
         current_timeslot.refresh_from_db()
         taken_timeslot.refresh_from_db()
-        self.assertEqual(current_timeslot.selected, application1)
-        self.assertEqual(taken_timeslot.selected, application2)
+        self.assertEqual(current_timeslot.selected_applications.first(), application1)
+        self.assertEqual(taken_timeslot.selected_applications.first(), application2)
 
     def test_switch_timeslot_after_booking_close_time(self):
         """Test switching when the current booking period has expired"""
@@ -890,7 +890,7 @@ class StudentSessionTests(TestCase):
         new_timeslot = self._create_timeslot(session)
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -928,7 +928,7 @@ class StudentSessionTests(TestCase):
         )
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
@@ -1016,7 +1016,7 @@ class StudentSessionTests(TestCase):
         other_company_timeslot = self._create_timeslot(session2)
 
         # Book the current timeslot
-        current_timeslot.selected = application
+        current_timeslot.selected_applications.add(application)
         current_timeslot.time_booked = timezone.now()
         current_timeslot.save()
 
