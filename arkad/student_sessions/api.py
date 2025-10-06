@@ -13,6 +13,7 @@ from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
     StudentSessionTimeslot,
+    SessionType,
 )
 from student_sessions.schema import (
     TimeslotSchema,
@@ -223,7 +224,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
     session = application.student_session
 
     # For company events, show all timeslots. For regular sessions, only show free or user's booked slots
-    if session.session_type == "company_event":
+    if session.session_type == SessionType.COMPANY_EVENT:
         timeslots = (
             StudentSessionTimeslot.objects.filter(
                 Q(student_session__company_id=company_id)

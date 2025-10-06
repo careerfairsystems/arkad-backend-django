@@ -16,6 +16,17 @@ from companies.models import Company
 from django_pydantic_field import SchemaField
 
 
+class ApplicationStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    REJECTED = "rejected", "Rejected"
+
+
+class SessionType(models.TextChoices):
+    REGULAR = "regular", "Regular"
+    COMPANY_EVENT = "company_event", "Company Event"
+
+
 class StudentSessionApplication(models.Model):
     student_session = models.ForeignKey(
         "StudentSession", on_delete=models.CASCADE, null=False
@@ -30,14 +41,10 @@ class StudentSessionApplication(models.Model):
         null=True,
         blank=True,
     )
-    status = models.CharField(  # Todo use an enum
+    status = models.CharField(
         max_length=10,
-        choices=[
-            ("pending", "Pending"),
-            ("accepted", "Accepted"),
-            ("rejected", "Rejected"),
-        ],
-        default="pending",
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.PENDING,
     )
 
     class Meta:
@@ -52,7 +59,21 @@ class StudentSessionApplication(models.Model):
         return f"Application by {self.user} to {self.student_session.company.name}"
 
     def accept(self) -> None:
-        self.status = "accepted"
+        self.status = ApplicationStatus.ACCEPTED
+
+        # For company events, automatically create a timeslot if it doesn't exist
+        if self.student_session.session_type == SessionType.COMPANY_EVENT:
+            if self.student_session.company_event_at:
+                # Check if a timeslot already exists for this time
+                timeslot, created = StudentSessionTimeslot.objects.get_or_create(
+                    student_session=self.student_session,
+                    start_time=self.student_session.company_event_at,
+                    defaults={
+                        'duration': 480,  # 8 hours in minutes
+                    }
+                )
+                # Automatically add this application to the timeslot
+                timeslot.add_selection(self)
 
         self.user.email_user(
             "Application accepted",
@@ -62,7 +83,7 @@ class StudentSessionApplication(models.Model):
         self.save()
 
     def deny(self) -> None:
-        self.status = "rejected"
+        self.status = ApplicationStatus.REJECTED
 
         self.user.email_user(
             f"Your application to {self.student_session.company.name} has been rejected",
@@ -71,17 +92,17 @@ class StudentSessionApplication(models.Model):
         self.save()
 
     def is_accepted(self) -> bool:
-        return self.status == "accepted"
+        return self.status == ApplicationStatus.ACCEPTED
 
     def is_rejected(self) -> bool:
-        return self.status == "rejected"
+        return self.status == ApplicationStatus.REJECTED
 
     def is_pending(self) -> bool:
-        return self.status == "pending"
+        return self.status == ApplicationStatus.PENDING
 
     @staticmethod
     def get_valid_statuses() -> list[str]:
-        return ["pending", "accepted", "rejected"]
+        return [choice[0] for choice in ApplicationStatus.choices]
 
 
 class StudentSessionTimeslot(models.Model):
@@ -128,7 +149,7 @@ class StudentSessionTimeslot(models.Model):
         """Check if this timeslot is available for the given application."""
         session_type = self.student_session.session_type
 
-        if session_type == "company_event":
+        if session_type == SessionType.COMPANY_EVENT:
             # Company events allow multiple selections
             return True
         else:  # regular
@@ -186,11 +207,8 @@ class StudentSession(models.Model):
     )
     session_type = models.CharField(
         max_length=20,
-        choices=[
-            ("regular", "Regular"),
-            ("company_event", "Company Event"),
-        ],
-        default="regular",
+        choices=SessionType.choices,
+        default=SessionType.REGULAR,
         help_text="The type of the student session",
     )
 
