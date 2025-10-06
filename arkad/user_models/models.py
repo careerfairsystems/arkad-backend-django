@@ -144,6 +144,18 @@ class User(AbstractUser):
     def get_auth_headers(self) -> dict[str, str]:
         return {"Authorization": self.create_jwt_token()}
 
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        """Override delete to ensure uploaded files are removed from filesystem"""
+        # Delete CV file if it exists
+        if self.cv:
+            self.cv.delete(save=False)
+
+        # Delete profile picture if it exists
+        if self.profile_picture:
+            self.profile_picture.delete(save=False)
+
+        return super().delete(*args, **kwargs)
+
 
 class PydanticUser:
     @classmethod

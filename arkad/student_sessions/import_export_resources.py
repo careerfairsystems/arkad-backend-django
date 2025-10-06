@@ -1,4 +1,4 @@
-from typing import cast, Any
+from typing import Any
 
 from import_export import resources, fields, widgets
 from .models import StudentSessionApplication

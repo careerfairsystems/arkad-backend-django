@@ -4,20 +4,13 @@
     <head>
         <meta charset="UTF-8">
         <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
-        <title>ARKAD: Password Reset</title>
+        <title>ARKAD: Login</title>
         <link rel="stylesheet" type="text/css" href="{% static 'css/password_reset.css' %}">
         <style>
             .form-title {
                 text-align: center;
                 color: #003366;
                 margin-bottom: 1.5rem;
-            }
-
-            .info-text {
-                color: #555;
-                margin-bottom: 1.5rem;
-                line-height: 1.6;
-                text-align: center;
             }
 
             .messages {
@@ -40,6 +33,12 @@
                 background-color: #d4edda;
                 border: 1px solid #c3e6cb;
                 color: #155724;
+            }
+
+            .message.info {
+                background-color: #d1ecf1;
+                border: 1px solid #bee5eb;
+                color: #0c5460;
             }
 
             .errorlist {
@@ -75,6 +74,11 @@
             .form-links a:hover {
                 text-decoration: underline;
             }
+
+            .form-links .separator {
+                margin: 0 0.5rem;
+                color: #ccc;
+            }
         </style>
     </head>
     <body>
@@ -83,11 +87,7 @@
                 <img src="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w" alt="ARKAD Logo">
             </div>
 
-            <h1 class="form-title">Reset Your Password</h1>
-
-            <p class="info-text">
-                Enter your email address below and we'll send you instructions to reset your password.
-            </p>
+            <h1 class="form-title">Login to ARKAD</h1>
 
             {% if messages %}
                 <div class="messages">
@@ -107,27 +107,45 @@
                 {% csrf_token %}
 
                 <div class="form-group">
-                    <label for="id_email">{{ form.email.label }}</label>
-                    {{ form.email }}
-                    {% if form.email.errors %}
+                    <label for="id_username">{{ form.username.label }}</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
                         <ul class="errorlist">
-                            {% for error in form.email.errors %}
+                            {% for error in form.username.errors %}
                                 <li>{{ error }}</li>
                             {% endfor %}
                         </ul>
                     {% endif %}
-                    {% if form.email.help_text %}
-                        <span class="helptext">{{ form.email.help_text }}</span>
+                    {% if form.username.help_text %}
+                        <span class="helptext">{{ form.username.help_text }}</span>
                     {% endif %}
                 </div>
 
-                <button type="submit" class="arkad-button">Send Reset Link</button>
+                <div class="form-group">
+                    <label for="id_password">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.password.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    {% if form.password.help_text %}
+                        <span class="helptext">{{ form.password.help_text }}</span>
+                    {% endif %}
+                </div>
+
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <button type="submit" class="arkad-button">Login</button>
             </form>
 
             <div class="form-links">
-                <a href="{% url 'login' %}">Back to Login</a>
+                <a href="{% url 'reset_password' %}">Forgot your password?</a>
             </div>
         </main>
     </body>
 </html>
-

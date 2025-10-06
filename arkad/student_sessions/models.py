@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Any
 
 from django.db import models
 from django.db.models import UniqueConstraint
@@ -82,6 +83,12 @@ class StudentSessionApplication(models.Model):
     @staticmethod
     def get_valid_statuses() -> list[str]:
         return ["pending", "accepted", "rejected"]
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        """Override delete to ensure CV file is removed from filesystem"""
+        if self.cv:
+            self.cv.delete(save=False)
+        return super().delete(*args, **kwargs)
 
 
 class StudentSessionTimeslot(models.Model):
