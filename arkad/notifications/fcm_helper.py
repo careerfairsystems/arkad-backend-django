@@ -36,5 +36,6 @@ class FCMHelper:
         response = messaging.send(message)
         return str(response)
 
-    
-fcm = FCMHelper(settings.BASE_DIR / "firebase_cert.json")
+cert_path = settings.BASE_DIR / "firebase_cert.json"
+if cert_path:
+    fcm = FCMHelper(cert_path)
