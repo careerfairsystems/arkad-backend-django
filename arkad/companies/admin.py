@@ -51,6 +51,14 @@ class DesiredCompetencesFilter(ArrayFieldListFilter):
     title = "desired competences"
     parameter_name = "desired_competences"
 
+class PositionsFilter(ArrayFieldListFilter):
+    title = "positions"
+    parameter_name = "positions"
+
+class IndustriesFilter(ArrayFieldListFilter):
+    title = "industries"
+    parameter_name = "industries"
+
 
 # Register your models here.
 class CompanyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
@@ -60,6 +68,8 @@ class CompanyAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         DesiredDegreesFilter,
         DesiredProgrammeFilter,
         DesiredCompetencesFilter,
+        PositionsFilter,
+        IndustriesFilter,
     ]
 
     def changelist_view(
