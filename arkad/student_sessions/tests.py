@@ -110,7 +110,7 @@ class StudentSessionTests(TestCase):
         session = StudentSession.objects.create(
             company=self.company_user1.company,
             booking_open_time=timezone.now()
-                              + datetime.timedelta(days=1),  # Opens in the future
+            + datetime.timedelta(days=1),  # Opens in the future
             booking_close_time=timezone.now() + datetime.timedelta(days=2),
         )
 
