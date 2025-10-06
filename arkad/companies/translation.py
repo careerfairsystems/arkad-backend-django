@@ -56,7 +56,7 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "artificiell intelligens": "Artificial Intelligence",
     "automation": "Automation",
     "brandskydd": "Fire Protection",
-    "brandsäkerhet": "Fire Safety",
+    "brandsäkerhet": "Fire Protection",  # Unified with brandskydd
     "beräkning": "Computation",
     "datorsäkerhet": "Computer Security",
     "datasäkerhet": "Computer Security",
@@ -65,7 +65,7 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "elektroteknik": "Electrical Engineering",
     "elektronik": "Electronics",
     "energi": "Energy",
-    "energisystem": "Energy Systems",
+    "energisystem": "Energy",  # Unified with energi
     "finans": "Finance",
     "fysik": "Physics",
     "geografi": "Geography",
@@ -74,7 +74,7 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "industriprocesser": "Industrial Processes",
     "infrastruktur": "Infrastructure",
     "interaktion": "Interaction",
-    "interaktivitet": "Interactivity",
+    "interaktivitet": "Interaction",  # Unified with interaktion
     "juridik": "Law",
     "kemi": "Chemistry",
     "kommunikation": "Communications",
@@ -84,14 +84,14 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "livsvetenskap": "Life Science",
     "logistik": "Logistics",
     "läkemedel": "Pharmaceuticals",
-    "läkemedelsteknik": "Pharmaceutical Technology",
+    "läkemedelsteknik": "Pharmaceuticals",  # Unified with läkemedel
     "material": "Materials",
-    "materialteknik": "Materials Engineering",
+    "materialteknik": "Materials",  # Unified with material
     "matematisk modellering": "Mathematical Modelling",
     "medicinteknik": "Medical Technology",
     "mekatronik": "Mechatronics",
-    "modellering": "Modelling",
-    "olyckor": "Accidents",
+    "modellering": "Mathematical Modelling",  # Unified with matematisk modellering
+    "olyckor": "Accident Prevention",  # Unified with olycksförebyggande
     "olycksförebyggande": "Accident Prevention",
     "planering": "Planning",
     "produkt-dev": "Product Development",
@@ -104,12 +104,12 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "samhälle": "Society",
     "samhällsplanering": "Urban Planning",
     "simulering": "Simulation",
-    "simuleringar": "Simulations",
-    "teknik och samhälle": "Technology And Society",
+    "simuleringar": "Simulation",  # Unified - singular form
+    "teknik och samhälle": "Society",  # Unified with samhälle
     "tillverknings": "Manufacturing",
     "tillverkning": "Manufacturing",
     "tvärvetenskap": "Interdisciplinary",
-    "tvärvetenskapliga kompetenser": "Interdisciplinary Competences",
+    "tvärvetenskapliga kompetenser": "Interdisciplinary",  # Unified with tvärvetenskap
     "användarbarhet": "Usability",
     "användbarhet": "Usability",
     "väg- och vattenbyggnad": "Civil Engineering",
@@ -139,54 +139,53 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     # Industry Choices
     "Arkitektur och Grafisk design": "Architecture and Graphic Design",
     "Bank och finans": "Banking and Finance",
+    "bank finans": "Banking and Finance",  # Unified
     "Bemanning & Arbetsförmedling": "Staffing and Employment Services",
     "Bygg": "Construction",
+    "bygg": "Construction",  # Unified
     "Consulting": "Consulting",
-    "Data": "Data",
+    "konsult": "Consulting",  # Unified
+    "Konsultverksamhet": "Consulting",  # Unified
+    "Data": "Data and IT",  # Unified with Data and IT
+    "data": "Data and IT",  # Unified
     "Data and IT": "Data and IT",
+    "data IT": "Data and IT",  # Unified
     "Ekonomi och konsultverksamhet": "Economics and Consulting",
     "El, Energi och Kraft": "Electricity, Energy and Power",
+    "el energi kraft": "Electricity, Energy and Power",  # Unified
     "Environment": "Environment",
+    "miljö": "Environment",  # Unified
+    "Miljö": "Environment",  # Unified
     "Fackförbund": "Trade Union",
+    "fackförening": "Trade Union",  # Unified
     "Fastigheter & Infrastruktur": "Real Estate and Infrastructure",
+    "fastighet infrastruktur": "Real Estate and Infrastructure",  # Unified
     "Forskning": "Research",
+    "forskning": "Research",  # Unified
+    "Research": "Research",  # Unified
     "Försäkring": "Insurance",
+    "försäkring": "Insurance",  # Unified
+    "grafikdesign": "Architecture and Graphic Design",  # Unified with Arkitektur och Grafisk design
     "Industri": "Industry",
-    "Industry": "Industry",
+    "industri": "Industry",  # Unified
+    "Industry": "Industry",  # Unified
     "Investering": "Investment",
-    "Konsultverksamhet": "Consulting Services",
+    "investering": "Investment",  # Unified
     "Kärnkraft": "Nuclear Power",
+    "kärnkraft": "Nuclear Power",  # Unified
     "Life Science": "Life Science",
     "Management": "Management",
+    "ledning": "Management",  # Unified
     "Media": "Media",
-    "Medical Techniques": "Medical Techniques",
+    "media": "Media",  # Unified
+    "Medical Techniques": "Medical Technology",  # Unified with Medicinteknik
+    "medicinsk teknik": "Medical Technology",  # Unified
     "Medicinteknik": "Medical Technology",
-    "Research": "Research",
     "Telecommunication": "Telecommunication",
+    "telekommunikation": "Telecommunication",  # Unified
+    "Telekommunikation": "Telecommunication",  # Unified
     "Vägledning": "Guidance",
-    # Legacy industry mappings (keep for backwards compatibility)
-    "el energi kraft": "Electricity Energy Power",
-    "miljö": "Environment",
-    "Miljö": "Environment",
-    "bank finans": "Banking Finance",
-    "fackförening": "Union",
-    "investering": "Investment",
-    "försäkring": "Insurance",
+    "coaching": "Guidance",  # Unified with Vägledning
     "rekrytering": "Recruitment",
-    "bygg": "Construction",
-    "grafikdesign": "Graphic Design",
-    "data": "Data",
-    "data IT": "Data IT",
     "finanskonsult": "Finance Consultancy",
-    "telekommunikation": "Telecommunication",
-    "Telekommunikation": "Telecommunication",
-    "konsult": "Consulting",
-    "ledning": "Management",
-    "media": "Media",
-    "industri": "Industry",
-    "kärnkraft": "Nuclear Power",
-    "medicinsk teknik": "Medical Techniques",
-    "fastighet infrastruktur": "Property Infrastructure",
-    "forskning": "Research",
-    "coaching": "Coaching",
 }
