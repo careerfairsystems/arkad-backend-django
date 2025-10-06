@@ -36,14 +36,14 @@ class Ticket(models.Model):
     def status(self) -> EventUserStatus:
         return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args, **kwargs) -> None: # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
@@ -144,14 +144,14 @@ class Event(models.Model):
     def available_events(cls) -> QuerySet["Event"]:
         return cls.objects.filter(cls.available_filter()).all()
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args, **kwargs) -> None: # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 

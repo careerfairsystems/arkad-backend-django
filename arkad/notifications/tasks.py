@@ -1,17 +1,22 @@
 from celery import shared_task
 
+from arkad.celery import app
 
-@shared_task
+
+#@shared_task
+@app.task(Bind=True)
 def notify_event_tmrw(user_id: int, event_id: int) -> None:
     pass
 
 
-@shared_task
+#@shared_task
+@app.task(Bind=True)
 def notify_event_one_hour(user_id: int, event_id: int) -> None:
     pass
 
 
-@shared_task
+#@shared_task
+@app.task(Bind=True)
 def notify_event_reg_open(event_id: int) -> None:
     # Both for lunch lectures, company visits (events?), and Student sessions
     #Anmälan för lunchföreläsning med XXX har öppnat -Bara notis
@@ -19,13 +24,15 @@ def notify_event_reg_open(event_id: int) -> None:
     pass
 
 
-@shared_task
+#@shared_task
+@app.task(Bind=True)
 def notify_reg_close_tmrw(event_id: int) -> None:
     # Defence companies (SAAB and FMV, any more?), append "swedish citizenship required"
     pass
 
 
-@shared_task
+#@shared_task
+@app.task(Bind=True)
 def notify_appl_accept(user_id: int, event_id: int) -> None:
     # Notify that a user has gotten their application accepted
     # Not a scheduled notification - this is triggered

@@ -118,7 +118,7 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args, **kwargs) -> None: # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         if self.selected:
@@ -126,7 +126,7 @@ class StudentSessionTimeslot(models.Model):
             self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
