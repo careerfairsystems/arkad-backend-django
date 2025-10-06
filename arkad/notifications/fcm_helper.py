@@ -39,3 +39,5 @@ class FCMHelper:
 cert_path = settings.BASE_DIR / "firebase_cert.json"
 if cert_path.exists():
     fcm = FCMHelper(cert_path)
+else:
+    fcm = None
