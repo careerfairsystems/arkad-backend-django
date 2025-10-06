@@ -196,5 +196,11 @@ class StudentSession(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+    company_event_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="The date and time of the company event, if applicable",
+    )
+
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"

@@ -69,6 +69,7 @@ class StudentSessionNormalUserSchema(Schema):
     field_modifications: list[FieldModificationSchema]
     id: int
     session_type: Literal["regular", "company_event"] = "regular"
+    company_event_at: datetime | None = None
 
 
 class StudentSessionNormalUserListSchema(Schema):
