@@ -1,8 +1,11 @@
 from functools import partial
 from typing import Any
 
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 from django.db.models import UniqueConstraint
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 from django.utils import timezone
 
 from arkad.defaults import (
@@ -15,6 +18,19 @@ from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
 from companies.models import Company
 from django_pydantic_field import SchemaField
+
+COMPANY_EVENT_DEFAULT_DURATION: int = 480  # 8 hours in minutes
+
+
+class ApplicationStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    REJECTED = "rejected", "Rejected"
+
+
+class SessionType(models.TextChoices):
+    REGULAR = "regular", "Regular"
+    COMPANY_EVENT = "company_event", "Company Event"
 
 
 class StudentSessionApplication(models.Model):
@@ -31,14 +47,10 @@ class StudentSessionApplication(models.Model):
         null=True,
         blank=True,
     )
-    status = models.CharField(  # Todo use an enum
+    status = models.CharField(
         max_length=10,
-        choices=[
-            ("pending", "Pending"),
-            ("accepted", "Accepted"),
-            ("rejected", "Rejected"),
-        ],
-        default="pending",
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.PENDING,
     )
 
     class Meta:
@@ -53,17 +65,37 @@ class StudentSessionApplication(models.Model):
         return f"Application by {self.user} to {self.student_session.company.name}"
 
     def accept(self) -> None:
-        self.status = "accepted"
+        self.status = ApplicationStatus.ACCEPTED
 
-        self.user.email_user(
-            "Application accepted",
-            "Your application has been accepted, enter the app and select a timeslot\n "
-            "They may run out at any time.\n",
-        )
+        # For company events, automatically create a timeslot if it doesn't exist
+        if self.student_session.session_type == SessionType.COMPANY_EVENT:
+            with transaction.atomic():
+                timeslot, created = (
+                    StudentSessionTimeslot.objects.select_for_update().get_or_create(
+                        student_session=self.student_session,
+                        start_time=self.student_session.company_event_at,
+                        defaults={
+                            "duration": COMPANY_EVENT_DEFAULT_DURATION,  # 8 hours in minutes
+                        },
+                    )
+                )
+                # Automatically add this application to the timeslot
+                timeslot.add_selection(self)
+            self.user.email_user(
+                "Application accepted",
+                f"Your application has been accepted for the company event at {self.student_session.company.name}. ",
+            )
+
+        if self.student_session.session_type == SessionType.REGULAR:
+            self.user.email_user(
+                "Application accepted",
+                f"Your application to {self.student_session.company.name} has been accepted, enter the app and select a timeslot\n "
+                "They may run out at any time.\n",
+            )
         self.save()
 
     def deny(self) -> None:
-        self.status = "rejected"
+        self.status = ApplicationStatus.REJECTED
 
         self.user.email_user(
             f"Your application to {self.student_session.company.name} has been rejected",
@@ -72,17 +104,17 @@ class StudentSessionApplication(models.Model):
         self.save()
 
     def is_accepted(self) -> bool:
-        return self.status == "accepted"
+        return self.status == ApplicationStatus.ACCEPTED
 
     def is_rejected(self) -> bool:
-        return self.status == "rejected"
+        return self.status == ApplicationStatus.REJECTED
 
     def is_pending(self) -> bool:
-        return self.status == "pending"
+        return self.status == ApplicationStatus.PENDING
 
     @staticmethod
     def get_valid_statuses() -> list[str]:
-        return ["pending", "accepted", "rejected"]
+        return [choice[0] for choice in ApplicationStatus.choices]
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         """Override delete to ensure CV file is removed from filesystem"""
@@ -92,8 +124,11 @@ class StudentSessionApplication(models.Model):
 
 
 class StudentSessionTimeslot(models.Model):
-    selected = models.OneToOneField(
-        StudentSessionApplication, on_delete=models.SET_NULL, null=True, blank=True
+    selected_applications = models.ManyToManyField(
+        StudentSessionApplication,
+        related_name="selected_timeslots",
+        blank=True,
+        help_text="Selected applications for this timeslot - supports multiple for company events",
     )
     student_session = models.ForeignKey(
         "StudentSession",
@@ -126,6 +161,29 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
+    def is_available_for_application(self) -> bool:
+        """Check if this timeslot is available for booking."""
+        session_type = self.student_session.session_type
+
+        if session_type == SessionType.COMPANY_EVENT:
+            # Company events allow multiple selections
+            return True
+        else:  # regular
+            # Regular sessions only allow one selection
+            return self.selected_applications.count() == 0
+
+    def add_selection(self, application: StudentSessionApplication) -> None:
+        """Add an application selection to this timeslot."""
+        self.selected_applications.add(application)
+
+    def remove_selection(self, application: StudentSessionApplication) -> None:
+        """Remove an application selection from this timeslot."""
+        self.selected_applications.remove(application)
+
+    def get_selected_application(self) -> StudentSessionApplication | None:
+        """Get the single selected application for regular sessions."""
+        return self.selected_applications.first()
+
 
 class StudentSession(models.Model):
     company = models.OneToOneField(
@@ -152,13 +210,71 @@ class StudentSession(models.Model):
         blank=True,
         help_text="Description of the student session, shown to students when applying",
     )
+    location = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Location of the student session, shown to students when applying",
+    )
     disclaimer = models.TextField(
         null=True,
         blank=True,
         help_text="Disclaimer shown to students when applying (example SAAB requiring ONLY swedish citizens)",
     )
+    session_type = models.CharField(
+        max_length=20,
+        choices=SessionType.choices,
+        default=SessionType.REGULAR,
+        help_text="The type of the student session",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+    company_event_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="The date and time of the company event, if applicable",
+    )
+
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
+
+    def clean(self) -> None:
+        """
+        Custom validation to ensure company_event_at is set if the session_type is COMPANY_EVENT.
+        """
+        # Check for the specific condition:
+        if (
+            self.session_type == SessionType.COMPANY_EVENT
+            and self.company_event_at is None
+        ):
+            # Raise a ValidationError if the condition is not met
+            raise ValidationError(
+                {
+                    "company_event_at": (
+                        "A COMPANY_EVENT type session must have a defined company event start time."
+                    )
+                }
+            )
+        return super().clean()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Calls full clean before saving to ensure constraints are checked.
+        """
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+@receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)
+def validate_single_selection(
+    sender: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
+) -> None:
+    if action in ("post_add", "post_remove", "post_clear"):
+        if (
+            instance.student_session.session_type == SessionType.REGULAR
+            and instance.selected_applications.count() > 1
+        ):
+            raise ValidationError(
+                "Regular sessions can only have one selected application"
+            )
