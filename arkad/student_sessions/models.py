@@ -2,7 +2,7 @@ from functools import partial
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import UniqueConstraint
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
@@ -67,9 +67,8 @@ class StudentSessionApplication(models.Model):
 
         # For company events, automatically create a timeslot if it doesn't exist
         if self.student_session.session_type == SessionType.COMPANY_EVENT:
-            if self.student_session.company_event_at:
-                # Check if a timeslot already exists for this time
-                timeslot, created = StudentSessionTimeslot.objects.get_or_create(
+            with transaction.atomic():
+                timeslot, created = StudentSessionTimeslot.objects.select_for_update().get_or_create(
                     student_session=self.student_session,
                     start_time=self.student_session.company_event_at,
                     defaults={
@@ -78,12 +77,16 @@ class StudentSessionApplication(models.Model):
                 )
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
+            self.user.email_user(
+                "Application accepted",
+                f"Your application has been accepted for the company event at {self.student_session.company.name}. ")
 
-        self.user.email_user(
-            "Application accepted",
-            "Your application has been accepted, enter the app and select a timeslot\n "
-            "They may run out at any time.\n",
-        )
+        if self.student_session.session_type == SessionType.REGULAR:
+            self.user.email_user(
+                "Application accepted",
+                f"Your application to {self.student_session.company.name} has been accepted, enter the app and select a timeslot\n "
+                "They may run out at any time.\n",
+            )
         self.save()
 
     def deny(self) -> None:
@@ -228,12 +231,12 @@ class StudentSession(models.Model):
 
 @receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)
 def validate_single_selection(
-    _: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
+        _: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
 ) -> None:
     if action in ("post_add", "post_remove", "post_clear"):
         if (
-            instance.student_session.session_type == SessionType.REGULAR
-            and instance.selected_applications.count() > 1
+                instance.student_session.session_type == SessionType.REGULAR
+                and instance.selected_applications.count() > 1
         ):
             raise ValidationError(
                 "Regular sessions can only have one selected application"
