@@ -1023,7 +1023,7 @@ class CompanyEventSessionTests(TestCase):
         from student_sessions.models import SessionType
 
         with self.assertRaises(ValidationError):
-            session = StudentSession.objects.create(
+            StudentSession.objects.create(
                 company=self.company_user.company,
                 booking_close_time=timezone.now() + datetime.timedelta(days=1),
                 booking_open_time=timezone.now() - datetime.timedelta(days=1),

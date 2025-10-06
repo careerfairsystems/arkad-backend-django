@@ -233,35 +233,41 @@ class StudentSession(models.Model):
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Custom validation to ensure company_event_at is set if the session_type is COMPANY_EVENT.
         """
         # Check for the specific condition:
-        if self.session_type == SessionType.COMPANY_EVENT and self.company_event_at is None:
+        if (
+            self.session_type == SessionType.COMPANY_EVENT
+            and self.company_event_at is None
+        ):
             # Raise a ValidationError if the condition is not met
-            raise ValidationError({
-                'company_event_at': (
-                    'A COMPANY_EVENT type session must have a defined company event start time.'
-                )
-            })
+            raise ValidationError(
+                {
+                    "company_event_at": (
+                        "A COMPANY_EVENT type session must have a defined company event start time."
+                    )
+                }
+            )
+        return super().clean()
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Calls full clean before saving to ensure constraints are checked.
         """
         self.full_clean()
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 @receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)
 def validate_single_selection(
-        sender: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
+    sender: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
 ) -> None:
     if action in ("post_add", "post_remove", "post_clear"):
         if (
-                instance.student_session.session_type == SessionType.REGULAR
-                and instance.selected_applications.count() > 1
+            instance.student_session.session_type == SessionType.REGULAR
+            and instance.selected_applications.count() > 1
         ):
             raise ValidationError(
                 "Regular sessions can only have one selected application"
