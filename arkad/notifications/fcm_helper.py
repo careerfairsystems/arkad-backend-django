@@ -1,10 +1,26 @@
+import logging
+from datetime import datetime
 from pathlib import Path
 
 import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import credentials, messaging
+from firebase_admin.messaging import Message
 
 from arkad import settings
 
+
+class NotificationLog:
+    def log(self, msg: Message):
+        recipient = None
+        if msg.token:
+            recipient = msg.token
+        elif msg.topic:
+            recipient = f"topic {msg.topic}"
+
+        if msg.notification and recipient is not None:
+            logging.info(msg=f"Sent notification with title {msg.notification.title} and body {msg.notification.body} to {recipient} at {datetime.now()}")
+
+logger = NotificationLog()
 
 class FCMHelper:
     
@@ -22,6 +38,7 @@ class FCMHelper:
             token=token,
         )
         response = messaging.send(msg)
+        logger.log(msg)
         return str(response)
     
     def send_to_topic(self, topic: str, title: str, body: str) -> str:
@@ -34,7 +51,7 @@ class FCMHelper:
         )
         
         response = messaging.send(message)
+        logger.log(message)
         return str(response)
 
-cert_path = settings.BASE_DIR / "firebase_cert.json"
-fcm = FCMHelper(cert_path)
+fcm = FCMHelper(settings.BASE_DIR / "firebase_cert.json")
