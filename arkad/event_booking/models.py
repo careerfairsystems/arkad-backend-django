@@ -1,7 +1,7 @@
 import uuid
 from datetime import timedelta, datetime
 
-from celery.result import AsyncResult
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, UniqueConstraint, CheckConstraint, QuerySet

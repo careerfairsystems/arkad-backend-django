@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import firebase_admin
-from firebase_admin import credentials, messaging
+import firebase_admin  # type: ignore[import-untyped]
+from firebase_admin import credentials, messaging  # type: ignore[import-untyped]
 
 from arkad import settings
 

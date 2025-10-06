@@ -4,7 +4,7 @@ from functools import partial
 from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils import timezone
-from celery.result import AsyncResult
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from arkad.defaults import (
     STUDENT_SESSIONS_OPEN_UTC,
     STUDENT_SESSIONS_CLOSE_UTC,
