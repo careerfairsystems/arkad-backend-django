@@ -9,7 +9,7 @@ from arkad import settings
 class FCMHelper:
     
     def __init__(self, cert_path: Path):
-        if not firebase_admin._apps:
+        if cert_path.exists() and not firebase_admin._apps:
             cred = credentials.Certificate(cert_path)
             firebase_admin.initialize_app(cred)
     
@@ -37,7 +37,4 @@ class FCMHelper:
         return str(response)
 
 cert_path = settings.BASE_DIR / "firebase_cert.json"
-if cert_path.exists():
-    fcm = FCMHelper(cert_path)
-else:
-    fcm = None
+fcm = FCMHelper(cert_path)
