@@ -7,7 +7,7 @@ For the easiest and most consistent development experience, use Docker Compose. 
 2. Copy `example.env` to `.env` in the arkad folder.
 3. From the project root, run:
    ```bash
-   docker compose -f arkad/compose.yaml up --build
+   docker compose -f compose.yaml up --build
    ```
 4. Migrate with: 
    ```bash
