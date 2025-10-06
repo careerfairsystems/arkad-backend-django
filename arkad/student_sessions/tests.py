@@ -1231,6 +1231,11 @@ class CompanyEventSessionTests(TestCase):
         dataset = tablib.Dataset(*rows, headers=("id", "Status"))
 
         resource.import_data(dataset, dry_run=False)
+        # Make sure that the applications were updated:
+
+        for app in applications:
+            app.refresh_from_db()
+            self.assertEqual(app.status, "accepted")
 
         # Verify only one timeslot created
         self.assertEqual(
@@ -1524,7 +1529,9 @@ class CompanyEventSessionTests(TestCase):
         application.accept()
 
         # Verify no new timeslot created
-        self.assertEqual(StudentSessionTimeslot.objects.filter(student_session=session).count(), 1)
+        self.assertEqual(
+            StudentSessionTimeslot.objects.filter(student_session=session).count(), 1
+        )
 
         # Verify the existing timeslot was reused (duration unchanged)
         timeslot = StudentSessionTimeslot.objects.get(student_session=session)
@@ -1590,20 +1597,26 @@ class CompanyEventSessionTests(TestCase):
 
         # Verify regular session has NO timeslots created
         self.assertEqual(
-            StudentSessionTimeslot.objects.filter(student_session=regular_session).count(),
+            StudentSessionTimeslot.objects.filter(
+                student_session=regular_session
+            ).count(),
             0,
-            "Regular session should not have auto-created timeslots"
+            "Regular session should not have auto-created timeslots",
         )
 
         # Verify company event session has EXACTLY ONE timeslot created
         self.assertEqual(
-            StudentSessionTimeslot.objects.filter(student_session=event_session).count(),
+            StudentSessionTimeslot.objects.filter(
+                student_session=event_session
+            ).count(),
             1,
-            "Company event should have exactly one auto-created timeslot"
+            "Company event should have exactly one auto-created timeslot",
         )
 
         # Verify the company event timeslot has all 3 event applications
-        event_timeslot = StudentSessionTimeslot.objects.get(student_session=event_session)
+        event_timeslot = StudentSessionTimeslot.objects.get(
+            student_session=event_session
+        )
         self.assertEqual(event_timeslot.selected_applications.count(), 3)
         self.assertEqual(event_timeslot.start_time, event_time)
         self.assertEqual(event_timeslot.duration, 480)
@@ -1618,7 +1631,11 @@ class CompanyEventSessionTests(TestCase):
         for app in regular_apps:
             app.refresh_from_db()
             self.assertEqual(app.status, "accepted")
-            self.assertEqual(app.selected_timeslots.count(), 0, "Regular apps should not be auto-assigned to timeslots")
+            self.assertEqual(
+                app.selected_timeslots.count(),
+                0,
+                "Regular apps should not be auto-assigned to timeslots",
+            )
 
     def test_import_mixed_statuses_for_company_events(self):
         """Test importing company event applications with mixed accepted/rejected statuses."""
@@ -1661,7 +1678,12 @@ class CompanyEventSessionTests(TestCase):
         resource.import_data(dataset, dry_run=False)
 
         # Verify timeslot was created
-        self.assertEqual(StudentSessionTimeslot.objects.filter(student_session=event_session).count(), 1)
+        self.assertEqual(
+            StudentSessionTimeslot.objects.filter(
+                student_session=event_session
+            ).count(),
+            1,
+        )
 
         # Verify only accepted applications are in the timeslot
         timeslot = StudentSessionTimeslot.objects.get(student_session=event_session)
@@ -1682,4 +1704,3 @@ class CompanyEventSessionTests(TestCase):
         self.assertEqual(apps[4].status, "rejected")
         self.assertNotIn(apps[2], timeslot.selected_applications.all())
         self.assertNotIn(apps[4], timeslot.selected_applications.all())
-
