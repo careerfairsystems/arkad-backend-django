@@ -126,18 +126,18 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
         # Just update the status field directly
         if not dry_run:
             instance.save()
-        self.custom_after_save_instance(instance)
+        self.custom_after_save_instance(instance, dry_run)
 
     @staticmethod
     def custom_after_save_instance(
         instance: StudentSessionApplication,
+        dry_run: bool = False,
         **kwargs: Any,
     ) -> None:
         """
         Call accept() or deny() method when status changes during import.
         This ensures the proper logic (like creating timeslots) is executed.
         """
-        dry_run = kwargs.get("dry_run", False)
 
         if dry_run:
             return

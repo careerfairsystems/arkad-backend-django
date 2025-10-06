@@ -1,5 +1,5 @@
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from pydantic import BaseModel
@@ -223,38 +223,28 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
 
     session = application.student_session
 
-    # For company events, show all timeslots. For regular sessions, only show free or user's booked slots
-    if session.session_type == SessionType.COMPANY_EVENT:
-        timeslots = (
-            StudentSessionTimeslot.objects.filter(
-                Q(student_session__company_id=company_id)
-                & Q(booking_closes_at__gte=timezone.now())
-            )
-            .prefetch_related("selected_applications")
-            .all()
-        )
-    else:
-        # For regular sessions, filter to show only unbooked slots or the user's booked slot
-        timeslots = (
-            StudentSessionTimeslot.objects.filter(
-                Q(student_session__company_id=company_id)
-                & Q(booking_closes_at__gte=timezone.now())
-            )
-            .prefetch_related("selected_applications")
-            .all()
-        )
+    max_applications_per_slot: int = (
+        1 if session.session_type == SessionType.REGULAR else 1000_000_000
+    )
 
-        # Filter out timeslots that are booked by other users
-        filtered_timeslots = []
-        for timeslot in timeslots:
-            if timeslot.selected_applications.count() == 0:
-                # Timeslot is free
-                filtered_timeslots.append(timeslot)
-            elif timeslot.selected_applications.filter(id=application.id).exists():
-                # Timeslot is booked by current user
-                filtered_timeslots.append(timeslot)
-        timeslots = filtered_timeslots
-
+    timeslots = (
+        StudentSessionTimeslot.objects.annotate(
+            num_selected_applications=Count("selected_applications")
+        )
+        .filter(
+            Q(student_session__company_id=company_id)
+            & (
+                Q(booking_closes_at__gte=timezone.now())
+                | Q(booking_closes_at__isnull=True)
+            )
+            & (
+                Q(num_selected_applications__lt=max_applications_per_slot)
+                | Q(selected_applications=application)
+            )
+        )
+        .prefetch_related("selected_applications")
+        .all()
+    )
     result = []
     for timeslot in timeslots:
         # Check if user has booked this timeslot
@@ -306,14 +296,15 @@ def confirm_student_session(
         with transaction.atomic():
             timeslot: StudentSessionTimeslot = (
                 StudentSessionTimeslot.objects.select_for_update().get(
+                    Q(booking_closes_at__gte=timezone.now())
+                    | Q(booking_closes_at__isnull=True),
                     id=timeslot_id,
-                    booking_closes_at__gte=timezone.now(),
                     student_session=session,
                 )
             )
 
             # Check if timeslot is available based on session type
-            if not timeslot.is_available_for_application(applicant):
+            if not timeslot.is_available_for_application():
                 return 404, "Timeslot not found or already taken"
 
             # Add the selection using the model method
@@ -350,7 +341,10 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     if not timeslot:
         return 404, "Timeslot not found or already taken"
 
-    if timeslot.booking_closes_at <= timezone.now():
+    if (
+        timeslot.booking_closes_at is not None
+        and timeslot.booking_closes_at <= timezone.now()
+    ):
         return 409, "Unbooking period has expired"
 
     # Remove the booking using the model method

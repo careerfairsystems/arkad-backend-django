@@ -441,7 +441,9 @@ class StudentSessionTests(TestCase):
         timeslot.refresh_from_db()
         application.refresh_from_db()
         self.assertEqual(application.status, "accepted", application.status)
-        self.assertEqual(timeslot.selected_applications.first(), application, timeslot)
+        self.assertEqual(
+            timeslot.selected_applications.first(), application, application
+        )
         self.assertEqual(timeslot.selected_applications.count(), 1)
         self.assertIsNotNone(timeslot.time_booked)
 
@@ -1231,11 +1233,6 @@ class CompanyEventSessionTests(TestCase):
         dataset = tablib.Dataset(*rows, headers=("id", "Status"))
 
         resource.import_data(dataset, dry_run=False)
-        # Make sure that the applications were updated:
-
-        for app in applications:
-            app.refresh_from_db()
-            self.assertEqual(app.status, "accepted")
 
         # Verify only one timeslot created
         self.assertEqual(

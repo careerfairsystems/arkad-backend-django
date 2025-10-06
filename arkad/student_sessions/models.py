@@ -1,7 +1,11 @@
 from functools import partial
+from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 from django.utils import timezone
 
 from arkad.defaults import (
@@ -143,10 +147,8 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
-    def is_available_for_application(
-        self, application: StudentSessionApplication
-    ) -> bool:
-        """Check if this timeslot is available for the given application."""
+    def is_available_for_application(self) -> bool:
+        """Check if this timeslot is available for booking."""
         session_type = self.student_session.session_type
 
         if session_type == SessionType.COMPANY_EVENT:
@@ -222,3 +224,17 @@ class StudentSession(models.Model):
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
+
+
+@receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)
+def validate_single_selection(
+    _: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
+) -> None:
+    if action in ("post_add", "post_remove", "post_clear"):
+        if (
+            instance.student_session.session_type == SessionType.REGULAR
+            and instance.selected_applications.count() > 1
+        ):
+            raise ValidationError(
+                "Regular sessions can only have one selected application"
+            )
