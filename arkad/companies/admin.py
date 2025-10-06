@@ -51,9 +51,11 @@ class DesiredCompetencesFilter(ArrayFieldListFilter):
     title = "desired competences"
     parameter_name = "desired_competences"
 
+
 class PositionsFilter(ArrayFieldListFilter):
     title = "positions"
     parameter_name = "positions"
+
 
 class IndustriesFilter(ArrayFieldListFilter):
     title = "industries"

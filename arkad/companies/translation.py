@@ -32,7 +32,6 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "Teknisk Matematik": "Engineering Mathematics",
     "Teknisk Nanovetenskap": "Engineering Nanoscience",
     "Väg- och vatttenbyggnad": "Road and Water Engineering",
-
     # Competence Choices (Swedish to English)
     "Applications": "Applications",
     "Architecture": "Architecture",
@@ -113,7 +112,6 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "användarbarhet": "Usability",
     "användbarhet": "Usability",
     "väg- och vattenbyggnad": "Civil Engineering",
-
     # Position Choices
     "Extrajobb": "Part Time",
     "extrajobb": "Part Time",
@@ -135,7 +133,6 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "Utlandsmöjligheter": "Foreign Opportunity",
     "utlandsmöjlighet": "Foreign Opportunity",
     "deltid": "Part Time",
-
     # Industry Choices
     "Arkitektur och Grafisk design": "Architecture and Graphic Design",
     "Bank och finans": "Banking and Finance",
