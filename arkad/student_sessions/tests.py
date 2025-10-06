@@ -1,5 +1,6 @@
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.test import Client
 
 from student_sessions.models import (
@@ -1017,30 +1018,18 @@ class CompanyEventSessionTests(TestCase):
         for app in applications:
             self.assertIn(app, timeslot.selected_applications.all())
 
-    def test_company_event_without_event_time_no_timeslot_created(self):
+    def test_company_event_with_no_event_time(self):
         """Test that accepting application for company event without event time doesn't create timeslot."""
         from student_sessions.models import SessionType
 
-        session = StudentSession.objects.create(
-            company=self.company_user.company,
-            booking_close_time=timezone.now() + datetime.timedelta(days=1),
-            booking_open_time=timezone.now() - datetime.timedelta(days=1),
-            session_type=SessionType.COMPANY_EVENT,
-            company_event_at=None,  # No event time set
-        )
-
-        application = StudentSessionApplication.objects.create(
-            user=self.student_users[0],
-            student_session=session,
-            motivation_text="Test",
-        )
-
-        application.accept()
-
-        # Verify no timeslot was created
-        self.assertEqual(
-            StudentSessionTimeslot.objects.filter(student_session=session).count(), 0
-        )
+        with self.assertRaises(ValidationError):
+            session = StudentSession.objects.create(
+                company=self.company_user.company,
+                booking_close_time=timezone.now() + datetime.timedelta(days=1),
+                booking_open_time=timezone.now() - datetime.timedelta(days=1),
+                session_type=SessionType.COMPANY_EVENT,
+                company_event_at=None,  # No event time set
+            )
 
     def test_regular_session_does_not_auto_create_timeslot(self):
         """Test that regular sessions don't automatically create timeslots when accepting applications."""

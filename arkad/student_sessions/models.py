@@ -19,6 +19,8 @@ from user_models.models import User
 from companies.models import Company
 from django_pydantic_field import SchemaField
 
+COMPANY_EVENT_DEFAULT_DURATION: int = 480  # 8 hours in minutes
+
 
 class ApplicationStatus(models.TextChoices):
     PENDING = "pending", "Pending"
@@ -68,18 +70,21 @@ class StudentSessionApplication(models.Model):
         # For company events, automatically create a timeslot if it doesn't exist
         if self.student_session.session_type == SessionType.COMPANY_EVENT:
             with transaction.atomic():
-                timeslot, created = StudentSessionTimeslot.objects.select_for_update().get_or_create(
-                    student_session=self.student_session,
-                    start_time=self.student_session.company_event_at,
-                    defaults={
-                        "duration": 480,  # 8 hours in minutes
-                    },
+                timeslot, created = (
+                    StudentSessionTimeslot.objects.select_for_update().get_or_create(
+                        student_session=self.student_session,
+                        start_time=self.student_session.company_event_at,
+                        defaults={
+                            "duration": COMPANY_EVENT_DEFAULT_DURATION,  # 8 hours in minutes
+                        },
+                    )
                 )
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
             self.user.email_user(
                 "Application accepted",
-                f"Your application has been accepted for the company event at {self.student_session.company.name}. ")
+                f"Your application has been accepted for the company event at {self.student_session.company.name}. ",
+            )
 
         if self.student_session.session_type == SessionType.REGULAR:
             self.user.email_user(
@@ -228,10 +233,30 @@ class StudentSession(models.Model):
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
 
+    def clean(self):
+        """
+        Custom validation to ensure company_event_at is set if the session_type is COMPANY_EVENT.
+        """
+        # Check for the specific condition:
+        if self.session_type == SessionType.COMPANY_EVENT and self.company_event_at is None:
+            # Raise a ValidationError if the condition is not met
+            raise ValidationError({
+                'company_event_at': (
+                    'A COMPANY_EVENT type session must have a defined company event start time.'
+                )
+            })
+
+    def save(self, *args, **kwargs):
+        """
+        Calls full clean before saving to ensure constraints are checked.
+        """
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 @receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)
 def validate_single_selection(
-        _: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
+        sender: Any, instance: StudentSessionTimeslot, action: str, **kwargs: Any
 ) -> None:
     if action in ("post_add", "post_remove", "post_clear"):
         if (
