@@ -21,6 +21,10 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
         SWEDISH_TO_ENGLISH.get(c, c) for c in profile.desiredCompetence
     ]
 
+    desired_programmes = [
+        SWEDISH_TO_ENGLISH.get(p, p) for p in profile.desiredProgramme
+    ]
+
     industries = [SWEDISH_TO_ENGLISH.get(i, i) for i in profile.industry]
 
     # The url for the image, it uses the key for the exibitors storage. Does not append a size here.
@@ -30,13 +34,11 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
         else None
     )
 
-    # Map positions from 'weOffer' (add more mappings as needed)
-    position_mapping = {
-        "Heltidsjobb": "FullTime",
-        "Exjobb": "Thesis",
-        "Praktikplatser": "Internship",
-    }
-    positions = [position_mapping.get(offer, offer) for offer in profile.weOffer]
+    # Translate positions from weOffer and positionsOffered
+    positions = [
+        SWEDISH_TO_ENGLISH.get(offer, offer)
+        for offer in profile.weOffer + profile.positionsOffered
+    ]
 
     # Extract student session days - prioritize events.studentsessions[xdays] over studentsession field
     parse_session_days: int = 0
@@ -85,7 +87,7 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             "company_email": profile.contactEmail,
             "company_phone": profile.contactPhone,
             "desired_degrees": profile.desiredDegree,
-            "desired_programme": profile.desiredProgramme,
+            "desired_programme": desired_programmes,
             "desired_competences": desired_competences,
             "positions": positions,
             "industries": industries,
