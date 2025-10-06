@@ -98,6 +98,7 @@ def get_student_sessions(request: AuthenticatedRequest):
                 disclaimer=s.disclaimer,
                 booking_open_time=s.booking_open_time,
                 session_type=s.session_type,
+                location=s.location,
             )
             for s in sessions
         ],

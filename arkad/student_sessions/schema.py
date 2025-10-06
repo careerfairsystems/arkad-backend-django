@@ -64,6 +64,7 @@ class StudentSessionNormalUserSchema(Schema):
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
     description: str | None
+    location: str | None
     disclaimer: str | None
     field_modifications: list[FieldModificationSchema]
     id: int

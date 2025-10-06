@@ -173,6 +173,12 @@ class StudentSession(models.Model):
         blank=True,
         help_text="Description of the student session, shown to students when applying",
     )
+    location = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Location of the student session, shown to students when applying",
+    )
     disclaimer = models.TextField(
         null=True,
         blank=True,
