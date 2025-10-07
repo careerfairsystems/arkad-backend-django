@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, UniqueConstraint, CheckConstraint
+from django.db.models import Q, CheckConstraint
 from django.utils import timezone
 
 from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVENT
