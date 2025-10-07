@@ -20,11 +20,6 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    class Meta:
-        constraints = [
-            UniqueConstraint(name="one_ticket_per_user_event", fields=("user", "event"))
-        ]
-
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
