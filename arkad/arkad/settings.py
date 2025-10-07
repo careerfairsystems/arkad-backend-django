@@ -226,3 +226,5 @@ if CELERY_BROKER_URL:
     CELERY_BROKER_CONNECTION_MAX_RETRIES = 0
 else:
     logging.warning("CELERY_BROKER_URL is not set, Celery will not work!")
+
+FIREBASE_CERT_PATH = BASE_DIR / "firebase_cert.json"

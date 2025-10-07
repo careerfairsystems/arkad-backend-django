@@ -54,4 +54,4 @@ class FCMHelper:
         logger.log(message)
         return str(response)
 
-fcm = FCMHelper(settings.BASE_DIR / "firebase_cert.json")
+fcm = FCMHelper(settings.FIREBASE_CERT_PATH)
