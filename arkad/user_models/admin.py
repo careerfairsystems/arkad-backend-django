@@ -3,12 +3,14 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.contrib import messages
+from django.http import HttpRequest
+from typing import Any
 import secrets
 
 from .models import User, StaffEnrollmentToken, StaffEnrollmentUsage
 
 
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
     list_display = (
         "username",
         "email",
@@ -87,13 +89,15 @@ class UserAdmin(BaseUserAdmin):
 
     actions = ["generate_staff_enrollment_link"]
 
-    def is_company_user(self, obj):
+    def is_company_user(self, obj: User) -> bool:
         return obj.is_company
 
-    is_company_user.boolean = True
-    is_company_user.short_description = "Company User"
+    is_company_user.boolean = True  # type: ignore[attr-defined]
+    is_company_user.short_description = "Company User"  # type: ignore[attr-defined]
 
-    def generate_staff_enrollment_link(self, request, queryset):
+    def generate_staff_enrollment_link(
+        self, request: HttpRequest, queryset: Any
+    ) -> None:
         """Generate a secure staff enrollment link"""
         # Only allow superusers to generate enrollment links
         if not request.user.is_superuser:
@@ -131,20 +135,37 @@ class UserAdmin(BaseUserAdmin):
             ),
         )
 
-    generate_staff_enrollment_link.short_description = "Generate staff enrollment link"
+    generate_staff_enrollment_link.short_description = "Generate staff enrollment link"  # type: ignore[attr-defined]
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Only superusers can add new users"""
+        return request.user.is_superuser
+
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        """Superusers can change any user, staff can only change themselves"""
+        if request.user.is_superuser:
+            return True
+        # Staff can only change their own account
+        if obj is not None and request.user.is_staff:
+            return bool(obj.pk == request.user.pk)
+        return False
+
+    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        """Only superusers can delete users"""
+        return request.user.is_superuser
 
 
-class StaffEnrollmentUsageInline(admin.TabularInline):
+class StaffEnrollmentUsageInline(admin.TabularInline):  # type: ignore[type-arg]
     model = StaffEnrollmentUsage
     extra = 0
     readonly_fields = ("user", "created_at")
     can_delete = False
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
         return False
 
 
-class StaffEnrollmentTokenAdmin(admin.ModelAdmin):
+class StaffEnrollmentTokenAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "token_preview",
         "created_by",
@@ -159,18 +180,26 @@ class StaffEnrollmentTokenAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     inlines = [StaffEnrollmentUsageInline]
 
-    def token_preview(self, obj):
+    def token_preview(self, obj: StaffEnrollmentToken) -> str:
         return f"{obj.token[:16]}..."
 
-    token_preview.short_description = "Token"
+    token_preview.short_description = "Token"  # type: ignore[attr-defined]
 
-    def usage_count(self, obj):
+    def usage_count(self, obj: StaffEnrollmentToken) -> int:
         return obj.usages.count()
 
-    usage_count.short_description = "Times Used"
+    usage_count.short_description = "Times Used"  # type: ignore[attr-defined]
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         return False
+
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        """Only superusers can change staff enrollment tokens"""
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        """Only superusers can delete staff enrollment tokens"""
+        return request.user.is_superuser
 
 
 admin.site.register(User, UserAdmin)

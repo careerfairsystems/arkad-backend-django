@@ -154,11 +154,13 @@ def staff_complete_signup(request: HttpRequest) -> HttpResponse:
     and then upgrades the user to staff.
     """
     # Get data from session
-    verification_token = request.session.get("verification_token")
+    verification_token: str | None = request.session.get("verification_token")
     signup_email = request.session.get("signup_email")
     enrollment_token_str = request.session.get("staff_enrollment_token")
 
-    if not all([verification_token, signup_email, enrollment_token_str]):
+    if verification_token is None or not all(
+        [verification_token, signup_email, enrollment_token_str]
+    ):
         messages.error(request, "Invalid signup session. Please start again.")
         return redirect(reverse("login"))
 
