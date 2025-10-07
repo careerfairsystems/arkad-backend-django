@@ -134,12 +134,6 @@ class StaffEnrollmentAPITestCase(TestCase):
         # Verify email was sent
         mock_send_email.assert_called_once()
 
-        # Verify data is stored in cache
-        cache_key = "staff-signup-data-newstaff@example.com"
-        cached_data = cache.get(cache_key)
-        self.assertIsNotNone(cached_data)
-        self.assertEqual(cached_data["email"], "newstaff@example.com")
-
     def test_staff_begin_signup_invalid_token(self) -> None:
         """Test beginning signup with invalid enrollment token"""
         response = self.client.post(
@@ -224,35 +218,36 @@ class StaffEnrollmentAPITestCase(TestCase):
     @patch("email_app.emails.send_signup_code_email")
     def test_staff_complete_signup_success(self, mock_send_email: Any) -> None:
         """Test completing staff signup with valid code"""
-        # First, begin the signup
         email = "completesignup@example.com"
         password = "CompletePass123!"
+        first_name = "Complete"
+        last_name = "Signup"
+
+        # Create SignupSchema to generate the correct hash
+        from user_models.schema import SignupSchema
+
+        signup_schema = SignupSchema(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            food_preferences=None,
+        )
 
         # Mock the verification code
         code = "123456"
         salt = "test_salt"
 
-        # Store signup data in cache
-        cache.set(
-            f"staff-signup-data-{email}",
-            {
-                "email": email,
-                "password": password,
-                "first_name": "Complete",
-                "last_name": "Signup",
-                "food_preferences": None,
-            },
-            timeout=600,
-        )
-
-        # Create verification JWT
+        # Create verification JWT with correct signup data hash
         verification_token = jwt_encode(
             {
                 "code2fa": sha256(
                     (SECRET_KEY + salt + code).encode("utf-8"), usedforsecurity=True
                 ).hexdigest(),
                 "salt2fa": salt,
-                "signup-data-hash": "test_hash",
+                "signup-data-hash": sha256(
+                    signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                ).hexdigest(),
             }
         )
 
@@ -263,6 +258,10 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": self.valid_token.token,
                     "verification_token": verification_token,
                     "code": code,
+                    "email": email,
+                    "password": password,
+                    "first_name": first_name,
+                    "last_name": last_name,
                 }
             ),
             content_type="application/json",
@@ -274,18 +273,14 @@ class StaffEnrollmentAPITestCase(TestCase):
         user = User.objects.get(email=email)
         self.assertTrue(user.is_staff)
         self.assertFalse(user.is_student)
-        self.assertEqual(user.first_name, "Complete")
+        self.assertEqual(user.first_name, first_name)
 
         # Verify enrollment usage was tracked
-        usage = StaffEnrollmentUsage.objects.filter(
+        usage = StaffEnrollmentUsage.objects.filter(  # type: ignore[attr-defined]
             token=self.valid_token,
             user=user,
         ).first()
         self.assertIsNotNone(usage)
-
-        # Verify cache was cleared
-        cached_data = cache.get(f"staff-signup-data-{email}")
-        self.assertIsNone(cached_data)
 
     def test_staff_complete_signup_invalid_token(self) -> None:
         """Test completing signup with invalid enrollment token"""
@@ -296,6 +291,8 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": "invalid_token",
                     "verification_token": "some_jwt",
                     "code": "123456",
+                    "email": "test@example.com",
+                    "password": "TestPass123!",
                 }
             ),
             content_type="application/json",
@@ -306,18 +303,16 @@ class StaffEnrollmentAPITestCase(TestCase):
     def test_staff_complete_signup_wrong_code(self) -> None:
         """Test completing signup with wrong verification code"""
         email = "wrongcode@example.com"
+        password = "WrongCodePass123!"
 
-        # Store signup data
-        cache.set(
-            f"staff-signup-data-{email}",
-            {
-                "email": email,
-                "password": "WrongCodePass123!",
-                "first_name": "Wrong",
-                "last_name": "Code",
-                "food_preferences": None,
-            },
-            timeout=600,
+        from user_models.schema import SignupSchema
+
+        signup_schema = SignupSchema(
+            email=email,
+            password=password,
+            first_name="Wrong",
+            last_name="Code",
+            food_preferences=None,
         )
 
         # Create verification JWT with different code
@@ -328,7 +323,9 @@ class StaffEnrollmentAPITestCase(TestCase):
                     (SECRET_KEY + salt + "654321").encode("utf-8"), usedforsecurity=True
                 ).hexdigest(),
                 "salt2fa": salt,
-                "signup-data-hash": "test_hash",
+                "signup-data-hash": sha256(
+                    signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                ).hexdigest(),
             }
         )
 
@@ -339,13 +336,66 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": self.valid_token.token,
                     "verification_token": verification_token,
                     "code": "123456",  # Wrong code
+                    "email": email,
+                    "password": password,
+                    "first_name": "Wrong",
+                    "last_name": "Code",
                 }
             ),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 401)
-        self.assertIn("Invalid verification code", response.content.decode())
+
+    def test_staff_complete_signup_data_mismatch(self) -> None:
+        """Test completing signup with data that doesn't match the hash"""
+        email = "mismatch@example.com"
+        password = "MismatchPass123!"
+
+        from user_models.schema import SignupSchema
+
+        # Create hash with one set of data
+        original_schema = SignupSchema(
+            email=email,
+            password=password,
+            first_name="Original",
+            last_name="Name",
+            food_preferences=None,
+        )
+
+        salt = "test_salt"
+        code = "123456"
+        verification_token = jwt_encode(
+            {
+                "code2fa": sha256(
+                    (SECRET_KEY + salt + code).encode("utf-8"), usedforsecurity=True
+                ).hexdigest(),
+                "salt2fa": salt,
+                "signup-data-hash": sha256(
+                    original_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                ).hexdigest(),
+            }
+        )
+
+        # Try to complete with different data
+        response = self.client.post(
+            "/api/user/staff-enrollment/complete-signup",
+            data=json.dumps(
+                {
+                    "enrollment_token": self.valid_token.token,
+                    "verification_token": verification_token,
+                    "code": code,
+                    "email": email,
+                    "password": password,
+                    "first_name": "Different",  # Changed!
+                    "last_name": "Name",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        # Should fail because data hash doesn't match
+        self.assertEqual(response.status_code, 401)
 
     def test_staff_complete_signup_expired_session(self) -> None:
         """Test completing signup with expired cache session"""
@@ -382,22 +432,22 @@ class StaffEnrollmentAPITestCase(TestCase):
     @patch("email_app.emails.send_signup_code_email")
     def test_multiple_users_same_token(self, mock_send_email: Any) -> None:
         """Test that the same enrollment token can be used multiple times"""
+        from user_models.schema import SignupSchema
+
         # Create first user
         email1 = "staffuser1@example.com"
         password1 = "StaffPass123!"
+        first_name1 = "Staff"
+        last_name1 = "One"
         code1 = "123456"
         salt1 = "salt1"
 
-        cache.set(
-            f"staff-signup-data-{email1}",
-            {
-                "email": email1,
-                "password": password1,
-                "first_name": "Staff",
-                "last_name": "One",
-                "food_preferences": None,
-            },
-            timeout=600,
+        signup_schema1 = SignupSchema(
+            email=email1,
+            password=password1,
+            first_name=first_name1,
+            last_name=last_name1,
+            food_preferences=None,
         )
 
         verification_token1 = jwt_encode(
@@ -406,7 +456,9 @@ class StaffEnrollmentAPITestCase(TestCase):
                     (SECRET_KEY + salt1 + code1).encode("utf-8"), usedforsecurity=True
                 ).hexdigest(),
                 "salt2fa": salt1,
-                "signup-data-hash": "hash1",
+                "signup-data-hash": sha256(
+                    signup_schema1.model_dump_json().encode("utf-8"), usedforsecurity=False
+                ).hexdigest(),
             }
         )
 
@@ -417,6 +469,10 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": self.valid_token.token,
                     "verification_token": verification_token1,
                     "code": code1,
+                    "email": email1,
+                    "password": password1,
+                    "first_name": first_name1,
+                    "last_name": last_name1,
                 }
             ),
             content_type="application/json",
@@ -427,19 +483,17 @@ class StaffEnrollmentAPITestCase(TestCase):
         # Create second user with same token
         email2 = "staffuser2@example.com"
         password2 = "StaffPass456!"
+        first_name2 = "Staff"
+        last_name2 = "Two"
         code2 = "654321"
         salt2 = "salt2"
 
-        cache.set(
-            f"staff-signup-data-{email2}",
-            {
-                "email": email2,
-                "password": password2,
-                "first_name": "Staff",
-                "last_name": "Two",
-                "food_preferences": None,
-            },
-            timeout=600,
+        signup_schema2 = SignupSchema(
+            email=email2,
+            password=password2,
+            first_name=first_name2,
+            last_name=last_name2,
+            food_preferences=None,
         )
 
         verification_token2 = jwt_encode(
@@ -448,7 +502,9 @@ class StaffEnrollmentAPITestCase(TestCase):
                     (SECRET_KEY + salt2 + code2).encode("utf-8"), usedforsecurity=True
                 ).hexdigest(),
                 "salt2fa": salt2,
-                "signup-data-hash": "hash2",
+                "signup-data-hash": sha256(
+                    signup_schema2.model_dump_json().encode("utf-8"), usedforsecurity=False
+                ).hexdigest(),
             }
         )
 
@@ -459,6 +515,10 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": self.valid_token.token,
                     "verification_token": verification_token2,
                     "code": code2,
+                    "email": email2,
+                    "password": password2,
+                    "first_name": first_name2,
+                    "last_name": last_name2,
                 }
             ),
             content_type="application/json",
@@ -474,7 +534,7 @@ class StaffEnrollmentAPITestCase(TestCase):
         self.assertTrue(user2.is_staff)
 
         # Verify both usages are tracked
-        usages = StaffEnrollmentUsage.objects.filter(token=self.valid_token)
+        usages = StaffEnrollmentUsage.objects.filter(token=self.valid_token)  # type: ignore[attr-defined]
         self.assertEqual(usages.count(), 2)
 
     def test_token_usage_count(self) -> None:
