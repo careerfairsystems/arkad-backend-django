@@ -364,8 +364,10 @@ def staff_begin_signup(request: HttpRequest, data: StaffBeginSignupSchema):
     status_code, result = begin_signup(request, signup_data)
     if status_code != 200:
         return status_code, result
-    # result should now be a JWT token
-    cache.set(f"staff-enrollment-{result}", True, timeout=600)  # Mark this token as used for staff enrollment
+
+    # result is a JWT token - mark it as used for staff enrollment
+    # Store the enrollment token association, not just a boolean
+    cache.set(f"staff-enrollment-{result}", data.enrollment_token, timeout=600)
     return status_code, result
 
 
@@ -393,7 +395,6 @@ def staff_complete_signup(request: HttpRequest, data: StaffCompleteSignupSchema)
             return 400, "This enrollment token has been deactivated"
         else:
             return 400, "This enrollment token has expired"
-
 
     # Verify that the signup processes was also started as a staff enrollment:
     if not cache.get(f"staff-enrollment-{data.verification_token}", False):

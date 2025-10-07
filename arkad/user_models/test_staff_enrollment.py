@@ -246,9 +246,17 @@ class StaffEnrollmentAPITestCase(TestCase):
                 ).hexdigest(),
                 "salt2fa": salt,
                 "signup-data-hash": sha256(
-                    signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                    signup_schema.model_dump_json().encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             }
+        )
+
+        # Set cache to mark this as a staff enrollment verification token
+        cache.set(
+            f"staff-enrollment-{verification_token}",
+            self.valid_token.token,
+            timeout=600,
         )
 
         response = self.client.post(
@@ -276,7 +284,7 @@ class StaffEnrollmentAPITestCase(TestCase):
         self.assertEqual(user.first_name, first_name)
 
         # Verify enrollment usage was tracked
-        usage = StaffEnrollmentUsage.objects.filter(  # type: ignore[attr-defined]
+        usage = StaffEnrollmentUsage.objects.filter(
             token=self.valid_token,
             user=user,
         ).first()
@@ -324,7 +332,8 @@ class StaffEnrollmentAPITestCase(TestCase):
                 ).hexdigest(),
                 "salt2fa": salt,
                 "signup-data-hash": sha256(
-                    signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                    signup_schema.model_dump_json().encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             }
         )
@@ -372,7 +381,8 @@ class StaffEnrollmentAPITestCase(TestCase):
                 ).hexdigest(),
                 "salt2fa": salt,
                 "signup-data-hash": sha256(
-                    original_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
+                    original_schema.model_dump_json().encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             }
         )
@@ -421,12 +431,16 @@ class StaffEnrollmentAPITestCase(TestCase):
                     "enrollment_token": self.valid_token.token,
                     "verification_token": verification_token,
                     "code": code,
+                    "email": "expired@example.com",
+                    "password": "ExpiredPass123!",
+                    "first_name": "Expired",
+                    "last_name": "Session",
                 }
             ),
             content_type="application/json",
         )
 
-        # Should fail because email not in JWT
+        # Should fail because cache entry doesn't exist
         self.assertEqual(response.status_code, 401)
 
     @patch("email_app.emails.send_signup_code_email")
@@ -457,9 +471,17 @@ class StaffEnrollmentAPITestCase(TestCase):
                 ).hexdigest(),
                 "salt2fa": salt1,
                 "signup-data-hash": sha256(
-                    signup_schema1.model_dump_json().encode("utf-8"), usedforsecurity=False
+                    signup_schema1.model_dump_json().encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             }
+        )
+
+        # Set cache to mark this as a staff enrollment verification token
+        cache.set(
+            f"staff-enrollment-{verification_token1}",
+            self.valid_token.token,
+            timeout=600,
         )
 
         response1 = self.client.post(
@@ -503,9 +525,17 @@ class StaffEnrollmentAPITestCase(TestCase):
                 ).hexdigest(),
                 "salt2fa": salt2,
                 "signup-data-hash": sha256(
-                    signup_schema2.model_dump_json().encode("utf-8"), usedforsecurity=False
+                    signup_schema2.model_dump_json().encode("utf-8"),
+                    usedforsecurity=False,
                 ).hexdigest(),
             }
+        )
+
+        # Set cache to mark this as a staff enrollment verification token
+        cache.set(
+            f"staff-enrollment-{verification_token2}",
+            self.valid_token.token,
+            timeout=600,
         )
 
         response2 = self.client.post(
@@ -534,7 +564,7 @@ class StaffEnrollmentAPITestCase(TestCase):
         self.assertTrue(user2.is_staff)
 
         # Verify both usages are tracked
-        usages = StaffEnrollmentUsage.objects.filter(token=self.valid_token)  # type: ignore[attr-defined]
+        usages = StaffEnrollmentUsage.objects.filter(token=self.valid_token)
         self.assertEqual(usages.count(), 2)
 
     def test_token_usage_count(self) -> None:
