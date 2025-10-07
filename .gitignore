@@ -13,7 +13,6 @@ arkad/config
 .DS_Store
 .dmypy.json
 /arkad/static_root/
-*.pem
 tofu/.terraform/providers/registry.opentofu.org/hashicorp/aws/5.97.0/darwin_arm64
 tofu/terraform.tfstate
 tofu/terraform.tfstate.backup
