@@ -40,7 +40,7 @@ class Event(models.Model):
     location = models.CharField(max_length=300, null=True)
     language = models.CharField(max_length=100, default="Swedish")
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
 
     visible_time = models.DateTimeField(
         null=False,
