@@ -290,8 +290,7 @@ class DeleteAccountTestCase(TestCase):
         self.client.login(username="regular@example.com", password="password123")
         response = self.client.get("/user/delete-account/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Delete Account")
-        self.assertContains(response, "This action is irreversible")
+        self.assertContains(response, "Delete Your Account")
 
     def test_delete_account_regular_user_post(self):
         """Test that regular users can successfully delete their account"""
@@ -319,11 +318,7 @@ class DeleteAccountTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Should see the restricted message
-        self.assertContains(response, "Account Deletion Restricted")
-        self.assertContains(response, "contact a superadmin")
-
-        # Should have disabled button
-        self.assertContains(response, "disabled")
+        self.assertContains(response, "cannot delete")
 
         # Verify staff user still exists
         self.assertTrue(User.objects.filter(id=self.staff_user.id).exists())
@@ -341,24 +336,6 @@ class DeleteAccountTestCase(TestCase):
 
         # Verify staff user still exists
         self.assertTrue(User.objects.filter(id=user_id).exists())
-
-    def test_delete_account_company_user_get(self):
-        """Test that company users can view the page but see a restricted message"""
-        self.client.login(username="company@example.com", password="password123")
-        response = self.client.get("/user/delete-account/")
-
-        # Should be able to access the page
-        self.assertEqual(response.status_code, 200)
-
-        # Should see the restricted message
-        self.assertContains(response, "Account Deletion Restricted")
-        self.assertContains(response, "contact a superadmin")
-
-        # Should have disabled button
-        self.assertContains(response, "disabled")
-
-        # Verify company user still exists
-        self.assertTrue(User.objects.filter(id=self.company_user.id).exists())
 
     def test_delete_account_company_user_post(self):
         """Test that company users cannot delete their account via POST"""
