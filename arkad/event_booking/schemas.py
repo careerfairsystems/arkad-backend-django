@@ -48,5 +48,7 @@ class UseTicketSchema(Schema):
 
 
 class EventUserInformation(Schema):
+    user_id: int
     full_name: str
     food_preferences: str | None
+    ticket_used: bool
