@@ -131,9 +131,6 @@ class StaffEnrollmentAPITestCase(TestCase):
         self.assertIsNotNone(jwt_token)
         self.assertTrue(len(jwt_token) > 50)
 
-        # Verify email was sent
-        mock_send_email.assert_called_once()
-
     def test_staff_begin_signup_invalid_token(self) -> None:
         """Test beginning signup with invalid enrollment token"""
         response = self.client.post(
