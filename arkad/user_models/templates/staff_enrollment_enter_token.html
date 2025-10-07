@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Staff Enrollment{% endblock %}
+
+{% block form_title %}Enter Staff Enrollment Token{% endblock %}
+
+{% block content %}
+    <form method="post" action="{% url 'staff_enrollment_enter_token' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="token" class="required">Enrollment Token</label>
+            <input type="text" name="token" required id="token">
+            <div class="help-text">Please enter the enrollment token you received from an existing staff user.</div>
+        </div>
+        <button type="submit" class="button">Continue</button>
+    </form>
+
+    <div style="margin-top: 2rem; text-align: center;">
+        <p><a href="{% url 'login' %}">Back to Login</a></p>
+    </div>
+{% endblock %}

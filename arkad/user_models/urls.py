@@ -2,7 +2,13 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 from arkad.settings import DEBUG
-from user_models.views import delete_account
+from user_models.views import (
+    delete_account,
+    staff_enrollment,
+    staff_enrollment_enter_token,
+    staff_begin_signup,
+    staff_complete_signup,
+)
 
 debugging_urls = [
     path(
@@ -44,5 +50,25 @@ urlpatterns = [
         "login/",
         auth_views.LoginView.as_view(template_name="login.html"),
         name="login",
+    ),
+    path(
+        "staff-enrollment/",
+        staff_enrollment_enter_token,
+        name="staff_enrollment_enter_token",
+    ),
+    path(
+        "staff-enrollment/<str:token>/",
+        staff_enrollment,
+        name="staff_enrollment",
+    ),
+    path(
+        "staff-begin-signup/",
+        staff_begin_signup,
+        name="staff_begin_signup",
+    ),
+    path(
+        "staff-complete-signup/",
+        staff_complete_signup,
+        name="staff_complete_signup",
     ),
 ]

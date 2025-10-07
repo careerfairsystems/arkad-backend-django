@@ -58,3 +58,33 @@ class CompanySchema(Schema):
     id: int
     name: str
     description: str | None = None
+
+
+class StaffEnrollmentTokenSchema(Schema):
+    token: str
+    created_at: str
+    expires_at: str
+    is_active: bool
+    usage_count: int
+
+
+class ValidateTokenSchema(Schema):
+    token: str
+
+
+class StaffBeginSignupSchema(Schema):
+    enrollment_token: str
+    email: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+class StaffCompleteSignupSchema(Schema):
+    enrollment_token: str
+    verification_token: str
+    code: str
+    email: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
