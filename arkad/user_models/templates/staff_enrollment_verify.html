@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Verify Email{% endblock %}
+
+{% block form_title %}Verify Your Email{% endblock %}
+
+{% block content %}
+    <div class="info-box">
+        <p>A verification code has been sent to <strong>{{ email }}</strong>. Please enter the code below to complete your registration.</p>
+    </div>
+
+    <form method="post" action="{% url 'staff_complete_signup' %}">
+        {% csrf_token %}
+        <input type="hidden" name="email" value="{{ email }}">
+        <div class="form-group">
+            <label for="code" class="required">Verification Code</label>
+            <input type="text" id="code" name="code" required pattern="[0-9]{6}" maxlength="6" title="Enter the 6-digit code sent to your email.">
+            <div class="help-text">Enter the 6-digit code sent to your email.</div>
+        </div>
+
+        <button type="submit" class="button">Verify and Create Account</button>
+    </form>
+
+    <div style="margin-top: 2rem; text-align: center;">
+        <p>Entered the wrong email? <a href="{% url 'staff_begin_signup' %}">Go back</a></p>
+    </div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .info-box {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    #code {
+        font-size: 1.5rem;
+        text-align: center;
+        letter-spacing: 0.5rem;
+    }
+</style>
+{% endblock %}

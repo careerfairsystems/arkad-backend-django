@@ -179,3 +179,56 @@ class AuthenticatedRequest(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class StaffEnrollmentToken(models.Model):
+    """Token for secure staff enrollment links"""
+
+    token = models.CharField(max_length=255, unique=True, db_index=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_enrollment_tokens",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Staff Enrollment Token"
+        verbose_name_plural = "Staff Enrollment Tokens"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Token {self.token[:16]}... (created by {self.created_by.username})"
+
+    def is_valid(self) -> bool:
+        """Check if token is still valid (active and not expired)"""
+        from django.utils import timezone
+
+        return self.is_active and self.expires_at > timezone.now()
+
+
+class StaffEnrollmentUsage(models.Model):
+    """Track users created from staff enrollment tokens"""
+
+    token = models.ForeignKey(
+        StaffEnrollmentToken,
+        on_delete=models.CASCADE,
+        related_name="usages",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="enrollment_usage",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Staff Enrollment Usage"
+        verbose_name_plural = "Staff Enrollment Usages"
+        ordering = ["-created_at"]
+        unique_together = [["token", "user"]]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} enrolled via token {self.token.token[:16]}..."
