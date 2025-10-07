@@ -35,7 +35,7 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
 
             stockholm_tz = pytz.timezone("Europe/Stockholm")
             visible_time = stockholm_tz.localize(
-                start_time.replace(hour=21, minute=0, second=0, microsecond=0).replace(
+                start_time.replace(year=2500, hour=21, minute=0, second=0, microsecond=0).replace(
                     tzinfo=None
                 )
             )

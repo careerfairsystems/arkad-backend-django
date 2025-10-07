@@ -52,8 +52,11 @@ class Command(BaseCommand):
             return
 
         end_time = start_time + timedelta(minutes=duration_minutes)
+        # Visible time should be year 2100
         visible_time = stockholm_tz.localize(
-            datetime.combine(start_time.date(), time(21, 0))
+            start_time.replace(year=2100, hour=21, minute=0, second=0, microsecond=0).replace(
+                tzinfo=None
+            )
         )
 
         event = Event.objects.create(
