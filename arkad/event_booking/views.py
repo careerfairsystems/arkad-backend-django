@@ -7,7 +7,7 @@ from io import BytesIO
 import pytz
 import qrcode
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -18,7 +18,7 @@ from user_models.models import User
 
 
 @staff_member_required
-def create_lunch_event_view(request):
+def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
     # Make sure user is superuser
     if not request.user.is_superuser:
         return HttpResponse("Unauthorized", status=401)
@@ -35,7 +35,9 @@ def create_lunch_event_view(request):
 
             stockholm_tz = pytz.timezone("Europe/Stockholm")
             visible_time = stockholm_tz.localize(
-                start_time.replace(hour=21, minute=0, second=0, microsecond=0).replace(tzinfo=None)
+                start_time.replace(hour=21, minute=0, second=0, microsecond=0).replace(
+                    tzinfo=None
+                )
             )
 
             event = Event.objects.create(
@@ -62,11 +64,13 @@ def create_lunch_event_view(request):
                 ticket = Ticket.objects.create(user=user, event=event)
                 tickets.append(ticket)
 
-            dir_name = f"{event.name.replace(' ', '_')}_{start_time.strftime('%Y%m%d_%H%M')}"
+            dir_name = (
+                f"{event.name.replace(' ', '_')}_{start_time.strftime('%Y%m%d_%H%M')}"
+            )
             if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
 
-            ticket_chunks = [tickets[i:i + 4] for i in range(0, len(tickets), 4)]
+            ticket_chunks = [tickets[i : i + 4] for i in range(0, len(tickets), 4)]
             pdf_count = 0
 
             for chunk in ticket_chunks:
@@ -85,7 +89,9 @@ def create_lunch_event_view(request):
                 for i, ticket in enumerate(chunk):
                     x_offset, y_offset = positions[i]
                     c.setFont("Helvetica-Bold", 16)
-                    c.drawString(x_offset + 50, y_offset + height / 2 - 50, "Lunch Ticket")
+                    c.drawString(
+                        x_offset + 50, y_offset + height / 2 - 50, "Lunch Ticket"
+                    )
                     c.setFont("Helvetica", 12)
                     c.drawString(
                         x_offset + 50,
@@ -103,20 +109,30 @@ def create_lunch_event_view(request):
                     with open(qr_path, "wb") as f:
                         qr_img.save(f)
 
-                    c.drawImage(qr_path, x_offset + 50, y_offset + height/2 - 250, width=150, height=150)
+                    c.drawImage(
+                        qr_path,
+                        x_offset + 50,
+                        y_offset + height / 2 - 250,
+                        width=150,
+                        height=150,
+                    )
                     os.remove(qr_path)
 
                 c.save()
 
             zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            with zipfile.ZipFile(
+                zip_buffer, "a", zipfile.ZIP_DEFLATED, False
+            ) as zip_file:
                 for root, _, files in os.walk(dir_name):
                     for file in files:
                         zip_file.write(os.path.join(root, file), file)
 
             shutil.rmtree(dir_name)
 
-            response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
+            response = HttpResponse(
+                zip_buffer.getvalue(), content_type="application/zip"
+            )
             response["Content-Disposition"] = f'attachment; filename="{dir_name}.zip"'
             return response
 

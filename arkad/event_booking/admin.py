@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib import admin
 from django.urls import path
 
@@ -5,8 +7,8 @@ from .models import Event, Ticket
 from .views import create_lunch_event_view
 
 
-class EventAdmin(admin.ModelAdmin):
-    def get_urls(self):
+class EventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    def get_urls(self) -> list[Any]:
         urls = super().get_urls()
         custom_urls = [
             path(
@@ -17,7 +19,7 @@ class EventAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-    def changelist_view(self, request, extra_context=None):
+    def changelist_view(self, request, extra_context=None):  # type: ignore[no-untyped-def]
         extra_context = extra_context or {}
         extra_context["show_button"] = True
         return super().changelist_view(request, extra_context=extra_context)

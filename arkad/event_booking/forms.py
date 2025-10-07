@@ -1,5 +1,6 @@
 from django import forms
 
+
 class CreateLunchEventForm(forms.Form):
     username = forms.CharField(label="Username", max_length=100)
     time_start = forms.DateTimeField(
@@ -8,4 +9,3 @@ class CreateLunchEventForm(forms.Form):
     )
     duration = forms.IntegerField(label="Duration in minutes")
     amount = forms.IntegerField(label="Number of tickets")
-
