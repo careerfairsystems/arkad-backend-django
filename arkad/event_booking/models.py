@@ -22,8 +22,8 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    notify_event_tmrw_id = models.CharField(default=None, null=True, blank=True)
-    notify_event_one_hour_id = models.CharField(default=None, null=True, blank=True)
+    task_id_notify_event_tomorrow = models.CharField(default=None, null=True, blank=True)
+    task_id_notify_event_in_one_hour = models.CharField(default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -54,22 +54,22 @@ class Ticket(models.Model):
             args=[self.user.id, self.event.id],
             eta=self.event.start_time - timedelta(hours=24)
         )
-        self.notify_event_tmrw_id = task_notify_event_tmrw.id
+        self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
 
         #(Du har anmält dig till) YYY (som är) med XXX är om en timme
         task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
             args=[self.user.id, self.event.id],
             eta=self.event.start_time - timedelta(hours=1)
         )
-        self.notify_event_one_hour_id = task_notify_event_one_hour.id
+        self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
     
     def _remove_notifications(self) -> None:
-        if self.notify_event_tmrw_id:
-            AsyncResult(self.notify_event_tmrw_id).revoke()
-            self.notify_event_tmrw_id = None
+        if self.task_id_notify_event_tomorrow:
+            AsyncResult(self.task_id_notify_event_tomorrow).revoke()
+            self.task_id_notify_event_tomorrow = None
  
-        if self.notify_event_tmrw_id:
-            AsyncResult(self.notify_event_tmrw_id).revoke()
+        if self.task_id_notify_event_tomorrow:
+            AsyncResult(self.task_id_notify_event_tomorrow).revoke()
             self.notify_event_one_day_id = None
 
 
@@ -102,7 +102,7 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    notify_registration_open_id = models.CharField(default=None, null=True, blank=True)
+    task_id_notify_registration_opening = models.CharField(default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -162,10 +162,10 @@ class Event(models.Model):
             args=[self.id],
             eta=self.release_time
         )
-        self.notify_registration_open_id = task_notify_registration_open.id
+        self.task_id_notify_registration_opening = task_notify_registration_open.id
 
     def _remove_notifications(self) -> None:
-        if self.notify_registration_open_id:
-            AsyncResult(self.notify_registration_open_id).revoke()
-            self.notify_registration_open_id = None
+        if self.task_id_notify_registration_opening:
+            AsyncResult(self.task_id_notify_registration_opening).revoke()
+            self.task_id_notify_registration_opening = None
 

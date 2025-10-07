@@ -99,13 +99,14 @@ class StudentSessionTimeslot(models.Model):
 
     time_booked = models.DateTimeField(null=True, blank=True)
 
-    notify_tmrw_id = models.CharField(default=None, null=True)
-    notify_one_hour_id = models.CharField(default=None, null=True)
     booking_closes_at = models.DateTimeField(
         default=STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
         null=True,
         help_text="The time the timeslot is no longer bookable",
     )
+
+    task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
+    task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
@@ -138,22 +139,22 @@ class StudentSessionTimeslot(models.Model):
                 args=[self.selected.user.id, self.student_session.id],
                 eta=self.start_time - timedelta(hours=24)
             )
-            self.notify_tmrw_id = task_notify_tmrw.id
+            self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
             #(Du har anmält dig till) YYY (som är) med XXX är om en timme
             task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
                 args=[self.selected.user.id, self.student_session.id],
                 eta=self.start_time - timedelta(hours=1)
             )
-            self.notify_one_hour_id = task_notify_one_hour.id
+            self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
     
     def _remove_notifications(self) -> None:
-        if self.notify_tmrw_id:
-            AsyncResult(self.notify_tmrw_id).revoke()
-            self.notify_tmrw_id = None
+        if self.task_id_notify_timeslot_tomorrow:
+            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
+            self.task_id_notify_timeslot_tomorrow = None
  
-        if self.notify_tmrw_id:
-            AsyncResult(self.notify_tmrw_id).revoke()
+        if self.task_id_notify_timeslot_tomorrow:
+            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
             self.notify_one_day_id = None
 
 
