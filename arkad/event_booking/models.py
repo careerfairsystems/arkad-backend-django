@@ -52,7 +52,7 @@ class Event(models.Model):
     end_time = models.DateTimeField(null=False)
 
     number_booked = models.IntegerField(
-        default=0, null=False
+        default=0, null=False, editable=False
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
