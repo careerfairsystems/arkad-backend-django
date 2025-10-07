@@ -1,121 +1,40 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
-        <title>ARKAD: Staff Enrollment</title>
-        <link rel="stylesheet" type="text/css" href="{% static 'css/password_reset.css' %}">
-        <style>
-            .form-title {
-                text-align: center;
-                color: #003366;
-                margin-bottom: 1.5rem;
-            }
 
-            .messages {
-                margin-bottom: 1rem;
-            }
+{% block title %}Staff Enrollment{% endblock %}
 
-            .message {
-                padding: 0.75rem;
-                border-radius: 4px;
-                margin-bottom: 0.5rem;
-            }
+{% block form_title %}Staff Account Enrollment{% endblock %}
 
-            .message.error {
-                background-color: #f8d7da;
-                border: 1px solid #f5c6cb;
-                color: #721c24;
-            }
+{% block content %}
+    <form method="post" action="{% url 'staff_begin_signup' %}">
+        {% csrf_token %}
 
-            .message.success {
-                background-color: #d4edda;
-                border: 1px solid #c3e6cb;
-                color: #155724;
-            }
-
-            .message.info {
-                background-color: #d1ecf1;
-                border: 1px solid #bee5eb;
-                color: #0c5460;
-            }
-
-            .form-group {
-                margin-bottom: 1rem;
-            }
-
-            .form-group label {
-                display: block;
-                margin-bottom: 0.25rem;
-                font-weight: 500;
-            }
-
-            .form-group input {
-                width: 100%;
-                padding: 0.5rem;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                box-sizing: border-box;
-            }
-
-            .required:after {
-                content: " *";
-                color: #c00;
-            }
-
-            .help-text {
-                font-size: 0.875rem;
-                color: #666;
-                margin-top: 0.25rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1 class="form-title">Staff Account Enrollment</h1>
-
-            {% if messages %}
-                <div class="messages">
-                    {% for message in messages %}
-                        <div class="message {{ message.tags }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <form method="post" action="{% url 'staff_begin_signup' %}">
-                {% csrf_token %}
-
-                <div class="form-group">
-                    <label for="email" class="required">Email</label>
-                    <input type="email" id="email" name="email" value="{{ email|default:'' }}" required>
-                    <div class="help-text">A verification code will be sent to this email.</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="first_name">First Name</label>
-                    <input type="text" id="first_name" name="first_name" value="{{ first_name|default:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="last_name">Last Name</label>
-                    <input type="text" id="last_name" name="last_name" value="{{ last_name|default:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="password" class="required">Password</label>
-                    <input type="password" id="password" name="password" required>
-                    <div class="help-text">Password must be at least 8 characters long.</div>
-                </div>
-
-                <button type="submit" class="button">Send Verification Code</button>
-            </form>
-
-            <div style="margin-top: 2rem; text-align: center;">
-                <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
-            </div>
+        <div class="form-group">
+            <label for="email" class="required">Email</label>
+            <input type="email" id="email" name="email" value="{{ email|default:'' }}" required>
+            <div class="help-text">A verification code will be sent to this email.</div>
         </div>
-    </body>
-</html>
+
+        <div class="form-group">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" value="{{ first_name|default:'' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" value="{{ last_name|default:'' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="password" class="required">Password</label>
+            <input type="password" id="password" name="password" required>
+            <div class="help-text">Password must be at least 8 characters long.</div>
+        </div>
+
+        <button type="submit" class="button">Send Verification Code</button>
+    </form>
+
+    <div style="margin-top: 2rem; text-align: center;">
+        <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+    </div>
+{% endblock %}

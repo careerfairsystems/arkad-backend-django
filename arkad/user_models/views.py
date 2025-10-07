@@ -42,6 +42,23 @@ def delete_account(request: HttpRequest) -> HttpResponse:
     )
 
 
+@require_http_methods(["GET", "POST"])
+def staff_enrollment_enter_token(request: HttpRequest) -> HttpResponse:
+    """
+    Page for user to enter their staff enrollment token.
+    On POST, redirects to the enrollment page with the token.
+    """
+    if request.method == "POST":
+        token = request.POST.get("token", "").strip()
+        if not token:
+            messages.error(request, "Please enter an enrollment token.")
+            return render(request, "staff_enrollment_enter_token.html")
+
+        return redirect(reverse("staff_enrollment", kwargs={"token": token}))
+
+    return render(request, "staff_enrollment_enter_token.html")
+
+
 @require_http_methods(["GET"])
 def staff_enrollment(request: HttpRequest, token: str) -> HttpResponse:
     """
