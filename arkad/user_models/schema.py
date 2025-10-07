@@ -84,3 +84,7 @@ class StaffCompleteSignupSchema(Schema):
     enrollment_token: str
     verification_token: str
     code: str
+    email: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
