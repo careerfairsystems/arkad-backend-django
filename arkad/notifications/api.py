@@ -15,8 +15,11 @@ def update_fcm_token(request: AuthenticatedRequest, data: UpdateFCMTokenSchema):
 
 
 @router.post("notify", response={ 200: str })
-def send_notification_to_token(data: NotifyByTokenSchema):
+def send_notification_to_token(request: AuthenticatedRequest, data: NotifyByTokenSchema):
     "Sends the specified message (title and body) to specified token."
+    if not request.user.is_superuser:
+        return 403, "Insufficient permissions"
+
     fcm.send_to_token(
         token=data.token,
         title=data.title,
