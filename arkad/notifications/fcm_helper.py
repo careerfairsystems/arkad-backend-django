@@ -4,13 +4,13 @@ from pathlib import Path
 
 import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import credentials, messaging
-from firebase_admin.messaging import Message
+from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 
 from arkad import settings
 
 
 class NotificationLog:
-    def log(self, msg: Message):
+    def log(self, msg: Message) -> None:
         recipient = None
         if msg.token:
             recipient = msg.token
