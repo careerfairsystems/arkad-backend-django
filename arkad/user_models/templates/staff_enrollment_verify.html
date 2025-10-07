@@ -1,0 +1,133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/6142149cd22bb442c2fdbb26/f0043496-cc87-4059-ba29-1044def3411f/favicon.ico?format=100w">
+        <title>ARKAD: Verify Email</title>
+        <link rel="stylesheet" type="text/css" href="{% static 'css/password_reset.css' %}">
+        <style>
+            .form-title {
+                text-align: center;
+                color: #003366;
+                margin-bottom: 1.5rem;
+            }
+
+            .messages {
+                margin-bottom: 1rem;
+            }
+
+            .message {
+                padding: 0.75rem;
+                border-radius: 4px;
+                margin-bottom: 0.5rem;
+            }
+
+            .message.error {
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                color: #721c24;
+            }
+
+            .message.success {
+                background-color: #d4edda;
+                border: 1px solid #c3e6cb;
+                color: #155724;
+            }
+
+            .message.info {
+                background-color: #d1ecf1;
+                border: 1px solid #bee5eb;
+                color: #0c5460;
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 0.25rem;
+                font-weight: 500;
+            }
+
+            .form-group input {
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+                font-size: 1.5rem;
+                text-align: center;
+                letter-spacing: 0.5rem;
+            }
+
+            .required:after {
+                content: " *";
+                color: #c00;
+            }
+
+            .help-text {
+                font-size: 0.875rem;
+                color: #666;
+                margin-top: 0.25rem;
+                text-align: center;
+            }
+
+            .info-box {
+                background-color: #e7f3ff;
+                border: 1px solid #b3d9ff;
+                border-radius: 4px;
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1 class="form-title">Verify Your Email</h1>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="info-box">
+                <p><strong>A verification code has been sent to:</strong></p>
+                <p style="font-size: 1.1rem; color: #003366;">{{ email }}</p>
+            </div>
+
+            <form method="post" action="{% url 'staff_complete_signup' %}">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="code" class="required">Verification Code</label>
+                    <input
+                        type="text"
+                        id="code"
+                        name="code"
+                        maxlength="6"
+                        pattern="[0-9]{6}"
+                        placeholder="000000"
+                        required
+                        autofocus
+                    >
+                    <div class="help-text">Enter the 6-digit code from your email</div>
+                </div>
+
+                <button type="submit" class="button">Complete Staff Account Setup</button>
+            </form>
+
+            <div style="margin-top: 2rem; text-align: center; color: #666;">
+                <p>Didn't receive the code? Please wait 30 seconds and try again.</p>
+            </div>
+        </div>
+    </body>
+</html>
+

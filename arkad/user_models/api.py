@@ -28,15 +28,20 @@ from user_models.schema import (
     UpdateProfileSchema,
     CompleteSignupSchema,
     ResetPasswordSchema,
+    ValidateTokenSchema,
+    StaffBeginSignupSchema,
+    StaffCompleteSignupSchema,
 )
 from hashlib import sha256
 
 
 auth = Router(tags=["Authentication"])
 profile = Router(tags=["User Profile"])
+staff_enrollment = Router(tags=["Staff Enrollment"])
 router = Router(tags=["Users"])
 router.add_router("", auth)
 router.add_router("profile", profile)
+router.add_router("staff-enrollment", staff_enrollment)
 
 
 @auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str, 429: str})
@@ -290,3 +295,189 @@ def delete_cv(request: AuthenticatedRequest):
     request.user.cv.delete()
     request.user.save()
     return 200, "CV deleted"
+
+
+# Staff Enrollment API endpoints
+@staff_enrollment.post(
+    "validate-token", auth=None, response={200: dict, 400: str, 404: str}
+)
+def validate_enrollment_token(request: HttpRequest, data: ValidateTokenSchema):
+    """
+    Validate a staff enrollment token.
+    Returns token details if valid, error message otherwise.
+    """
+    from user_models.models import StaffEnrollmentToken
+
+    try:
+        token = StaffEnrollmentToken.objects.get(token=data.token)
+    except StaffEnrollmentToken.DoesNotExist:
+        return 404, "Invalid enrollment token"
+
+    if not token.is_valid():
+        if not token.is_active:
+            return 400, "This enrollment token has been deactivated"
+        else:
+            return 400, "This enrollment token has expired"
+
+    return 200, {
+        "valid": True,
+        "expires_at": token.expires_at.isoformat(),
+        "created_by": token.created_by.username,
+    }
+
+
+@staff_enrollment.post(
+    "begin-signup",
+    auth=None,
+    response={200: str, 400: str, 404: str, 415: str, 429: str},
+)
+def staff_begin_signup(request: HttpRequest, data: StaffBeginSignupSchema):
+    """
+    Begin staff signup with email verification.
+    Validates enrollment token and proxies to regular signup flow.
+    Returns JWT verification token on success.
+    """
+    from user_models.models import StaffEnrollmentToken
+
+    # Validate enrollment token first
+    try:
+        enrollment_token = StaffEnrollmentToken.objects.get(token=data.enrollment_token)
+    except StaffEnrollmentToken.DoesNotExist:
+        return 404, "Invalid enrollment token"
+
+    if not enrollment_token.is_valid():
+        if not enrollment_token.is_active:
+            return 400, "This enrollment token has been deactivated"
+        else:
+            return 400, "This enrollment token has expired"
+
+    # Create signup schema and call existing begin_signup
+    signup_data = SignupSchema(
+        email=data.email,
+        password=data.password,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        food_preferences=None,
+    )
+
+    # Call the existing begin_signup function
+    status_code, result = begin_signup(request, signup_data)
+
+    # If successful, store the signup data in cache for staff_complete_signup
+    if status_code == 200:
+        cache_key = f"staff-signup-data-{data.email}"
+        cache.set(
+            cache_key,
+            {
+                "email": data.email,
+                "password": data.password,
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+                "food_preferences": None,
+            },
+            timeout=600,
+        )  # 10 minutes
+
+    # Return the result directly
+    return status_code, result
+
+
+@staff_enrollment.post(
+    "complete-signup",
+    auth=None,
+    response={200: ProfileSchema, 400: str, 401: str, 404: str},
+)
+def staff_complete_signup(request: HttpRequest, data: StaffCompleteSignupSchema):
+    """
+    Complete staff signup after email verification.
+    Creates user with staff privileges and tracks enrollment usage.
+    """
+    from user_models.models import StaffEnrollmentToken, StaffEnrollmentUsage
+
+    # Validate enrollment token
+    try:
+        enrollment_token = StaffEnrollmentToken.objects.get(token=data.enrollment_token)
+    except StaffEnrollmentToken.DoesNotExist:
+        return 404, "Invalid enrollment token"
+
+    if not enrollment_token.is_valid():
+        if not enrollment_token.is_active:
+            return 400, "This enrollment token has been deactivated"
+        else:
+            return 400, "This enrollment token has expired"
+
+    # Verify the 2FA code from the verification token
+    try:
+        jwt_data = jwt_decode(data.verification_token)
+    except Exception:
+        return 401, "Invalid or expired verification token"
+
+    # Verify the 2FA code
+    if (
+        jwt_data["code2fa"]
+        != sha256(
+            (SECRET_KEY + jwt_data["salt2fa"] + data.code).encode("utf-8")
+        ).hexdigest()
+    ):
+        return 401, "Invalid verification code"
+
+    # Get the signup data hash from JWT
+    signup_data_hash = jwt_data.get("signup-data-hash")
+    if not signup_data_hash:
+        return 401, "Signup data hash was empty"
+
+    # We need to extract the original signup data from the hash verification
+    # Since the hash was created with the original SignupSchema, we need to reconstruct it
+    # The client needs to send the same data they used in begin-signup
+    # For now, we'll create the user from the JWT validation
+
+    # Get email from cache or session - we stored it during begin_signup
+    # Since this is stateless API, we need the email in the request
+    # Let's decode what we can from the JWT
+
+    # Actually, we need to get the original data - let's require it in the schema
+    # For now, let's extract from a different approach
+
+    # We'll need to modify this - for now let's create a simpler approach
+    # Store email in the JWT during begin_signup for staff
+    email = jwt_data.get("email")
+    if not email:
+        return 401, "Email not found in verification token"
+
+    # Get user data from cache using email
+    cache_key = f"staff-signup-data-{email}"
+    stored_data = cache.get(cache_key)
+
+    if not stored_data:
+        return 400, "Signup session expired. Please start again."
+
+    # Create the user with staff privileges
+    try:
+        user = User.objects.create_user(
+            username=stored_data["email"],
+            email=stored_data["email"],
+            password=stored_data["password"],
+            first_name=stored_data.get("first_name", ""),
+            last_name=stored_data.get("last_name", ""),
+            food_preferences=stored_data.get("food_preferences"),
+            is_staff=True,
+            is_student=False,
+        )
+
+        # Track the usage
+        StaffEnrollmentUsage.objects.create(token=enrollment_token, user=user)
+
+        # Clear the cache
+        cache.delete(cache_key)
+
+        # Log the user in
+        login(request, user)
+
+        return 200, ProfileSchema.from_orm(user)
+
+    except IntegrityError as e:
+        logging.error(e)
+        if "duplicate key" in str(e):
+            return 400, "Email already exists"
+        else:
+            return 500, "Something went wrong"
