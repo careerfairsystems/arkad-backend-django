@@ -44,7 +44,7 @@ router.add_router("profile", profile)
 router.add_router("staff-enrollment", staff_enrollment)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str, 409: str})
+@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str, 409: str, 406: str})
 def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
@@ -59,7 +59,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     try:
         validate_password(data.password)
     except ValidationError as e:
-        return 415, "\n".join(e.messages)
+        return 406, "\n".join(e.messages)
 
     if User.objects.filter(
         email__iexact=data.email, username__iexact=data.email
@@ -331,7 +331,7 @@ def validate_enrollment_token(request: HttpRequest, data: ValidateTokenSchema):
 @staff_enrollment.post(
     "begin-signup",
     auth=None,
-    response={200: str, 400: str, 404: str, 415: str, 429: str, 409: str},
+    response={200: str, 400: str, 404: str, 415: str, 429: str, 409: str, 406: str},
 )
 def staff_begin_signup(request: HttpRequest, data: StaffBeginSignupSchema):
     """

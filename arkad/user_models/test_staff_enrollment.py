@@ -184,7 +184,7 @@ class StaffEnrollmentAPITestCase(TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 415)
+        self.assertEqual(response.status_code, 406)
 
     @patch("email_app.emails.send_signup_code_email")
     def test_staff_begin_signup_existing_user(self, mock_send_email: Any) -> None:
