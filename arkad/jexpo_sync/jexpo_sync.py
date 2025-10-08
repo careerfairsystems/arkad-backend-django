@@ -2,7 +2,7 @@ from typing import Tuple
 
 from companies.models import Company, Job
 from jexpo_sync.jexpo_ingestion import ExhibitorSchema
-from companies.translation import SWEDISH_TO_ENGLISH
+from companies.translation import SWEDISH_TO_ENGLISH, translate_to_english
 from student_sessions.models import StudentSession
 
 
@@ -17,15 +17,11 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
     logotype = profile.logotype
 
     # Map choices from Swedish to English
-    desired_competences = [
-        SWEDISH_TO_ENGLISH.get(c, c) for c in profile.desiredCompetence
-    ]
+    desired_competences = translate_to_english(profile.desiredCompetence)
 
-    desired_programmes = [
-        SWEDISH_TO_ENGLISH.get(p, p) for p in profile.desiredProgramme
-    ]
+    desired_programmes = translate_to_english(profile.desiredProgramme)
 
-    industries = [SWEDISH_TO_ENGLISH.get(i, i) for i in profile.industry]
+    industries = translate_to_english(profile.industry)
 
     # The url for the image, it uses the key for the exibitors storage. Does not append a size here.
     logo_url: str | None = (

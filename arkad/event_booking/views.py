@@ -35,9 +35,9 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
 
             stockholm_tz = pytz.timezone("Europe/Stockholm")
             visible_time = stockholm_tz.localize(
-                start_time.replace(year=2500, hour=21, minute=0, second=0, microsecond=0).replace(
-                    tzinfo=None
-                )
+                start_time.replace(
+                    year=2500, hour=21, minute=0, second=0, microsecond=0
+                ).replace(tzinfo=None)
             )
 
             event = Event.objects.create(
@@ -86,7 +86,6 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
 
                 for i, ticket in enumerate(chunk):
                     x_offset, y_offset = positions[i]
-                    cell_width = width / 3
                     cell_height = height / 4
                     c.setFont("Helvetica-Bold", 12)
                     c.drawString(

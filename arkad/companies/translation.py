@@ -186,3 +186,28 @@ SWEDISH_TO_ENGLISH: dict[str, str] = {
     "rekrytering": "Recruitment",
     "finanskonsult": "Finance Consultancy",
 }
+
+ENGLISH_TO_SWEDISH: dict[str, str] = {v: k for k, v in SWEDISH_TO_ENGLISH.items()}
+
+
+def attempt_translate(term: str) -> str | None:
+    """
+    Attempt to translate a term from Swedish to English or verify if it is already in English.
+    """
+    attempt: str | None = SWEDISH_TO_ENGLISH.get(term, None) or (
+        term if term in ENGLISH_TO_SWEDISH else None
+    )
+    if attempt is None:
+        print(
+            f"Warning: Term '{term}' is neither in Swedish nor English and will be omitted."
+        )
+    return attempt
+
+
+def translate_to_english(terms: list[str]) -> list[str]:
+    """
+    Translate a list of terms from Swedish to English or verify if they are already in English.
+    If a term is neither in Swedish nor English, it is omitted from the result.
+    """
+
+    return [w for w in list(attempt_translate(term) for term in terms) if w is not None]

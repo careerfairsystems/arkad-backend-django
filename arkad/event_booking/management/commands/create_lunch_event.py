@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
 import pytz
 import qrcode
@@ -54,9 +54,9 @@ class Command(BaseCommand):
         end_time = start_time + timedelta(minutes=duration_minutes)
         # Visible time should be year 2100
         visible_time = stockholm_tz.localize(
-            start_time.replace(year=2100, hour=21, minute=0, second=0, microsecond=0).replace(
-                tzinfo=None
-            )
+            start_time.replace(
+                year=2100, hour=21, minute=0, second=0, microsecond=0
+            ).replace(tzinfo=None)
         )
 
         event = Event.objects.create(
