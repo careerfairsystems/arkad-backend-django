@@ -61,7 +61,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     except ValidationError as e:
         return 415, "\n".join(e.messages)
 
-    if User.objects.filter(email=data.email, username=data.email).exists():
+    if User.objects.filter(email__iexact=data.email, username__iexact=data.email).exists():
         return 409, "User with this email already exists."
 
     key: str = f"signup-{data.email}"
@@ -178,7 +178,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
         User = get_user_model()
 
         try:
-            user = User.objects.get(email=data.email)
+            user = User.objects.get(email__iexact=data.email)
 
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
