@@ -18,17 +18,20 @@ class NotificationLog:
             recipient = f"topic {msg.topic}"
 
         if msg.notification and recipient is not None:
-            logging.info(msg=f"Sent notification with title {msg.notification.title} and body {msg.notification.body} to {recipient} at {datetime.now()}")
+            logging.info(
+                msg=f"Sent notification with title {msg.notification.title} and body {msg.notification.body} to {recipient} at {datetime.now()}"
+            )
+
 
 logger = NotificationLog()
 
+
 class FCMHelper:
-    
     def __init__(self, cert_path: Path):
         if cert_path.exists() and not firebase_admin._apps:
             cred = credentials.Certificate(cert_path)
             firebase_admin.initialize_app(cred)
-    
+
     def send_to_token(self, token: str, title: str, body: str) -> str:
         msg = messaging.Message(
             notification=messaging.Notification(
@@ -40,7 +43,7 @@ class FCMHelper:
         response = messaging.send(msg)
         logger.log(msg)
         return str(response)
-    
+
     def send_to_topic(self, topic: str, title: str, body: str) -> str:
         message = messaging.Message(
             notification=messaging.Notification(
@@ -49,9 +52,10 @@ class FCMHelper:
             ),
             topic=topic,
         )
-        
+
         response = messaging.send(message)
         logger.log(message)
         return str(response)
+
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)

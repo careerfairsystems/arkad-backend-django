@@ -119,7 +119,7 @@ class StudentSessionTimeslot(models.Model):
     def __str__(self) -> str:
         return f"Timeslot {self.start_time} - {self.duration} minutes"
 
-    def save(self, *args, **kwargs) -> None: # type: ignore
+    def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         if self.selected:
@@ -127,32 +127,33 @@ class StudentSessionTimeslot(models.Model):
             self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
     def _schedule_notifications(self) -> None:
         from notifications import tasks
-        #(Du har anmält dig till) YYY (som är) med XXX är imorgon
+
+        # (Du har anmält dig till) YYY (som är) med XXX är imorgon
         if self.selected is not None:
             task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
                 args=[self.selected.user.id, self.student_session.id],
-                eta=self.start_time - timedelta(hours=24)
+                eta=self.start_time - timedelta(hours=24),
             )
             self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
-            #(Du har anmält dig till) YYY (som är) med XXX är om en timme
+            # (Du har anmält dig till) YYY (som är) med XXX är om en timme
             task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
                 args=[self.selected.user.id, self.student_session.id],
-                eta=self.start_time - timedelta(hours=1)
+                eta=self.start_time - timedelta(hours=1),
             )
             self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
-    
+
     def _remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:
             AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
             self.task_id_notify_timeslot_tomorrow = None
- 
+
         if self.task_id_notify_timeslot_tomorrow:
             AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
             self.notify_one_day_id = None
@@ -193,4 +194,3 @@ class StudentSession(models.Model):
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
-

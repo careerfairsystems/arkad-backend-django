@@ -22,8 +22,12 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    task_id_notify_event_tomorrow = models.CharField(default=None, null=True, blank=True)
-    task_id_notify_event_in_one_hour = models.CharField(default=None, null=True, blank=True)
+    task_id_notify_event_tomorrow = models.CharField(
+        default=None, null=True, blank=True
+    )
+    task_id_notify_event_in_one_hour = models.CharField(
+        default=None, null=True, blank=True
+    )
 
     class Meta:
         constraints = [
@@ -36,38 +40,39 @@ class Ticket(models.Model):
     def status(self) -> EventUserStatus:
         return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
 
-    def save(self, *args, **kwargs) -> None: # type: ignore
+    def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
     def _schedule_notifications(self) -> None:
         from notifications import tasks
-        #(Du har anmält dig till) YYY (som är) med XXX är imorgon
+
+        # (Du har anmält dig till) YYY (som är) med XXX är imorgon
         task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
             args=[self.user.id, self.event.id],
-            eta=self.event.start_time - timedelta(hours=24)
+            eta=self.event.start_time - timedelta(hours=24),
         )
         self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
 
-        #(Du har anmält dig till) YYY (som är) med XXX är om en timme
+        # (Du har anmält dig till) YYY (som är) med XXX är om en timme
         task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
             args=[self.user.id, self.event.id],
-            eta=self.event.start_time - timedelta(hours=1)
+            eta=self.event.start_time - timedelta(hours=1),
         )
         self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
-    
+
     def _remove_notifications(self) -> None:
         if self.task_id_notify_event_tomorrow:
             AsyncResult(self.task_id_notify_event_tomorrow).revoke()
             self.task_id_notify_event_tomorrow = None
- 
+
         if self.task_id_notify_event_tomorrow:
             AsyncResult(self.task_id_notify_event_tomorrow).revoke()
             self.notify_event_one_day_id = None
@@ -102,7 +107,9 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    task_id_notify_registration_opening = models.CharField(default=None, null=True, blank=True)
+    task_id_notify_registration_opening = models.CharField(
+        default=None, null=True, blank=True
+    )
 
     class Meta:
         constraints = [
@@ -144,23 +151,23 @@ class Event(models.Model):
     def available_events(cls) -> QuerySet["Event"]:
         return cls.objects.filter(cls.available_filter()).all()
 
-    def save(self, *args, **kwargs) -> None: # type: ignore
+    def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model
         # Schedule a notification task
         self._remove_notifications()
         self._schedule_notifications()
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]: # type: ignore
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
 
     def _schedule_notifications(self) -> None:
         from notifications import tasks
-        #Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
+
+        # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
         task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
-            args=[self.id],
-            eta=self.release_time
+            args=[self.id], eta=self.release_time
         )
         self.task_id_notify_registration_opening = task_notify_registration_open.id
 
@@ -168,4 +175,3 @@ class Event(models.Model):
         if self.task_id_notify_registration_opening:
             AsyncResult(self.task_id_notify_registration_opening).revoke()
             self.task_id_notify_registration_opening = None
-

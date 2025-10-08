@@ -1,7 +1,5 @@
 from celery import shared_task  # type: ignore[import-untyped]
 
-from arkad.celery import app
-
 
 @shared_task  # type: ignore
 def notify_event_tmrw(user_id: int, event_id: int) -> None:
@@ -16,7 +14,7 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
 @shared_task  # type: ignore
 def notify_event_reg_open(event_id: int) -> None:
     # Both for lunch lectures, company visits (events?), and Student sessions
-    #Anmälan för lunchföreläsning med XXX har öppnat -Bara notis
+    # Anmälan för lunchföreläsning med XXX har öppnat -Bara notis
     # Anmälan för företagsbesök med XXX har öppnat - Bara notis
     pass
 
