@@ -220,9 +220,10 @@ class StudentSessionTimeslot(models.Model):
     def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model
         # Schedule a notification task
-        if self.selected_applications.exists():
-            self._remove_notifications()
-            self._schedule_notifications()
+        if self.pk is not None:
+            if self.selected_applications.exists():
+                self._remove_notifications()
+                self._schedule_notifications()
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
