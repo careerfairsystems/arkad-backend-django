@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, CheckConstraint, QuerySet
+from django.db.models import Q, CheckConstraint
 from django.utils import timezone
 
 from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVENT
@@ -49,7 +49,7 @@ class Ticket(models.Model):
         from notifications import tasks
 
         # (Du har anmält dig till) YYY (som är) med XXX är imorgon
-        task_notify_event_tmrw = tasks.notify_event_tmrw.apply_async(
+        task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
             args=[self.user.id, self.event.id],
             eta=self.event.start_time - timedelta(hours=24),
         )
@@ -150,8 +150,10 @@ class Event(models.Model):
         from notifications import tasks
 
         # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
-        task_notify_registration_open = tasks.notify_event_reg_open.apply_async(
-            args=[self.id], eta=self.release_time
+        task_notify_registration_open = (
+            tasks.notify_event_registration_open.apply_async(
+                args=[self.id], eta=self.release_time
+            )
         )
         self.task_id_notify_registration_opening = task_notify_registration_open.id
 

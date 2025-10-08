@@ -1,3 +1,4 @@
+import datetime
 from datetime import timedelta
 from functools import partial
 from typing import Any
@@ -53,6 +54,9 @@ class StudentSessionApplication(models.Model):
         choices=ApplicationStatus.choices,
         default=ApplicationStatus.PENDING,
     )
+
+    task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
+    task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
@@ -123,6 +127,34 @@ class StudentSessionApplication(models.Model):
             self.cv.delete(save=False)
         return super().delete(*args, **kwargs)
 
+    def schedule_notifications(self, start_time: datetime.datetime) -> None:
+        # You have registered for YYY with XXX is tomorrow/ in one hour
+        assert self.is_accepted(), (
+            "Can only schedule notifications for accepted applications"
+        )
+        from notifications import tasks
+
+        task_notify_tmrw = tasks.notify_event_tomorrow.apply_async(
+            args=[self.user.id, self.student_session.id],
+            eta=start_time - timedelta(hours=24),
+        )
+        self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
+
+        task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
+            args=[self.user.id, self.student_session.id],
+            eta=start_time - timedelta(hours=1),
+        )
+        self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
+
+    def remove_notifications(self) -> None:
+        if self.task_id_notify_timeslot_tomorrow:
+            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
+            self.task_id_notify_timeslot_tomorrow = None
+
+        if self.task_id_notify_timeslot_tomorrow:
+            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
+            self.notify_one_day_id = None
+
 
 class StudentSessionTimeslot(models.Model):
     selected_applications = models.ManyToManyField(
@@ -150,9 +182,6 @@ class StudentSessionTimeslot(models.Model):
         null=True,
         help_text="The time the timeslot is no longer bookable",
     )
-
-    task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
-    task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
@@ -191,7 +220,7 @@ class StudentSessionTimeslot(models.Model):
     def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model
         # Schedule a notification task
-        if self.selected:
+        if self.selected_applications.exists():
             self._remove_notifications()
             self._schedule_notifications()
         super().save(*args, **kwargs)
@@ -201,31 +230,13 @@ class StudentSessionTimeslot(models.Model):
         return super().delete(*args, **kwargs)
 
     def _schedule_notifications(self) -> None:
-        from notifications import tasks
-
-        # (Du har anmält dig till) YYY (som är) med XXX är imorgon
-        if self.selected is not None:
-            task_notify_tmrw = tasks.notify_event_tmrw.apply_async(
-                args=[self.selected.user.id, self.student_session.id],
-                eta=self.start_time - timedelta(hours=24),
-            )
-            self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
-
-            # (Du har anmält dig till) YYY (som är) med XXX är om en timme
-            task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
-                args=[self.selected.user.id, self.student_session.id],
-                eta=self.start_time - timedelta(hours=1),
-            )
-            self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
+        # You have registered for YYY with XXX is tomorrow/ in one hour
+        for application in self.selected_applications.all():
+            application.schedule_notifications(self.start_time)
 
     def _remove_notifications(self) -> None:
-        if self.task_id_notify_timeslot_tomorrow:
-            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
-            self.task_id_notify_timeslot_tomorrow = None
-
-        if self.task_id_notify_timeslot_tomorrow:
-            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
-            self.notify_one_day_id = None
+        for application in self.selected_applications.all():
+            application.remove_notifications()
 
 
 class StudentSession(models.Model):
