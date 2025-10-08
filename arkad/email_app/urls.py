@@ -16,9 +16,10 @@ Including another URLconf
 """
 
 from django.urls import path
-from email_app.views import test_reset, test_sign_up
+from email_app.views import test_reset, test_sign_up, test_generic_information
 
 urlpatterns = [
     path("test/reset", test_reset, name="test_reset"),
     path("test/sign_up", test_sign_up, name="test_sign_up"),
+    path("test/generic_information", test_generic_information, name="test_generic_information"),
 ]

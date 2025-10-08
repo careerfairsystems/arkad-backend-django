@@ -36,3 +36,71 @@ def send_signup_code_email(request: HttpRequest, email: str, code: str) -> None:
         recipient_list=recipient_list,
         fail_silently=False,
     )
+
+
+def send_generic_information_email(
+    request: HttpRequest,
+    email: str,
+    subject: str,
+    name: str = "",
+    greeting: str = "",
+    heading: str = "",
+    message: str = "",
+    button_text: str = "",
+    button_link: str = "",
+    note: str = "",
+) -> None:
+    """
+    Send a generic information email to the user.
+
+    Args:
+        request: HttpRequest object to get the base URL
+        email: Recipient email address
+        subject: Email subject line
+        name: Recipient name (used in default greeting if greeting not provided)
+        greeting: Custom greeting text (optional, defaults to "Hello {name}!")
+        heading: Subheading text (optional)
+        message: Main message content (supports HTML) (optional)
+        button_text: Text for the call-to-action button (optional)
+        button_link: URL for the call-to-action button (optional)
+        note: Footer note text (optional)
+    """
+    html_message: str = render_to_string(
+        "email_app/generic_information_email.html",
+        {
+            "name": name,
+            "greeting": greeting,
+            "heading": heading,
+            "message": message,
+            "button_text": button_text,
+            "button_link": button_link,
+            "note": note,
+            "base_url": get_base_url(request),
+        },
+    )
+
+    # Create a plain text version by stripping HTML tags
+    plain_text_message = f"{greeting or f'Hello {name}!'}\n\n"
+    if heading:
+        plain_text_message += f"{heading}\n\n"
+    if message:
+        # Basic HTML stripping for plain text
+        import re
+
+        plain_text_message += re.sub("<[^<]+?>", "", message) + "\n\n"
+    if button_text and button_link:
+        plain_text_message += f"{button_text}: {button_link}\n\n"
+    if note:
+        plain_text_message += f"{note}\n"
+
+    from_email: str = settings.DEFAULT_FROM_EMAIL
+    recipient_list: list[str] = [email]
+
+    send_mail(
+        subject=subject,
+        message=plain_text_message,
+        html_message=html_message,
+        from_email=from_email,
+        recipient_list=recipient_list,
+        fail_silently=False,
+    )
