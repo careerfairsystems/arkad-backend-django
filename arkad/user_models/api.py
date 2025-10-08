@@ -44,7 +44,19 @@ router.add_router("profile", profile)
 router.add_router("staff-enrollment", staff_enrollment)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str, 409: str, 406: str})
+@auth.post("/validate-token", response={200: str, 401: str})
+def validate_token(request: AuthenticatedRequest):
+    """
+    Validates the users token, returns 200 if valid, 401 if not.
+    """
+    return 200, "Token is valid"
+
+
+@auth.post(
+    "begin-signup",
+    auth=None,
+    response={200: str, 415: str, 429: str, 409: str, 406: str},
+)
 def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
