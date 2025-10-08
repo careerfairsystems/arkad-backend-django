@@ -51,6 +51,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
 
     Only allowing sending an email once every 30 seconds to prevent abuse. If in that window 429 is returned.
     409 is returned if the user already exists.
+    406 is returned if the password does not meet the requirements.
     """
 
     def generate_salt(length: int = 16) -> str:
