@@ -61,7 +61,9 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     except ValidationError as e:
         return 415, "\n".join(e.messages)
 
-    if User.objects.filter(email__iexact=data.email, username__iexact=data.email).exists():
+    if User.objects.filter(
+        email__iexact=data.email, username__iexact=data.email
+    ).exists():
         return 409, "User with this email already exists."
 
     key: str = f"signup-{data.email}"
