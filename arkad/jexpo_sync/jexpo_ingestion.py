@@ -65,6 +65,13 @@ class Billing(BaseModel):
     corporateId: Optional[str] = None
     corporateName: Optional[str] = None
     invoicing: Optional[str] = None
+    invoiceEmail: Optional[EmailStr | str] = None
+    reference: Optional[str] = None
+    eInvoice: Optional[bool] = None
+    corporatePO: Optional[str] = None
+    requests: Optional[Any] = Field(None, alias="$requests")
+    updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
+    submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")
 
 
 class Terms(BaseModel):
@@ -85,11 +92,18 @@ class FairPkg(BaseModel):
     submitted: Optional[UpdatedSubmittedBase] = None
 
 
-class ContactList(BaseModel):
+class ContactPerson(BaseModel):
     inactive: Optional[bool] = None
     phone: Optional[str] = None
     name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[EmailStr | str] = None
+
+
+class ContactList(BaseModel):
+    list: List[ContactPerson] = Field(default_factory=list)
+    requests: Optional[Any] = Field(None, alias="$requests")
+    updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
+    submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")
 
 
 class Email(BaseModel):
@@ -118,6 +132,19 @@ class OrderRow(BaseModel):
     description: Optional[str] = None
     amount: Optional[int] = None
     key: Optional[str] = None
+    approved: Optional[datetime] = None
+    user: Optional[str] = None
+    clientIp: Optional[str] = None
+    included: Optional[str | int] = None  # Can be string like "2" or int like 1
+    price: Optional[str] = None
+    extra: Optional[int] = None
+
+
+class Order(BaseModel):
+    rows: List[OrderRow] = Field(default_factory=list)
+    sum: Optional[int] = None
+    extra: Optional[int] = None
+    contractRev: Optional[datetime] = None
     approved: Optional[datetime] = None
 
 
@@ -177,6 +204,7 @@ class Profile(BaseModel):
     desiredDegree: List[str] = Field(default_factory=list)
     desiredProgramme: List[str] = Field(default_factory=list)
     purpose: List[str] = Field(default_factory=list)
+    positionsOffered: List[str] = Field(default_factory=list)
     name: Optional[str] = None
     employeesLocal: Optional[int] = None
     employeesGlobal: Optional[int] = None
@@ -190,8 +218,61 @@ class CompanyHost(BaseModel):
     utc: Optional[datetime] = None
 
 
+class StudentSessionEvent(BaseModel):
+    """Represents a student session event, e.g., studentsessions[2days]"""
+
+    sessions: Optional[str] = None
+    sessions_why: Optional[str] = None
+    requests: Optional[bool] = Field(None, alias="$requests")
+    updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
+    submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")
+
+
+class Events(BaseModel):
+    """
+    Events object that can contain various event types including student sessions.
+    Student sessions are stored with keys like 'studentsessions[2days]'
+    """
+
+    # We'll store the raw dict and provide helper methods to extract student sessions
+    data: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        extra = "allow"  # Allow any additional fields
+
+    def get_student_session_keys(self) -> List[str]:
+        """Get all keys that match the studentsessions pattern"""
+        return [k for k in self.data.keys() if "studentsessions" in k.lower()]
+
+    def get_student_session_days(self) -> Optional[int]:
+        """
+        Parse the number of days from studentsessions[xdays] format.
+        Returns the number of days or None if not found.
+        """
+        for key in self.get_student_session_keys():
+            # Extract number from pattern like 'studentsessions[2days]'
+            import re
+
+            match = re.search(r"\[(\d+)days?]", key)
+            if match:
+                return int(match.group(1))
+        return None
+
+    def get_student_session_data(self) -> Optional[Dict[str, Any]]:
+        """Get the student session data if it exists"""
+        keys = self.get_student_session_keys()
+        if keys:
+            return self.data.get(keys[0])
+        return None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Events":
+        """Create Events object from raw dictionary"""
+        return cls(data=data)
+
+
 class StudentSession(BaseModel):
-    sessions: Optional[str] = None  # e.g., "none"
+    sessions: Optional[str] = None  # e.g., "none", "2days"
     requests: Optional[bool] = Field(None, alias="$requests")
     updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
     submitted: Optional[UpdatedSubmittedBase] = Field(None, alias="$submitted")
@@ -217,8 +298,8 @@ class ExhibitorSchema(BaseModel):
     responsible: Optional[str] = None
     emails: List[Email] = Field(default_factory=list, alias="$emails")
     tokens: List[Token] = Field(default_factory=list, alias="$tokens")
-    events: Optional[Dict[str, Any]] = None
-    order: Optional[Dict[str, Any]] = None
+    events: Optional[Events] = None
+    order: Optional[Order] = None
     exhibition: Optional[Exhibition] = None
     period: Optional[str] = None
     updated: Optional[UpdatedSubmittedBase] = Field(None, alias="$updated")
@@ -235,6 +316,64 @@ class ExhibitorSchema(BaseModel):
     status: Optional[str] = None
     rev: Optional[datetime] = Field(None, alias="$rev")
     key: Optional[str] = Field(None, alias="$key")
+
+    def get_student_session_days_from_events(self) -> Optional[int]:
+        """
+        Extract student session days from events.studentsessions[xdays].
+        Returns the number of days or None if not found.
+        """
+        if self.events:
+            return self.events.get_student_session_days()
+        return None
+
+    def get_student_session_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Get all student session information from both studentsession field and events.
+        Prioritizes events.studentsessions[xdays] over studentsession field.
+        """
+        # First check events for studentsessions[xdays]
+        if self.events:
+            event_data = self.events.get_student_session_data()
+            if event_data:
+                return event_data
+
+        # Fallback to studentsession field
+        if self.studentsession:
+            return {
+                "sessions": self.studentsession.sessions,
+                "sessions_why": self.studentsession.sessions_why,
+            }
+
+        return None
+
+    def get_combined_competences(self) -> List[str]:
+        """
+        Combine weOffer and desiredCompetence from profile into a unique set.
+        Returns a sorted list of all unique competences.
+        """
+        competences = set()
+
+        if self.profile:
+            competences.update(self.profile.weOffer)
+            competences.update(self.profile.desiredCompetence)
+
+        if self.inquiry:
+            competences.update(self.inquiry.desiredCompetence)
+
+        return sorted(list(competences))
+
+    def get_all_opportunities(self) -> List[str]:
+        """
+        Get all opportunities (weOffer + positionsOffered) for students.
+        Returns a sorted list of unique opportunities.
+        """
+        opportunities = set()
+
+        if self.profile:
+            opportunities.update(self.profile.weOffer)
+            opportunities.update(self.profile.positionsOffered)
+
+        return sorted(list(opportunities))
 
     @classmethod
     def preprocess(cls, data: dict[Any, Any]) -> dict[Any, Any]:
@@ -256,4 +395,9 @@ class ExhibitorSchema(BaseModel):
                 data["profile"]["employeesGlobal"] = int(employees_global)
             except ValueError:
                 data["profile"]["employeesGlobal"] = None
+
+        # Convert events dict to Events object if present
+        if "events" in data and data["events"] and isinstance(data["events"], dict):
+            data["events"] = Events.from_dict(data["events"])
+
         return data

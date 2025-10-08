@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from event_booking.models import Event, Ticket
 from companies.models import Company
-from event_booking.schemas import UseTicketSchema, EventSchema
+from event_booking.schemas import UseTicketSchema, EventSchema, EventUserInformation
 
 User = get_user_model()
 
@@ -18,6 +18,12 @@ class EventBookingTestCase(TestCase):
         self.company = Company.objects.create(name="Test Company")
         self.user = User.objects.create_user(
             username="testuser",
+            password="password",
+            first_name="test",
+            last_name="test",
+        )
+        self.user2 = User.objects.create_user(
+            username="testuser2",
             password="password",
             first_name="test",
             last_name="test",
@@ -393,3 +399,35 @@ class EventBookingTestCase(TestCase):
             f"Difference: {time_difference}. "
             f"Expected: {expected_dt}, Actual: {actual_dt}",
         )
+
+    def test_get_attending_information_non_staff_user(self):
+        headers = self._get_auth_headers(self.user)
+        response = self.client.get(
+            f"/api/events/{self.event.id}/attending", headers=headers
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_get_attending_information_staff_user(self):
+        headers = self._get_auth_headers(self.staff_user)
+        Ticket.objects.create(user=self.user, event=self.event, used=True)
+        Ticket.objects.create(user=self.user2, event=self.event)
+        response = self.client.get(
+            f"/api/events/{self.event.id}/attending", headers=headers
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 2)
+
+        result: list[EventUserInformation] = [
+            EventUserInformation(**event) for event in response.json()
+        ]
+        # Look through ids and find the ones for the different users
+        user1_info = next(
+            (info for info in result if info.user_id == self.user.id), None
+        )
+        user2_info = next(
+            (info for info in result if info.user_id == self.user2.id), None
+        )
+        self.assertIsNotNone(user1_info)
+        self.assertIsNotNone(user2_info)
+        self.assertTrue(user1_info.ticket_used)
+        self.assertFalse(user2_info.ticket_used)

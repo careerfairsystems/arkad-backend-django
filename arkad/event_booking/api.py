@@ -24,7 +24,10 @@ def get_events(request: AuthenticatedRequest):
     Returns a list of all events
     """
     if not request.user.is_authenticated:
-        return Event.objects.all()
+        return [
+            EventSchema.from_orm(e)
+            for e in Event.objects.filter(visible_time__lte=timezone.now()).all()
+        ]
     events: QuerySet[Event] = (
         Event.objects.prefetch_related("tickets")
         .filter(visible_time__lte=timezone.now())
@@ -86,7 +89,10 @@ def get_users_attending_event(request: AuthenticatedRequest, event_id: int):
         return 401, "Not a staff user"
     return 200, [
         EventUserInformation(
-            full_name=str(ticket.user), food_preferences=ticket.user.food_preferences
+            full_name=str(ticket.user),
+            food_preferences=ticket.user.food_preferences,
+            ticket_used=ticket.used,
+            user_id=ticket.user.id,
         )
         for ticket in Ticket.objects.prefetch_related("user").filter(event_id=event_id)
     ]

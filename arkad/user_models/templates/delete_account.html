@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete Account{% endblock %}
+
+{% block form_title %}Delete Your Account{% endblock %}
+
+{% block content %}
+    {% if user.is_superuser or user.is_staff %}
+        <div class="info-box">
+            <h2 class="info-title">
+                <span class="info-icon">ℹ️</span> Account Deletion Not Available
+            </h2>
+            <p class="info-text">
+                As a superuser or staff member, you cannot delete your account through this page.
+                Please contact the system administrator for assistance if you need to have your account removed.
+            </p>
+        </div>
+    {% else %}
+        <div class="warning-box">
+            <h2 class="warning-title">
+                <span class="warning-icon">⚠️</span> Warning: Account Deletion is Permanent
+            </h2>
+            <p class="warning-text">
+                You are about to permanently delete your account. This action cannot be undone.
+                When you delete your account, all of your personal data will be removed from our systems, including:
+            </p>
+            <ul class="warning-list">
+                <li>Your profile information (name, email, etc.)</li>
+                <li>Any applications or registrations you have made</li>
+                <li>Your event history and any saved information</li>
+            </ul>
+            <p class="warning-text">
+                If you are sure you want to proceed, please enter your password below to confirm.
+            </p>
+        </div>
+
+        <form method="post" action="{% url 'delete_account' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_password" class="required">Password</label>
+                <input type="password" name="password" required id="id_password">
+                {% if form.errors %}
+                    <div class="errors">
+                        {% for error in form.password.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit" class="button delete-button">Delete My Account</button>
+        </form>
+    {% endif %}
+
+    <div style="margin-top: 2rem; text-align: center;">
+        <p><a href="/">Back to Home</a></p>
+    </div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .warning-box {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 4px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .info-box {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 4px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .warning-title, .info-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-top: 0;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    .warning-title { color: #856404; }
+    .info-title { color: #0c5460; }
+    .warning-icon, .info-icon {
+        font-size: 1.5rem;
+        margin-right: 0.75rem;
+    }
+    .warning-text, .warning-list, .info-text {
+        line-height: 1.6;
+    }
+    .warning-list {
+        margin-left: 1.5rem;
+        padding-left: 0;
+    }
+    .delete-button {
+        background-color: #dc3545;
+    }
+    .delete-button:hover {
+        background-color: #c82333;
+    }
+    .errors .error-message {
+        color: #721c24;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}

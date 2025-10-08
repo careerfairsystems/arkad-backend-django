@@ -48,6 +48,7 @@ class StudentSessionApplicationSchemaAccepted(Schema):
 
 class ExhibitorTimeslotSchema(TimeslotSchema):
     selected: StudentSessionApplicationSchemaAccepted | None = None
+    selected_applications: List[StudentSessionApplicationSchemaAccepted] = []
 
 
 class CreateStudentSessionSchema(Schema):
@@ -63,9 +64,12 @@ class StudentSessionNormalUserSchema(Schema):
     available: bool
     user_status: Literal["accepted", "rejected", "pending"] | None = None
     description: str | None
+    location: str | None
     disclaimer: str | None
     field_modifications: list[FieldModificationSchema]
     id: int
+    session_type: Literal["regular", "company_event"]
+    company_event_at: datetime | None = None
 
 
 class StudentSessionNormalUserListSchema(Schema):
@@ -81,3 +85,8 @@ class MotivationTextUpdateSchema(Schema):
 class UpdateStudentSessionApplicantStatus(Schema):
     applicant_user_id: int
     status: Literal["accepted", "rejected"]
+
+
+class SwitchStudentSessionTimeslot(Schema):
+    new_timeslot_id: int
+    from_timeslot_id: int

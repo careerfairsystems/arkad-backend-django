@@ -4,14 +4,13 @@ from datetime import timedelta, datetime
 from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, UniqueConstraint, CheckConstraint, QuerySet
+from django.db.models import Q, CheckConstraint, QuerySet
 from django.utils import timezone
 
 from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVENT
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
 from user_models.models import User
-
 
 EVENT_TYPES: dict[str, str] = {"ce": "Company event", "lu": "Lunch", "ba": "Banquet"}
 
@@ -28,11 +27,6 @@ class Ticket(models.Model):
     task_id_notify_event_in_one_hour = models.CharField(
         default=None, null=True, blank=True
     )
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(name="one_ticket_per_user_event", fields=("user", "event"))
-        ]
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -86,7 +80,7 @@ class Event(models.Model):
     location = models.CharField(max_length=300, null=True)
     language = models.CharField(max_length=100, default="Swedish")
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
 
     visible_time = models.DateTimeField(
         null=False,
@@ -103,7 +97,7 @@ class Event(models.Model):
     end_time = models.DateTimeField(null=False)
 
     number_booked = models.IntegerField(
-        default=0, null=False
+        default=0, null=False, editable=False
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
@@ -140,16 +134,6 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
-
-    @staticmethod
-    def available_filter() -> Q:
-        return Q(
-            start_time__gte=timezone.now(),
-        )
-
-    @classmethod
-    def available_events(cls) -> QuerySet["Event"]:
-        return cls.objects.filter(cls.available_filter()).all()
 
     def save(self, *args, **kwargs) -> None:  # type: ignore
         # Override the save method of the model

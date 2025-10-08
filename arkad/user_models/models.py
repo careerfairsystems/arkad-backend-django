@@ -13,27 +13,81 @@ from companies.models import Company
 
 
 class Programme(models.TextChoices):
-    BRANDINGENJOR = "Brandingenjör"
-    MASKINTEKNIK_TD = "Maskinteknik_Teknisk_Design"
-    ELEKTROTEKNIK = "Elektroteknik"
-    EKOSYSTEMTEKNIK = "Ekosystemteknik"
-    MASKINTEKNIK = "Maskinteknik"
-    NANOVETEKNIK = "Nanoveteknik"
-    BIOTEKNIK = "Bioteknik"
-    INDUSTRIDESIGN = "Industridesign"
-    ARKITEKT = "Arkitekt"
-    INFOKOMM_TEKNIK = "Informations och Kommunikationsteknik"
-    KEMITEKNIK = "Kemiteknik"
-    BYGG_JARNVAG = "Byggteknik med Järnvägsteknik"
-    VAG_VATTEN = "Väg och vatttenbyggnad"
-    BYGG_ARKITEKTUR = "Byggteknik med arkitektur"
-    INDUSTRIELL_EKONOMI = "Industriell ekonomi"
-    TEKNISK_MATEMATIK = "Teknisk Matematik"
-    MEDICINTEKNIK = "Medicinteknik"
-    LANTMATERI = "Lantmäteri"
-    DATATEKNIK = "Datateknik"
-    TEKNISK_FYSIK = "Teknisk Fysik"
-    BYGG_VAG_TRAFIK = "Byggteknik med väg och trafikteknik"
+    BRANDINGENJOR = "Fire Engineering"
+    MASKINTEKNIK_TD = "Mechanical Engineering with Technical Design"
+    ELEKTROTEKNIK = "Electrical Engineering"
+    EKOSYSTEMTEKNIK = "Environmental Engineering"
+    MASKINTEKNIK = "Mechanical Engineering"
+    NANOVETEKNIK = "Nanoscience and Technology"
+    BIOTEKNIK = "Biotechnology"
+    INDUSTRIDESIGN = "Industrial Design"
+    ARKITEKT = "Architecture"
+    INFOKOMM_TEKNIK = "Information and Communication Engineering"
+    KEMITEKNIK = "Chemical Engineering"
+    BYGG_JARNVAG = "Civil Engineering with Railway Engineering"
+    VAG_VATTEN = "Road and Water Engineering"
+    BYGG_ARKITEKTUR = "Civil Engineering with Architecture"
+    INDUSTRIELL_EKONOMI = "Industrial Engineering and Management"
+    TEKNISK_MATEMATIK = "Engineering Mathematics"
+    MEDICINTEKNIK = "Biomedical Engineering"
+    LANTMATERI = "Surveying"
+    DATATEKNIK = "Computer Engineering"
+    TEKNISK_FYSIK = "Engineering Physics"
+    BYGG_VAG_TRAFIK = "Civil Engineering with Road and Traffic Engineering"
+
+
+# Translation mappings for Programme names
+PROGRAMME_ENGLISH_TO_SWEDISH: dict[str, str] = {
+    "Fire Engineering": "Brandingenjör",
+    "Mechanical Engineering with Technical Design": "Maskinteknik_Teknisk_Design",
+    "Electrical Engineering": "Elektroteknik",
+    "Environmental Engineering": "Ekosystemteknik",
+    "Mechanical Engineering": "Maskinteknik",
+    "Nanoscience and Technology": "Nanoveteknik",
+    "Biotechnology": "Bioteknik",
+    "Industrial Design": "Industridesign",
+    "Architecture": "Arkitekt",
+    "Information and Communication Engineering": "Informations och Kommunikationsteknik",
+    "Chemical Engineering": "Kemiteknik",
+    "Civil Engineering with Railway Engineering": "Byggteknik med Järnvägsteknik",
+    "Road and Water Engineering": "Väg och vatttenbyggnad",
+    "Civil Engineering with Architecture": "Byggteknik med arkitektur",
+    "Industrial Engineering and Management": "Industriell ekonomi",
+    "Engineering Mathematics": "Teknisk Matematik",
+    "Biomedical Engineering": "Medicinteknik",
+    "Surveying": "Lantmäteri",
+    "Computer Engineering": "Datateknik",
+    "Engineering Physics": "Teknisk Fysik",
+    "Civil Engineering with Road and Traffic Engineering": "Byggteknik med väg och trafikteknik",
+}
+
+PROGRAMME_SWEDISH_TO_ENGLISH: dict[str, str] = {
+    v: k for k, v in PROGRAMME_ENGLISH_TO_SWEDISH.items()
+}
+
+
+def translate_programme_to_swedish(english_name: str) -> str:
+    """Translate a programme name from English to Swedish.
+
+    Args:
+        english_name: The English programme name
+
+    Returns:
+        The Swedish translation, or the original name if not found
+    """
+    return PROGRAMME_ENGLISH_TO_SWEDISH.get(english_name, english_name)
+
+
+def translate_programme_to_english(swedish_name: str) -> str:
+    """Translate a programme name from Swedish to English.
+
+    Args:
+        swedish_name: The Swedish programme name
+
+    Returns:
+        The English translation, or the original name if not found
+    """
+    return PROGRAMME_SWEDISH_TO_ENGLISH.get(swedish_name, swedish_name)
 
 
 class User(AbstractUser):
@@ -90,6 +144,18 @@ class User(AbstractUser):
     def get_auth_headers(self) -> dict[str, str]:
         return {"Authorization": self.create_jwt_token()}
 
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        """Override delete to ensure uploaded files are removed from filesystem"""
+        # Delete CV file if it exists
+        if self.cv:
+            self.cv.delete(save=False)
+
+        # Delete profile picture if it exists
+        if self.profile_picture:
+            self.profile_picture.delete(save=False)
+
+        return super().delete(*args, **kwargs)
+
 
 class PydanticUser:
     @classmethod
@@ -113,3 +179,56 @@ class AuthenticatedRequest(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class StaffEnrollmentToken(models.Model):
+    """Token for secure staff enrollment links"""
+
+    token = models.CharField(max_length=255, unique=True, db_index=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_enrollment_tokens",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Staff Enrollment Token"
+        verbose_name_plural = "Staff Enrollment Tokens"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Token {self.token[:16]}... (created by {self.created_by.username})"
+
+    def is_valid(self) -> bool:
+        """Check if token is still valid (active and not expired)"""
+        from django.utils import timezone
+
+        return self.is_active and self.expires_at > timezone.now()
+
+
+class StaffEnrollmentUsage(models.Model):
+    """Track users created from staff enrollment tokens"""
+
+    token = models.ForeignKey(
+        StaffEnrollmentToken,
+        on_delete=models.CASCADE,
+        related_name="usages",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="enrollment_usage",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Staff Enrollment Usage"
+        verbose_name_plural = "Staff Enrollment Usages"
+        ordering = ["-created_at"]
+        unique_together = [["token", "user"]]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} enrolled via token {self.token.token[:16]}..."

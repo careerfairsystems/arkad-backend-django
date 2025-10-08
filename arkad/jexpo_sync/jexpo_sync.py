@@ -2,7 +2,7 @@ from typing import Tuple
 
 from companies.models import Company, Job
 from jexpo_sync.jexpo_ingestion import ExhibitorSchema
-from companies.translation import SWEDISH_TO_ENGLISH
+from companies.translation import SWEDISH_TO_ENGLISH, translate_to_english
 from student_sessions.models import StudentSession
 
 
@@ -17,11 +17,11 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
     logotype = profile.logotype
 
     # Map choices from Swedish to English
-    desired_competences = [
-        SWEDISH_TO_ENGLISH.get(c, c) for c in profile.desiredCompetence
-    ]
+    desired_competences = translate_to_english(profile.desiredCompetence)
 
-    industries = [SWEDISH_TO_ENGLISH.get(i, i) for i in profile.industry]
+    desired_programmes = translate_to_english(profile.desiredProgramme)
+
+    industries = translate_to_english(profile.industry)
 
     # The url for the image, it uses the key for the exibitors storage. Does not append a size here.
     logo_url: str | None = (
@@ -30,33 +30,42 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
         else None
     )
 
-    # Map positions from 'weOffer' (add more mappings as needed)
-    position_mapping = {
-        "Heltidsjobb": "FullTime",
-        "Exjobb": "Thesis",
-        "Praktikplatser": "Internship",
-    }
-    positions = [position_mapping.get(offer, offer) for offer in profile.weOffer]
-    # schema.studentsession.sessions is either None or xdays where x is an integer
-    # Will read as many numerical prepended numbers as possible.
-    # xxxx works
-    # axxx will give 0
+    # Translate positions from weOffer and positionsOffered
+    positions = [
+        SWEDISH_TO_ENGLISH.get(offer, offer)
+        for offer in profile.weOffer + profile.positionsOffered
+    ]
 
+    # Extract student session days - prioritize events.studentsessions[xdays] over studentsession field
     parse_session_days: int = 0
-    sessions: str | None = (
-        schema.studentsession.sessions if schema.studentsession else None
-    )
-    if sessions is not None and sessions != "none":
-        # This is not the prettiest way to do this but easy to read
-        numerical_chars: list[int] = []
-        for i, char in enumerate(sessions):
-            if char.isnumeric():
-                numerical_chars.append(int(char))
-            else:
-                break
-        parse_session_days = sum(
-            ((10**i) * d for i, d in enumerate(reversed(numerical_chars), start=0))
-        )
+    student_session_motivation: str | None = None
+
+    # First try to get from events.studentsessions[xdays]
+    days_from_events = schema.get_student_session_days_from_events()
+    if days_from_events is not None:
+        parse_session_days = days_from_events
+        # Try to get motivation from events data
+        event_session_data = schema.get_student_session_info()
+        if event_session_data:
+            student_session_motivation = event_session_data.get("sessions_why")
+
+    # Fallback to studentsession field if events didn't have the data
+    if parse_session_days == 0 and schema.studentsession:
+        sessions: str | None = schema.studentsession.sessions
+        student_session_motivation = schema.studentsession.sessions_why
+
+        if sessions is not None and sessions != "none":
+            # Parse numerical prepended numbers from sessions string
+            numerical_chars: list[int] = []
+            for char in sessions:
+                if char.isnumeric():
+                    numerical_chars.append(int(char))
+                else:
+                    break
+            parse_session_days = sum(
+                ((10**i) * d for i, d in enumerate(reversed(numerical_chars), start=0))
+            )
+
     # Create/update company with atomic transaction
     company, created = Company.objects.update_or_create(
         name=schema.name,
@@ -74,13 +83,11 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
             "company_email": profile.contactEmail,
             "company_phone": profile.contactPhone,
             "desired_degrees": profile.desiredDegree,
-            "desired_programme": profile.desiredProgramme,
+            "desired_programme": desired_programmes,
             "desired_competences": desired_competences,
             "positions": positions,
             "industries": industries,
-            "student_session_motivation": schema.studentsession.sessions_why
-            if schema.studentsession
-            else None,
+            "student_session_motivation": student_session_motivation,
             "days_with_studentsession": parse_session_days,
             "employees_locally": profile.employeesLocal,
             "employees_globally": profile.employeesGlobal,

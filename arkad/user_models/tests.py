@@ -238,3 +238,185 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(200, resp.status_code)
         self.maxDiff = None
         self.assertEqual(PUBLIC_KEY, resp.json()["publicKey"])
+
+
+class DeleteAccountTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        # Create a regular user
+        self.regular_user = User.objects.create_user(
+            username="regular@example.com",
+            email="regular@example.com",
+            password="password123",
+            first_name="Regular",
+            last_name="User",
+        )
+
+        # Create a staff user
+        self.staff_user = User.objects.create_user(
+            username="staff@example.com",
+            email="staff@example.com",
+            password="password123",
+            first_name="Staff",
+            last_name="User",
+            is_staff=True,
+        )
+
+        # Create a company user
+        from companies.models import Company
+
+        self.company = Company.objects.create(name="Test Company")
+        self.company_user = User.objects.create_user(
+            username="company@example.com",
+            email="company@example.com",
+            password="password123",
+            first_name="Company",
+            last_name="User",
+            company=self.company,
+        )
+
+    def test_delete_account_unauthenticated(self):
+        """Test that unauthenticated users cannot access the delete page"""
+        response = self.client.get("/user/delete-account/")
+        # Should redirect to login
+        self.assertEqual(response.status_code, 302)
+
+        response = self.client.post("/user/delete-account/")
+        # Should redirect to login
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_account_regular_user_get(self):
+        """Test that regular users can view the delete account page"""
+        self.client.login(username="regular@example.com", password="password123")
+        response = self.client.get("/user/delete-account/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Delete Your Account")
+
+    def test_delete_account_regular_user_post(self):
+        """Test that regular users can successfully delete their account"""
+        self.client.login(username="regular@example.com", password="password123")
+        user_id = self.regular_user.id
+
+        # Verify user exists
+        self.assertTrue(User.objects.filter(id=user_id).exists())
+
+        # Delete account
+        response = self.client.post("/user/delete-account/")
+
+        # Should redirect after deletion
+        self.assertEqual(response.status_code, 302)
+
+        # Verify user no longer exists
+        self.assertFalse(User.objects.filter(id=user_id).exists())
+
+    def test_delete_account_staff_user_get(self):
+        """Test that staff users can view the page but see a restricted message"""
+        self.client.login(username="staff@example.com", password="password123")
+        response = self.client.get("/user/delete-account/")
+
+        # Should be able to access the page
+        self.assertEqual(response.status_code, 200)
+
+        # Should see the restricted message
+        self.assertContains(response, "cannot delete")
+
+        # Verify staff user still exists
+        self.assertTrue(User.objects.filter(id=self.staff_user.id).exists())
+
+    def test_delete_account_staff_user_post(self):
+        """Test that staff users cannot delete their account via POST"""
+        self.client.login(username="staff@example.com", password="password123")
+        user_id = self.staff_user.id
+
+        response = self.client.post("/user/delete-account/")
+
+        # Should redirect back to the delete page
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/user/delete-account/", response.url)
+
+        # Verify staff user still exists
+        self.assertTrue(User.objects.filter(id=user_id).exists())
+
+    def test_delete_account_company_user_post(self):
+        """Test that company users cannot delete their account via POST"""
+        self.client.login(username="company@example.com", password="password123")
+        user_id = self.company_user.id
+
+        response = self.client.post("/user/delete-account/")
+
+        # Should redirect back to the delete page
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/user/delete-account/", response.url)
+
+        # Verify company user still exists
+        self.assertTrue(User.objects.filter(id=user_id).exists())
+
+    def test_delete_account_with_data(self):
+        """Test that deleting account also deletes associated data"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.client.login(username="regular@example.com", password="password123")
+
+        # Add some data to the user
+        self.regular_user.food_preferences = "Vegetarian"
+        self.regular_user.programme = "Computer Engineering"
+        self.regular_user.cv = SimpleUploadedFile(
+            "cv.pdf", b"file_content", content_type="application/pdf"
+        )
+        self.regular_user.profile_picture = SimpleUploadedFile(
+            "profile.jpg", b"file_content", content_type="image/jpeg"
+        )
+        self.regular_user.save()
+
+        user_id = self.regular_user.id
+
+        # Delete account
+        self.client.post("/user/delete-account/")
+
+        # Verify user and all data no longer exists
+        self.assertFalse(User.objects.filter(id=user_id).exists())
+
+    def test_delete_account_removes_files_from_filesystem(self):
+        """Test that deleting account also removes files from the filesystem"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        import os
+
+        self.client.login(username="regular@example.com", password="password123")
+
+        # Add files to the user
+        cv_file = SimpleUploadedFile(
+            "test_cv.pdf", b"cv_file_content", content_type="application/pdf"
+        )
+        profile_pic_file = SimpleUploadedFile(
+            "test_profile.jpg", b"profile_pic_content", content_type="image/jpeg"
+        )
+
+        self.regular_user.cv = cv_file
+        self.regular_user.profile_picture = profile_pic_file
+        self.regular_user.save()
+
+        # Get the file paths
+        cv_path = self.regular_user.cv.path
+        profile_pic_path = self.regular_user.profile_picture.path
+
+        # Verify files exist on filesystem
+        self.assertTrue(os.path.exists(cv_path), "CV file should exist before deletion")
+        self.assertTrue(
+            os.path.exists(profile_pic_path),
+            "Profile picture should exist before deletion",
+        )
+
+        # Delete account
+        self.client.post("/user/delete-account/")
+
+        # Verify user no longer exists
+        self.assertFalse(User.objects.filter(id=self.regular_user.id).exists())
+
+        # Verify files are removed from filesystem
+        self.assertFalse(
+            os.path.exists(cv_path), "CV file should be deleted from filesystem"
+        )
+        self.assertFalse(
+            os.path.exists(profile_pic_path),
+            "Profile picture should be deleted from filesystem",
+        )

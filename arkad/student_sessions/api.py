@@ -1,5 +1,5 @@
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from pydantic import BaseModel
@@ -13,6 +13,8 @@ from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
     StudentSessionTimeslot,
+    SessionType,
+    ApplicationStatus,
 )
 from student_sessions.schema import (
     TimeslotSchema,
@@ -25,6 +27,7 @@ from student_sessions.schema import (
     StudentSessionApplicationOutSchema,
     ExhibitorTimeslotSchema,
     TimeslotSchemaUser,
+    SwitchStudentSessionTimeslot,
 )
 from user_models.schema import ProfileSchema
 from functools import wraps
@@ -97,6 +100,8 @@ def get_student_sessions(request: AuthenticatedRequest):
                 description=s.description,
                 disclaimer=s.disclaimer,
                 booking_open_time=s.booking_open_time,
+                session_type=s.session_type,
+                location=s.location,
             )
             for s in sessions
         ],
@@ -131,7 +136,9 @@ def create_student_session(
 @exhibitor_check
 def get_exhibitor_sessions(request: AuthenticatedRequestSession):
     session: StudentSession = request.student_session
-    return session.timeslots.prefetch_related("selected", "selected__user").all()
+    return session.timeslots.prefetch_related(
+        "selected_applications", "selected_applications__user"
+    ).all()
 
 
 @router.get(
@@ -177,21 +184,23 @@ def update_student_session_application_status(
     This will email the user and allow them to select one of the available timeslots connected to this
     student session.
     """
+
     session: StudentSession = request.student_session
     try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=data.applicant_user_id
-        )
-        if not applicant.is_pending():
-            return 409, "Applicant status has been set and can not be modified"
+        with transaction.atomic():
+            applicant = StudentSessionApplication.objects.select_for_update().get(
+                student_session=session, user_id=data.applicant_user_id
+            )
+            if not applicant.is_pending():
+                return 409, "Applicant status has been set and can not be modified"
 
-        match data.status:
-            case "accepted":
-                applicant.accept()
-            case "rejected":
-                applicant.deny()
-            case _:
-                return 409, "Invalid status provided"
+            match data.status:
+                case "accepted":
+                    applicant.accept()
+                case "rejected":
+                    applicant.deny()
+                case _:
+                    return 409, "Invalid status provided"
     except StudentSessionApplication.DoesNotExist:
         return 404, "Applicant not found"
     return 200, "Applicant accepted"
@@ -205,6 +214,7 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
     """
     Returns a list of timeslots for a student session.
     Only viewable if accepted and returns only timeslots which are unbooked or booked by the user.
+    For company events, all timeslots are shown regardless of booking status.
     """
     try:
         application: StudentSessionApplication = StudentSessionApplication.objects.get(
@@ -215,24 +225,46 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
     except StudentSessionApplication.DoesNotExist:
         return 404, "Application not found"
 
-    timeslots = StudentSessionTimeslot.objects.filter(
-        Q(student_session__company_id=company_id)
-        & (Q(selected__isnull=True) | Q(selected=application))
-        & Q(booking_closes_at__gte=timezone.now())
-    ).all()
+    session = application.student_session
 
-    return 200, [
-        TimeslotSchemaUser(
-            id=timeslot.id,
-            start_time=timeslot.start_time,
-            duration=timeslot.duration,
-            status="bookedByCurrentUser"
-            if timeslot.selected == application
-            else "free",
-            booking_closes_at=timeslot.booking_closes_at,
+    max_applications_per_slot: int = (
+        1 if session.session_type == SessionType.REGULAR else 1000_000_000
+    )
+
+    timeslots = (
+        StudentSessionTimeslot.objects.annotate(
+            num_selected_applications=Count("selected_applications")
         )
-        for timeslot in timeslots
-    ]
+        .filter(
+            Q(student_session__company_id=company_id)
+            & (
+                Q(booking_closes_at__gte=timezone.now())
+                | Q(booking_closes_at__isnull=True)
+            )
+            & (
+                Q(num_selected_applications__lt=max_applications_per_slot)
+                | Q(selected_applications=application)
+            )
+        )
+        .prefetch_related("selected_applications")
+        .all()
+    )
+    result = []
+    for timeslot in timeslots:
+        # Check if user has booked this timeslot
+        user_booked = timeslot.selected_applications.filter(id=application.id).exists()
+
+        result.append(
+            TimeslotSchemaUser(
+                id=timeslot.id,
+                start_time=timeslot.start_time,
+                duration=timeslot.duration,
+                status="bookedByCurrentUser" if user_booked else "free",
+                booking_closes_at=timeslot.booking_closes_at,
+            )
+        )
+
+    return 200, result
 
 
 @router.post("/accept", response={200: str, 409: str, 401: str, 404: str})
@@ -240,32 +272,51 @@ def confirm_student_session(
     request: AuthenticatedRequest, company_id: int, timeslot_id: int
 ):
     """
-    Accept a timeslot from some student sessions
+    Accept a timeslot from some student sessions.
+    For company events, multiple users can book the same timeslot.
+    For regular sessions, only one user can book a timeslot.
     """
 
     try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session__company_id=company_id, user_id=request.user.id
-        )
-        if not applicant.is_accepted():
-            return 409, "Applicant not accepted"
-    except StudentSessionApplication.DoesNotExist:
-        return 404, "Application not found"
-
-    try:
         with transaction.atomic():
+            try:
+                applicant = StudentSessionApplication.objects.get(
+                    student_session__company_id=company_id, user_id=request.user.id
+                )
+                if not applicant.is_accepted():
+                    return 409, "Applicant not accepted"
+            except StudentSessionApplication.DoesNotExist:
+                return 404, "Application not found"
+
+            session = applicant.student_session
+
             timeslot: StudentSessionTimeslot = (
                 StudentSessionTimeslot.objects.select_for_update().get(
-                    id=timeslot_id, selected=None, booking_closes_at__gte=timezone.now()
+                    Q(booking_closes_at__gte=timezone.now())
+                    | Q(booking_closes_at__isnull=True),
+                    id=timeslot_id,
+                    student_session=session,
                 )
             )
-            timeslot.selected = applicant
+
+            # Check if user already has a booking for this session
+            existing_booking = StudentSessionTimeslot.objects.filter(
+                Q(student_session=session) & Q(selected_applications=applicant)
+            ).first()
+
+            if existing_booking:
+                return 409, "You have already booked a timeslot"
+
+            # Check if timeslot is available based on session type
+            if not timeslot.is_available_for_application():
+                return 404, "Timeslot not found or already taken"
+
+            # Add the selection using the model method
+            timeslot.add_selection(applicant)
             timeslot.time_booked = timezone.now()
             timeslot.save()
+
             return 200, "Student session confirmed"
-    except IntegrityError:
-        # Each application can only be connected to one timeslot
-        return 409, "You have already booked a timeslot"
     except StudentSessionTimeslot.DoesNotExist:
         return 404, "Timeslot not found or already taken"
 
@@ -286,20 +337,112 @@ def unbook_student_session(request: AuthenticatedRequest, company_id: int):
     except StudentSessionApplication.DoesNotExist:
         return 404, "Application not found"
 
-    try:
-        timeslot: StudentSessionTimeslot = StudentSessionTimeslot.objects.get(
-            selected=application
-        )
+    # Find the timeslot booked by this application
+    timeslot = StudentSessionTimeslot.objects.filter(
+        Q(selected_applications=application)
+    ).first()
 
-        if timeslot.booking_closes_at <= timezone.now():
-            return 409, "Unbooking period has expired"
-
-        timeslot.selected = None
-        timeslot.time_booked = None
-        timeslot.save()
-        return 200, "Student session unbooked"
-    except StudentSessionTimeslot.DoesNotExist:
+    if not timeslot:
         return 404, "Timeslot not found or already taken"
+
+    if (
+        timeslot.booking_closes_at is not None
+        and timeslot.booking_closes_at <= timezone.now()
+    ):
+        return 409, "Unbooking period has expired"
+
+    # Remove the booking using the model method
+    timeslot.remove_selection(application)
+    timeslot.time_booked = None
+    timeslot.save()
+
+    return 200, "Student session unbooked"
+
+
+@router.post("/switch-timeslot", response={200: str, 401: str, 404: str, 409: str})
+def switch_student_session_timeslot(
+    request: AuthenticatedRequest, data: SwitchStudentSessionTimeslot
+):
+    """
+    Switch from current booked timeslot to a new timeslot in a concurrency-safe manner.
+
+    This endpoint atomically unbooks the current timeslot and books the new one,
+    preventing race conditions where the new timeslot might be taken by another user.
+    """
+
+    try:
+        with transaction.atomic():
+            # Lock both timeslots to prevent race conditions
+            try:
+                current_timeslot: StudentSessionTimeslot = (
+                    StudentSessionTimeslot.objects.select_for_update().get(
+                        id=data.from_timeslot_id
+                    )
+                )
+            except StudentSessionTimeslot.DoesNotExist:
+                return 404, "Student session timeslot not found"
+
+            if (
+                current_timeslot.booking_closes_at is not None
+                and current_timeslot.booking_closes_at <= timezone.now()
+            ):
+                return (
+                    409,
+                    "Your current booking period has expired and cannot be modified",
+                )
+
+            # Check if trying to switch to the same timeslot
+            if current_timeslot.id == data.new_timeslot_id:
+                return 409, "You are already booked for this timeslot"
+
+            # Try to lock and book the new timeslot
+            try:
+                new_timeslot: StudentSessionTimeslot = (
+                    StudentSessionTimeslot.objects.select_for_update().get(
+                        Q(booking_closes_at__gte=timezone.now())
+                        | Q(booking_closes_at__isnull=True),
+                        id=data.new_timeslot_id,
+                    )
+                )
+
+                # Check if timeslot is available based on session type
+                if not new_timeslot.is_available_for_application():
+                    return 404, "Timeslot not found or already taken"
+
+            except StudentSessionTimeslot.DoesNotExist:
+                return (
+                    404,
+                    "New timeslot not found, already taken, or booking has closed",
+                )
+
+            # Check so that the student session connected to the new_timeslot is the same as the current_timeslot
+            if new_timeslot.student_session_id != current_timeslot.student_session_id:
+                return 409, "Timeslots belong to different student sessions"
+
+            try:
+                application: StudentSessionApplication = (
+                    StudentSessionApplication.objects.get(
+                        student_session_id=current_timeslot.student_session_id,
+                        user_id=request.user.id,
+                        status=ApplicationStatus.ACCEPTED,
+                    )
+                )
+            except StudentSessionApplication.DoesNotExist:
+                return 404, "Application not found"
+
+            # Perform the switch atomically
+            current_timeslot.selected_applications.remove(application)
+            current_timeslot.time_booked = None
+            current_timeslot.save()
+
+            new_timeslot.selected_applications.add(application)
+            new_timeslot.time_booked = timezone.now()
+            new_timeslot.save()
+
+            return 200, "Timeslot switched successfully"
+
+    except IntegrityError:
+        return 409, "Failed to switch timeslot due to a database constraint violation"
 
 
 @router.post("/apply", response={404: str, 409: str, 200: str})
