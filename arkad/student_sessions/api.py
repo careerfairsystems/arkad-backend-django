@@ -184,21 +184,23 @@ def update_student_session_application_status(
     This will email the user and allow them to select one of the available timeslots connected to this
     student session.
     """
+
     session: StudentSession = request.student_session
     try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session=session, user_id=data.applicant_user_id
-        )
-        if not applicant.is_pending():
-            return 409, "Applicant status has been set and can not be modified"
+        with transaction.atomic():
+            applicant = StudentSessionApplication.objects.select_for_update().get(
+                student_session=session, user_id=data.applicant_user_id
+            )
+            if not applicant.is_pending():
+                return 409, "Applicant status has been set and can not be modified"
 
-        match data.status:
-            case "accepted":
-                applicant.accept()
-            case "rejected":
-                applicant.deny()
-            case _:
-                return 409, "Invalid status provided"
+            match data.status:
+                case "accepted":
+                    applicant.accept()
+                case "rejected":
+                    applicant.deny()
+                case _:
+                    return 409, "Invalid status provided"
     except StudentSessionApplication.DoesNotExist:
         return 404, "Applicant not found"
     return 200, "Applicant accepted"
@@ -276,26 +278,18 @@ def confirm_student_session(
     """
 
     try:
-        applicant = StudentSessionApplication.objects.get(
-            student_session__company_id=company_id, user_id=request.user.id
-        )
-        if not applicant.is_accepted():
-            return 409, "Applicant not accepted"
-    except StudentSessionApplication.DoesNotExist:
-        return 404, "Application not found"
-
-    session = applicant.student_session
-
-    # Check if user already has a booking for this session
-    existing_booking = StudentSessionTimeslot.objects.filter(
-        Q(student_session=session) & Q(selected_applications=applicant)
-    ).first()
-
-    if existing_booking:
-        return 409, "You have already booked a timeslot"
-
-    try:
         with transaction.atomic():
+            try:
+                applicant = StudentSessionApplication.objects.get(
+                    student_session__company_id=company_id, user_id=request.user.id
+                )
+                if not applicant.is_accepted():
+                    return 409, "Applicant not accepted"
+            except StudentSessionApplication.DoesNotExist:
+                return 404, "Application not found"
+
+            session = applicant.student_session
+
             timeslot: StudentSessionTimeslot = (
                 StudentSessionTimeslot.objects.select_for_update().get(
                     Q(booking_closes_at__gte=timezone.now())
@@ -304,6 +298,14 @@ def confirm_student_session(
                     student_session=session,
                 )
             )
+
+            # Check if user already has a booking for this session
+            existing_booking = StudentSessionTimeslot.objects.filter(
+                Q(student_session=session) & Q(selected_applications=applicant)
+            ).first()
+
+            if existing_booking:
+                return 409, "You have already booked a timeslot"
 
             # Check if timeslot is available based on session type
             if not timeslot.is_available_for_application():
