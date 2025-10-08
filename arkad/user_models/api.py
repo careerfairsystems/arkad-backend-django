@@ -331,7 +331,7 @@ def validate_enrollment_token(request: HttpRequest, data: ValidateTokenSchema):
 @staff_enrollment.post(
     "begin-signup",
     auth=None,
-    response={200: str, 400: str, 404: str, 415: str, 429: str},
+    response={200: str, 400: str, 404: str, 415: str, 429: str, 409: str},
 )
 def staff_begin_signup(request: HttpRequest, data: StaffBeginSignupSchema):
     """
