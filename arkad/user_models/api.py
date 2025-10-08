@@ -44,7 +44,7 @@ router.add_router("profile", profile)
 router.add_router("staff-enrollment", staff_enrollment)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str, 429: str})
+@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str})
 def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
