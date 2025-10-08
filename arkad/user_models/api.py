@@ -44,13 +44,13 @@ router.add_router("profile", profile)
 router.add_router("staff-enrollment", staff_enrollment)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str})
+@auth.post("begin-signup", auth=None, response={200: str, 415: str, 429: str, 409: str})
 def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
 
     Only allowing sending an email once every 30 seconds to prevent abuse. If in that window 429 is returned.
-
+    409 is returned if the user already exists.
     """
 
     def generate_salt(length: int = 16) -> str:
@@ -62,7 +62,7 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
         return 415, "\n".join(e.messages)
 
     if User.objects.filter(email=data.email, username=data.email).exists():
-        return 415, "User with this email already exists."
+        return 409, "User with this email already exists."
 
     key: str = f"signup-{data.email}"
 
