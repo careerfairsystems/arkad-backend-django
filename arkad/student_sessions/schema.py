@@ -68,7 +68,7 @@ class StudentSessionNormalUserSchema(Schema):
     disclaimer: str | None
     field_modifications: list[FieldModificationSchema]
     id: int
-    session_type: Literal["regular", "company_event"] = "regular"
+    session_type: Literal["regular", "company_event"]
     company_event_at: datetime | None = None
 
 

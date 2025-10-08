@@ -1,6 +1,10 @@
 from datetime import datetime
 from enum import Enum
+from typing import Type, Any
 from uuid import UUID
+
+from ninja.schema import S
+
 from arkad.customized_django_ninja import Schema
 
 
@@ -25,7 +29,13 @@ class EventSchema(Schema):
     capacity: int
     number_booked: int
     company_id: int | None
-    status: EventUserStatus = EventUserStatus.NOT_BOOKED
+    status: EventUserStatus  # This field is not in the ORM model, but is set manually, default is NOT_BOOKED
+
+    @classmethod
+    def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
+        if "status" not in kw:
+            setattr(obj, "status", EventUserStatus.NOT_BOOKED)
+        return super().from_orm(obj, **kw)
 
 
 class UserEventInformationSchema(Schema):
