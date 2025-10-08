@@ -70,7 +70,7 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
             if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
 
-            ticket_chunks = [tickets[i : i + 4] for i in range(0, len(tickets), 4)]
+            ticket_chunks = [tickets[i : i + 12] for i in range(0, len(tickets), 12)]
             pdf_count = 0
 
             for chunk in ticket_chunks:
@@ -79,28 +79,28 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                 c = canvas.Canvas(pdf_path, pagesize=A4)
                 width, height = A4
 
-                positions = [
-                    (0, height / 2),
-                    (width / 2, height / 2),
-                    (0, 0),
-                    (width / 2, 0),
-                ]
+                positions = []
+                for row in range(4):
+                    for col in range(3):
+                        positions.append((col * (width / 3), (3 - row) * (height / 4)))
 
                 for i, ticket in enumerate(chunk):
                     x_offset, y_offset = positions[i]
-                    c.setFont("Helvetica-Bold", 16)
+                    cell_width = width / 3
+                    cell_height = height / 4
+                    c.setFont("Helvetica-Bold", 12)
                     c.drawString(
-                        x_offset + 50, y_offset + height / 2 - 50, "Lunch Ticket"
+                        x_offset + 20, y_offset + cell_height - 30, "Lunch Ticket"
                     )
-                    c.setFont("Helvetica", 12)
+                    c.setFont("Helvetica", 10)
                     c.drawString(
-                        x_offset + 50,
-                        y_offset + height / 2 - 70,
+                        x_offset + 20,
+                        y_offset + cell_height - 50,
                         f"Start: {event.start_time.strftime('%Y-%m-%d %H:%M')}",
                     )
                     c.drawString(
-                        x_offset + 50,
-                        y_offset + height / 2 - 90,
+                        x_offset + 20,
+                        y_offset + cell_height - 70,
                         f"End: {event.end_time.strftime('%Y-%m-%d %H:%M')}",
                     )
 
@@ -111,10 +111,10 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
 
                     c.drawImage(
                         qr_path,
-                        x_offset + 50,
-                        y_offset + height / 2 - 250,
-                        width=150,
-                        height=150,
+                        x_offset + 20,
+                        y_offset + 20,
+                        width=100,
+                        height=100,
                     )
                     os.remove(qr_path)
 
