@@ -23,7 +23,10 @@ def get_events(request: AuthenticatedRequest):
     Returns a list of all events
     """
     if not request.user.is_authenticated:
-        return Event.objects.filter(visible_time__lte=timezone.now()).all()
+        return [
+            EventSchema.from_orm(e)
+            for e in Event.objects.filter(visible_time__lte=timezone.now()).all()
+        ]
     events: QuerySet[Event] = (
         Event.objects.prefetch_related("tickets")
         .filter(visible_time__lte=timezone.now())

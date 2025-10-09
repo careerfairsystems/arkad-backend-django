@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, UniqueConstraint, CheckConstraint
+from django.db.models import Q, CheckConstraint
 from django.utils import timezone
 
 from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVENT
@@ -20,11 +20,6 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    class Meta:
-        constraints = [
-            UniqueConstraint(name="one_ticket_per_user_event", fields=("user", "event"))
-        ]
-
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
@@ -40,7 +35,7 @@ class Event(models.Model):
     location = models.CharField(max_length=300, null=True)
     language = models.CharField(max_length=100, default="Swedish")
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
 
     visible_time = models.DateTimeField(
         null=False,
@@ -57,7 +52,7 @@ class Event(models.Model):
     end_time = models.DateTimeField(null=False)
 
     number_booked = models.IntegerField(
-        default=0, null=False
+        default=0, null=False, editable=False
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 

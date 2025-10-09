@@ -44,13 +44,26 @@ router.add_router("profile", profile)
 router.add_router("staff-enrollment", staff_enrollment)
 
 
-@auth.post("begin-signup", auth=None, response={200: str, 400: str, 415: str, 429: str})
+@auth.post("/validate-token", response={200: str, 401: str})
+def validate_token(request: AuthenticatedRequest):
+    """
+    Validates the users token, returns 200 if valid, 401 if not.
+    """
+    return 200, "Token is valid"
+
+
+@auth.post(
+    "begin-signup",
+    auth=None,
+    response={200: str, 415: str, 429: str, 409: str, 406: str},
+)
 def begin_signup(request: HttpRequest, data: SignupSchema):
     """
     This endpoint begins the account creation process, returns a jwt which has to be used again with a 2fa code.
 
     Only allowing sending an email once every 30 seconds to prevent abuse. If in that window 429 is returned.
-
+    409 is returned if the user already exists.
+    406 is returned if the password does not meet the requirements.
     """
 
     def generate_salt(length: int = 16) -> str:
@@ -59,10 +72,12 @@ def begin_signup(request: HttpRequest, data: SignupSchema):
     try:
         validate_password(data.password)
     except ValidationError as e:
-        return 415, "\n".join(e.messages)
+        return 406, "\n".join(e.messages)
 
-    if User.objects.filter(email=data.email, username=data.email).exists():
-        return 415, "User with this email already exists."
+    if User.objects.filter(
+        email__iexact=data.email, username__iexact=data.email
+    ).exists():
+        return 409, "User with this email already exists."
 
     key: str = f"signup-{data.email}"
 
@@ -178,7 +193,7 @@ def reset_password(request: HttpRequest, data: ResetPasswordSchema):
         User = get_user_model()
 
         try:
-            user = User.objects.get(email=data.email)
+            user = User.objects.get(email__iexact=data.email)
 
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
@@ -329,7 +344,7 @@ def validate_enrollment_token(request: HttpRequest, data: ValidateTokenSchema):
 @staff_enrollment.post(
     "begin-signup",
     auth=None,
-    response={200: str, 400: str, 404: str, 415: str, 429: str},
+    response={200: str, 400: str, 404: str, 415: str, 429: str, 409: str, 406: str},
 )
 def staff_begin_signup(request: HttpRequest, data: StaffBeginSignupSchema):
     """
