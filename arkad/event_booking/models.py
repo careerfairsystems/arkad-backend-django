@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta, datetime
 
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, CheckConstraint
@@ -20,11 +21,55 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
+    task_id_notify_event_tomorrow = models.CharField(
+        default=None, null=True, blank=True
+    )
+    task_id_notify_event_in_one_hour = models.CharField(
+        default=None, null=True, blank=True
+    )
+
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
 
     def status(self) -> EventUserStatus:
         return EventUserStatus.TICKET_USED if self.used else EventUserStatus.BOOKED
+
+    def save(self, *args, **kwargs) -> None:  # type: ignore
+        # Override the save method of the model
+        # Schedule a notification task
+        self._remove_notifications()
+        self._schedule_notifications()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
+        self._remove_notifications()
+        return super().delete(*args, **kwargs)
+
+    def _schedule_notifications(self) -> None:
+        from notifications import tasks
+
+        # (Du har anmält dig till) YYY (som är) med XXX är imorgon
+        task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
+            args=[self.user.id, self.event.id],
+            eta=self.event.start_time - timedelta(hours=24),
+        )
+        self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
+
+        # (Du har anmält dig till) YYY (som är) med XXX är om en timme
+        task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
+            args=[self.user.id, self.event.id],
+            eta=self.event.start_time - timedelta(hours=1),
+        )
+        self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
+
+    def _remove_notifications(self) -> None:
+        if self.task_id_notify_event_tomorrow:
+            AsyncResult(self.task_id_notify_event_tomorrow).revoke()
+            self.task_id_notify_event_tomorrow = None
+
+        if self.task_id_notify_event_tomorrow:
+            AsyncResult(self.task_id_notify_event_tomorrow).revoke()
+            self.notify_event_one_day_id = None
 
 
 class Event(models.Model):
@@ -56,6 +101,10 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
+    task_id_notify_registration_opening = models.CharField(
+        default=None, null=True, blank=True
+    )
+
     class Meta:
         constraints = [
             CheckConstraint(
@@ -85,3 +134,30 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
+
+    def save(self, *args, **kwargs) -> None:  # type: ignore
+        # Override the save method of the model
+        # Schedule a notification task
+        self._remove_notifications()
+        self._schedule_notifications()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
+        self._remove_notifications()
+        return super().delete(*args, **kwargs)
+
+    def _schedule_notifications(self) -> None:
+        from notifications import tasks
+
+        # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
+        task_notify_registration_open = (
+            tasks.notify_event_registration_open.apply_async(
+                args=[self.id], eta=self.release_time
+            )
+        )
+        self.task_id_notify_registration_opening = task_notify_registration_open.id
+
+    def _remove_notifications(self) -> None:
+        if self.task_id_notify_registration_opening:
+            AsyncResult(self.task_id_notify_registration_opening).revoke()
+            self.task_id_notify_registration_opening = None

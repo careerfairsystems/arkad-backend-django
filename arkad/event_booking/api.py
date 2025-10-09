@@ -14,6 +14,7 @@ from event_booking.schemas import (
     EventUserStatus,
 )
 
+
 router = Router(tags=["Events"])
 
 
@@ -154,6 +155,7 @@ def book_event(request: AuthenticatedRequest, event_id: int):
                 return 409, "Event already ended"
         except Event.DoesNotExist:
             return 404, "Event not found"
+
         if event.number_booked < event.capacity:
             if event.tickets.filter(user_id=request.user.id).exists():
                 return 409, "You have already booked this event"
@@ -164,6 +166,7 @@ def book_event(request: AuthenticatedRequest, event_id: int):
 
             schema = EventSchema.from_orm(event)
             schema.status = ticket.status()
+
             return 200, schema
         else:
             return 409, "Event already fully booked"
@@ -184,10 +187,9 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
         except Event.DoesNotExist:
             return 404, "Event not found"
 
+        ticket = event.tickets.filter(user_id=request.user.id, used=False)
         # Delete the ticket
-        deleted_count, _ = event.tickets.filter(
-            user_id=request.user.id, used=False
-        ).delete()
+        deleted_count, _ = ticket.delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"
