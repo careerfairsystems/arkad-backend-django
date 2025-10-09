@@ -70,7 +70,7 @@ ruff==0.9.6
 s3transfer==0.11.4
 sentry-sdk==2.38.0
 service-identity==24.2.0
-setuptools==75.8.1
+setuptools==78.1.1
 six==1.17.0
 sqlparse==0.5.3
 tablib==3.8.0
