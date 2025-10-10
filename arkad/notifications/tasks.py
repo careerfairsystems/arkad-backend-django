@@ -25,8 +25,8 @@ def notify_event_tomorrow(user_id: int, event_id: int) -> None:
     fcm.send_event_reminder(
         user,
         event,
-        f"Påminnelse: {event.name} är imorgon!",
-        f"Glöm inte eventet i {event.location} imorgon klockan {event.start_time.strftime('%H:%M')}!",
+        f"Reminder: {event.name} is tomorrow!",
+        f"Don't forget the event at {event.location} tomorrow at {event.start_time.strftime('%H:%M')}!",
     )
     # TODO: Send email
 
@@ -44,8 +44,8 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
     fcm.send_event_reminder(
         user,
         event,
-        f"Påminnelse: {event.name} är om en timme!",
-        f"Glöm inte att komma till {event.location} om en timme klockan {event.start_time.strftime('%H:%M')}!",
+        f"Reminder: {event.name} is in one hour!",
+        f"Don't forget to come to {event.location} in one hour at {event.start_time.strftime('%H:%M')}!",
     )
 
 
@@ -57,11 +57,13 @@ def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> No
     title = ""
     body = ""
     if session.session_type == SessionType.REGULAR:
-        title = f"Påminnelse: Student session med {session.company.name} är imorgon!"
-        body = f"Glöm inte din student session med {session.company.name} imorgon!"
+        title = f"Reminder: Student session with {session.company.name} is tomorrow!"
+        body = (
+            f"Don't forget your student session with {session.company.name} tomorrow!"
+        )
     elif session.session_type == SessionType.COMPANY_EVENT:
-        title = f"Påminnelse: Företagsevent med {session.company.name} är imorgon!"
-        body = f"Glöm inte ditt företagsevent med {session.company.name} imorgon!"
+        title = f"Reminder: Company event with {session.company.name} is tomorrow!"
+        body = f"Don't forget your company event with {session.company.name} tomorrow!"
 
     fcm.send_student_session_reminder(user, session, timedelta(days=1), title, body)
     # TODO: Send email
@@ -75,13 +77,13 @@ def notify_student_session_one_hour(user_id: int, student_session_id: int) -> No
     title = ""
     body = ""
     if session.session_type == SessionType.REGULAR:
-        title = (
-            f"Påminnelse: Student session med {session.company.name} är om en timme!"
-        )
-        body = f"Glöm inte din student session med {session.company.name} om en timme!"
+        title = f"Reminder: Student session with {session.company.name} is in one hour!"
+        body = f"Don't forget your student session with {session.company.name} in one hour!"
     elif session.session_type == SessionType.COMPANY_EVENT:
-        title = f"Påminnelse: Företagsevent med {session.company.name} är om en timme!"
-        body = f"Glöm inte ditt företagsevent med {session.company.name} om en timme!"
+        title = f"Reminder: Company event with {session.company.name} is in one hour!"
+        body = (
+            f"Don't forget your company event with {session.company.name} in one hour!"
+        )
 
     fcm.send_student_session_reminder(user, session, timedelta(hours=1), title, body)
 
@@ -89,8 +91,8 @@ def notify_student_session_one_hour(user_id: int, student_session_id: int) -> No
 @shared_task  # type: ignore
 def notify_event_registration_open(event_id: int) -> None:
     # Both for lunch lectures, company visits (events?), and Student sessions
-    # Anmälan för lunchföreläsning med XXX har öppnat -Bara notis
-    # Anmälan för företagsbesök med XXX har öppnat - Bara notis
+    # Registration for lunch lecture with XXX has opened - Just a notification
+    # Registration for company visit with XXX has opened - Just a notification
     # Send by topic
     event: Event = Event.objects.get(id=event_id)
     if event.release_time and abs(timezone.now() - event.release_time) > timedelta(
@@ -99,8 +101,8 @@ def notify_event_registration_open(event_id: int) -> None:
         return
     fcm.send_to_topic(
         "broadcast",
-        f"Anmälan för {event.name} har öppnat!",
-        f"Reservera en plats till {event.name} nu! Öppna Arkadappen för att anmäla dig.",
+        f"Registration for {event.name} has opened!",
+        f"Reserve a spot for {event.name} now! Open the Arkad app to register.",
     )
 
 
@@ -114,14 +116,14 @@ def notify_student_session_registration_open(student_session_id: int) -> None:
     if session.session_type == SessionType.REGULAR:
         fcm.send_to_topic(
             "broadcast",
-            f"Anmälan för student session med {session.company.name} har öppnat!",
-            f"Reservera en plats till student session med {session.company.name} nu! Öppna Arkadappen för att anmäla dig.",
+            f"Registration for student session with {session.company.name} has opened!",
+            f"Reserve a spot for the student session with {session.company.name} now! Open the Arkad app to register.",
         )
     elif session.session_type == SessionType.COMPANY_EVENT:
         fcm.send_to_topic(
             "broadcast",
-            f"Anmälan för företagsevent med {session.company.name} har öppnat!",
-            f"Reservera en plats till företagsevent med {session.company.name} nu! Öppna Arkadappen för att anmäla dig.",
+            f"Registration for company event with {session.company.name} has opened!",
+            f"Reserve a spot for the company event with {session.company.name} now! Open the Arkad app to register.",
         )
 
 
@@ -141,8 +143,8 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
         fcm.send_event_reminder(
             user.user,
             event,
-            f"Påminnelse: Anmälan för {event.name} stänger imorgon!",
-            f"Glöm inte att avboka din plats till {event.name} om du inte kan komma!",
+            f"Reminder: Registration for {event.name} closes tomorrow!",
+            f"Don't forget to unbook your spot for {event.name} if you can't attend!",
         )
         # TODO: Send email
 
@@ -171,8 +173,8 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
         application.user,
         timeslot_obj.student_session,
         timedelta(days=1),
-        f"Påminnelse: Bokning för timeslot {timeslot_obj.start_time.strftime('%Y-%m-%d %H:%M')} stänger imorgon!",
-        f"Glöm inte att avboka din plats om du inte längre kan komma." + " Remember the following disclaimer: " + ss.booking_disclaimer if ss.booking_disclaimer else "",
+        f"Reminder: Booking for timeslot {timeslot_obj.start_time.strftime('%Y-%m-%d %H:%M')} closes tomorrow!",
+        f"Don't forget to unbook your spot if you can no longer attend." + " Remember the following disclaimer: " + ss.disclaimer if ss.disclaimer else "",
     )
     # TODO: Send email
 

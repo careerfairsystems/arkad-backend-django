@@ -159,12 +159,14 @@ class FCMHelper:
             return
 
         if session.session_type == SessionType.REGULAR:
-            title = f"Du har blivit antagen till en student session med {session.company.name}!"
-            body = f"Grattis! Du har blivit antagen till en student session med {session.company.name}, kolla i appen för mer info."
+            title = f"You have been accepted to a student session with {session.company.name}!"
+            body = f"Congratulations! You have been accepted to a student session with {session.company.name}, check the app for more info."
             FCMHelper.send_to_token(user, title, body)
         elif session.session_type == SessionType.COMPANY_EVENT:
-            title = f"Du har blivit antagen till ett företagsevent med {session.company.name}!"
-            body = f"Grattis! Du har blivit antagen till ett företagsevent med {session.company.name}, kolla i appen för mer info."
+            title = (
+                f"You have been accepted to a company event with {session.company.name}!"
+            )
+            body = f"Congratulations! You have been accepted to a company event with {session.company.name}, check the app for more info."
             FCMHelper.send_to_token(user, title, body)
 
 
