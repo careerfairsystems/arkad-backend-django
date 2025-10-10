@@ -57,6 +57,7 @@ class StudentSessionApplication(models.Model):
 
     task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
     task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
+    task_notify_timeslot_booking_closes_tomorrow = models.CharField()
 
     class Meta:
         constraints = [
@@ -127,7 +128,7 @@ class StudentSessionApplication(models.Model):
             self.cv.delete(save=False)
         return super().delete(*args, **kwargs)
 
-    def schedule_notifications(self, start_time: datetime.datetime) -> None:
+    def schedule_notifications(self, start_time: datetime.datetime, unbook_closes_at: datetime.datetime, timeslot_id: int) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         assert self.is_accepted(), (
             "Can only schedule notifications for accepted applications"
@@ -146,6 +147,13 @@ class StudentSessionApplication(models.Model):
         )
         self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
 
+        task_booking_closes_at = tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
+            args=[timeslot_id, self.id],
+            eta=unbook_closes_at - timedelta(days=1),
+        )
+        self.task_notify_timeslot_booking_closes_tomorrow = task_booking_closes_at.id
+
+
     def remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:
             AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
@@ -154,6 +162,10 @@ class StudentSessionApplication(models.Model):
         if self.task_id_notify_timeslot_in_one_hour:
             AsyncResult(self.task_id_notify_timeslot_in_one_hour).revoke()
             self.task_id_notify_timeslot_in_one_hour = None
+
+        if self.task_notify_timeslot_booking_closes_tomorrow:
+            AsyncResult(self.task_notify_timeslot_booking_closes_tomorrow).revoke()
+            self.task_notify_timeslot_booking_closes_tomorrow = None
 
 
 class StudentSessionTimeslot(models.Model):
@@ -233,7 +245,7 @@ class StudentSessionTimeslot(models.Model):
     def _schedule_notifications(self) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         for application in self.selected_applications.all():
-            application.schedule_notifications(self.start_time)
+            application.schedule_notifications(self.start_time, unbook_closes_at=self.booking_closes_at, timeslot_id=self.id)
 
     def _remove_notifications(self) -> None:
         for application in self.selected_applications.all():

@@ -8,6 +8,14 @@ from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 
 from arkad import settings
 from arkad.settings import DEBUG
+from event_booking.models import Event
+from notifications.models import NotificationLog
+from student_sessions.models import (
+    StudentSession,
+    StudentSessionApplication,
+    SessionType,
+)
+from user_models.models import User
 
 
 def log_notification(msg: Message) -> None:
@@ -32,20 +40,29 @@ class FCMHelper:
             raise FileNotFoundError(f"Firebase cert not found at {cert_path}")
 
     @staticmethod
-    def send_to_token(token: str, title: str, body: str) -> str:
+    def send_to_token(user: User, title: str, body: str) -> str:
         """
         Sends a notification to a specific device using its FCM token.
         See https://firebase.google.com/docs/cloud-messaging/js/client
         """
+        if not user.fcm_token:
+            return "User has no FCM token"
         msg = messaging.Message(
             notification=messaging.Notification(
                 title=title,
                 body=body,
             ),
-            token=token,
+            token=user.fcm_token,
         )
         response = messaging.send(msg)
         log_notification(msg)
+        NotificationLog.objects.create(
+            target_user=user,
+            title=title,
+            body=body,
+            email_sent=False,
+            fcm_sent=True,
+        )
         return str(response)
 
     @staticmethod
@@ -65,32 +82,36 @@ class FCMHelper:
 
         response = messaging.send(message)
         log_notification(message)
+        NotificationLog.objects.create(
+            notification_topic=topic,
+            title=title,
+            body=body,
+            email_sent=False,
+            fcm_sent=True,
+        )
         return str(response)
 
     def send_event_reminder(
-        self, user_id: int, event_id: int, title: str, body: str
+        self, user: User, event: Event, title: str, body: str
     ) -> None:
         """
         Sends a notification to the user that they have an event coming up.
         The notification is only sent if the user has a ticket to the event.
         10 minutes is used to account for possible delays in task scheduling.
         """
-        from user_models.models import User
-        from event_booking.models import Event
+        if not user.fcm_token:
+            return
 
-        try:
-            user = User.objects.get(id=user_id)
-            if not user.fcm_token:
-                return
-
-            event = Event.objects.get(id=event_id)
-            if event.verify_user_has_ticket(user_id):
-                self.send_to_token(user.fcm_token, title, body)
-        except (User.DoesNotExist, Event.DoesNotExist):
-            pass
+        if event.verify_user_has_ticket(user.id):
+            FCMHelper.send_to_token(user, title, body)
 
     def send_student_session_reminder(
-        self, user_id: int, session_id: int, time_delta: timedelta, title: str, body: str
+        self,
+        user: User,
+        session: StudentSession,
+        time_delta: timedelta,
+        title: str,
+        body: str,
     ) -> None:
         """
         Sends a notification to the user that they have a student session coming up.
@@ -98,78 +119,53 @@ class FCMHelper:
         the current time is within 10 minutes of the notification time (session start time - time_delta).
         10 minutes is used to account for possible delays in task scheduling.
         """
-        from user_models.models import User
-        from student_sessions.models import (
-            StudentSession,
-            StudentSessionApplication,
-            SessionType,
-        )
         from django.utils import timezone
 
-        try:
-            user = User.objects.get(id=user_id)
-            if not user.fcm_token:
-                return
+        if not user.fcm_token:
+            return
 
-            session = StudentSession.objects.get(id=session_id)
-            application = StudentSessionApplication.objects.get(
-                user_id=user_id, student_session_id=session_id
-            )
+        application = StudentSessionApplication.objects.filter(
+            user_id=user.id, student_session_id=session.id
+        ).first()
 
-            if not application.is_accepted():
-                return
+        if not application or not application.is_accepted():
+            return
 
-            notification_time = None
-            if session.session_type == SessionType.REGULAR:
-                timeslot = session.timeslots.first()
-                if timeslot:
-                    notification_time = timeslot.start_time
-            elif session.session_type == SessionType.COMPANY_EVENT:
-                notification_time = session.company_event_at
+        notification_time = None
+        if session.session_type == SessionType.REGULAR:
+            timeslot = session.timeslots.first()
+            if timeslot:
+                notification_time = timeslot.start_time
+        elif session.session_type == SessionType.COMPANY_EVENT:
+            notification_time = session.company_event_at
 
-            if not notification_time:
-                return
+        if not notification_time:
+            return
 
-            if abs(timezone.now() - (notification_time - time_delta)) > timedelta(
-                minutes=10
-            ):
-                return
-
-            self.send_to_token(user.fcm_token, title, body)
-
-        except (
-            User.DoesNotExist,
-            StudentSession.DoesNotExist,
-            StudentSessionApplication.DoesNotExist,
+        if abs(timezone.now() - (notification_time - time_delta)) > timedelta(
+            minutes=10
         ):
-            pass
+            return
+
+        FCMHelper.send_to_token(user, title, body)
 
     def send_student_session_application_accepted(
-        self, user_id: int, session_id: int
+        self, user: User, session: StudentSession
     ) -> None:
         """
         Sends a notification to the user that their application to the student session has been accepted.
         """
-        from user_models.models import User
-        from student_sessions.models import StudentSession, SessionType
+        if not user.fcm_token:
+            return
 
-        try:
-            user = User.objects.get(id=user_id)
-            if not user.fcm_token:
-                return
-
-            session = StudentSession.objects.get(id=session_id)
-
-            if session.session_type == SessionType.REGULAR:
-                title = f"Du har blivit antagen till en student session med {session.company.name}!"
-                body = f"Grattis! Du har blivit antagen till en student session med {session.company.name}, kolla i appen för mer info."
-                self.send_to_token(user.fcm_token, title, body)
-            elif session.session_type == SessionType.COMPANY_EVENT:
-                title = f"Du har blivit antagen till ett företagsevent med {session.company.name}!"
-                body = f"Grattis! Du har blivit antagen till ett företagsevent med {session.company.name}, kolla i appen för mer info."
-                self.send_to_token(user.fcm_token, title, body)
-        except (User.DoesNotExist, StudentSession.DoesNotExist):
-            pass
+        if session.session_type == SessionType.REGULAR:
+            title = f"Du har blivit antagen till en student session med {session.company.name}!"
+            body = f"Grattis! Du har blivit antagen till en student session med {session.company.name}, kolla i appen för mer info."
+            FCMHelper.send_to_token(user, title, body)
+        elif session.session_type == SessionType.COMPANY_EVENT:
+            title = f"Du har blivit antagen till ett företagsevent med {session.company.name}!"
+            body = f"Grattis! Du har blivit antagen till ett företagsevent med {session.company.name}, kolla i appen för mer info."
+            FCMHelper.send_to_token(user, title, body)
 
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)
