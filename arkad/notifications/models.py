@@ -16,3 +16,6 @@ class NotificationLog(models.Model):
     email_sent = models.BooleanField(default=False)
     fcm_sent = models.BooleanField(default=False)
     sent_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"Notification to {self.target_user} - {self.notification_topic} at {self.sent_at}"

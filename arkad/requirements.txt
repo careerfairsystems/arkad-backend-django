@@ -40,6 +40,7 @@ django-timezone-field==7.1
 dnspython==2.7.0
 email_validator==2.2.0
 firebase_admin==7.1.0
+freezegun==1.5.5
 google-api-core==2.26.0
 google-auth==2.41.1
 google-cloud-core==2.4.3

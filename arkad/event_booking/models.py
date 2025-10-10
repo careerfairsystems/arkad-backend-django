@@ -184,6 +184,16 @@ class Event(models.Model):
     def verify_user_has_ticket(self, user_id: int) -> bool:
         return self.tickets.filter(user_id=user_id, used=False).exists()
 
+    def get_event_type_display(self) -> str:
+        if self.type == "ce":
+            return "Company visit"
+        elif self.type == "lu":
+            return "Lunch lecture"
+        elif self.type == "ba":
+            return "Banquet"
+        else:
+            return "Event"
+
 
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(

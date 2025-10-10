@@ -178,6 +178,7 @@ class StudentSessionNotificationSchedulingTests(TestCase):
         # Add the application to the timeslot
         timeslot.selected_applications.add(application)
 
+        assert timeslot.booking_closes_at is not None
         # Manually trigger notification scheduling
         application.schedule_notifications(
             timeslot_start, timeslot.booking_closes_at, timeslot.id
@@ -255,7 +256,7 @@ class StudentSessionNotificationSchedulingTests(TestCase):
 
         # Schedule notifications
         application.schedule_notifications(
-            event_time, company_event.booking_close_time, None
+            event_time, company_event.booking_close_time, 0
         )
         application.save()
 

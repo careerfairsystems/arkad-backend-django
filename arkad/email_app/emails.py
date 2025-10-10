@@ -5,7 +5,7 @@ from django.template.loader import render_to_string
 from datetime import datetime
 import re
 
-from email_app.utils import get_base_url
+from email_app.utils import get_base_url, get_base_url_from_settings
 
 
 def send_signup_code_email(request: HttpRequest, email: str, code: str) -> None:
@@ -48,7 +48,6 @@ def send_signup_code_email(request: HttpRequest, email: str, code: str) -> None:
 
 
 def send_generic_information_email(
-    request: HttpRequest,
     email: str,
     subject: str,
     name: str = "",
@@ -58,12 +57,12 @@ def send_generic_information_email(
     button_text: str = "",
     button_link: str = "",
     note: str = "",
+    request: HttpRequest | None = None,
 ) -> None:
     """
     Send a generic information email to the user.
 
     Args:
-        request: HttpRequest object to get the base URL
         email: Recipient email address
         subject: Email subject line
         name: Recipient name (used in default greeting if greeting not provided)
@@ -73,7 +72,9 @@ def send_generic_information_email(
         button_text: Text for the call-to-action button (optional)
         button_link: URL for the call-to-action button (optional)
         note: Footer note text (optional)
+        request: HttpRequest object to get the base URL (optional)
     """
+    base_url = get_base_url(request) if request else get_base_url_from_settings()
     html_message: str = render_to_string(
         "email_app/generic_information_email.html",
         {
@@ -84,7 +85,7 @@ def send_generic_information_email(
             "button_text": button_text,
             "button_link": button_link,
             "note": note,
-            "base_url": get_base_url(request),
+            "base_url": base_url,
         },
     )
 
@@ -114,22 +115,21 @@ def send_generic_information_email(
 
 
 def send_event_closing_reminder_email(
-    request: HttpRequest,
     email: str,
     event_name: str,
     company_name: str,
     event_type: str,
     closes_at: datetime,
     event_description: str = "",
-    location: str = "",
+    location: str | None = "",
     button_link: str = "",
-    disclaimer: str = "",
+    disclaimer: str | None = "",
+    request: HttpRequest | None = None,
 ) -> None:
     """
     Send a reminder email that event registration closes tomorrow.
 
     Args:
-        request: HttpRequest object to get the base URL
         email: Recipient email address
         event_name: Name of the event
         company_name: Name of the company
@@ -139,10 +139,11 @@ def send_event_closing_reminder_email(
         location: Event location
         button_link: Link to manage booking
         disclaimer: Special disclaimer (e.g., for SAAB, FMV)
+        request: HttpRequest object to get the base URL (optional)
     """
     subject = f"Registration for {event_type} with {company_name} closes tomorrow"
     greeting = "Reminder!"
-    heading = f"Registration closes tomorrow"
+    heading = "Registration closes tomorrow"
     message = (
         f"Remember to cancel your spot if you can't attend! "
         f"Registration closes on {closes_at.strftime('%Y-%m-%d at %H:%M')}."
@@ -151,6 +152,7 @@ def send_event_closing_reminder_email(
 
     event_date = closes_at.strftime("%Y-%m-%d")
 
+    base_url = get_base_url(request) if request else get_base_url_from_settings()
     html_message = render_to_string(
         "email_app/event_closing_reminder.html",
         {
@@ -165,7 +167,7 @@ def send_event_closing_reminder_email(
             "button_text": button_text,
             "button_link": button_link,
             "disclaimer": disclaimer,
-            "base_url": get_base_url(request),
+            "base_url": base_url,
         },
     )
 
@@ -197,23 +199,22 @@ def send_event_closing_reminder_email(
 
 
 def send_event_reminder_email(
-    request: HttpRequest,
     email: str,
     event_name: str,
     company_name: str,
     event_type: str,
     event_start: datetime,
     event_description: str = "",
-    location: str = "",
+    location: str | None = "",
     button_link: str = "",
-    disclaimer: str = "",
+    disclaimer: str | None = "",
     hours_before: int = 24,  # 24 for tomorrow, 1 for one hour
+    request: HttpRequest | None = None,
 ) -> None:
     """
     Send a reminder email that the event is starting soon (tomorrow or in one hour).
 
     Args:
-        request: HttpRequest object to get the base URL
         email: Recipient email address
         event_name: Name of the event
         company_name: Name of the company
@@ -224,18 +225,20 @@ def send_event_reminder_email(
         button_link: Link to event details
         disclaimer: Special disclaimer (e.g., for SAAB, FMV)
         hours_before: 24 for tomorrow, 1 for one hour before
+        request: HttpRequest object to get the base URL (optional)
     """
     time_phrase = "tomorrow" if hours_before == 24 else "in one hour"
 
     subject = f"{event_type} with {company_name} is {time_phrase}"
     greeting = "Reminder!"
     heading = f"You're registered for {event_type} which is {time_phrase}"
-    message = f"We look forward to seeing you!"
+    message = "We look forward to seeing you!"
     button_text = "View event details"
 
     event_date = event_start.strftime("%Y-%m-%d")
     event_time = event_start.strftime("%H:%M")
 
+    base_url = get_base_url(request) if request else get_base_url_from_settings()
     html_message = render_to_string(
         "email_app/event_reminder.html",
         {
@@ -251,7 +254,7 @@ def send_event_reminder_email(
             "button_text": button_text,
             "button_link": button_link,
             "disclaimer": disclaimer,
-            "base_url": get_base_url(request),
+            "base_url": base_url,
         },
     )
 
@@ -284,22 +287,21 @@ def send_event_reminder_email(
 
 
 def send_event_selection_email(
-    request: HttpRequest,
     email: str,
     event_name: str,
     company_name: str,
     event_type: str,
     event_start: datetime,
     event_description: str = "",
-    location: str = "",
+    location: str | None = "",
     button_link: str = "",
-    disclaimer: str = "",
+    disclaimer: str | None = "",
+    request: HttpRequest | None = None,
 ) -> None:
     """
     Send an email notifying the user they've been selected for a student session or company visit.
 
     Args:
-        request: HttpRequest object to get the base URL
         email: Recipient email address
         event_name: Name of the event
         company_name: Name of the company
@@ -309,19 +311,21 @@ def send_event_selection_email(
         location: Event location
         button_link: Link to event details
         disclaimer: Special disclaimer (e.g., for SAAB, FMV)
+        request: HttpRequest object to get the base URL (optional)
     """
     subject = f"You've been selected for {event_type} with {company_name}!"
     greeting = "Congratulations!"
     heading = f"You've been selected for {event_type}"
     message = (
-        f"We're happy to inform you that you've been selected for this event. "
-        f"Please confirm your attendance as soon as possible."
+        "We're happy to inform you that you've been selected for this event. "
+        "Please confirm your attendance as soon as possible."
     )
     button_text = "View event details"
 
     event_date = event_start.strftime("%Y-%m-%d")
     event_time = event_start.strftime("%H:%M")
 
+    base_url = get_base_url(request) if request else get_base_url_from_settings()
     html_message = render_to_string(
         "email_app/event_selection.html",
         {
@@ -337,7 +341,7 @@ def send_event_selection_email(
             "button_text": button_text,
             "button_link": button_link,
             "disclaimer": disclaimer,
-            "base_url": get_base_url(request),
+            "base_url": base_url,
         },
     )
 

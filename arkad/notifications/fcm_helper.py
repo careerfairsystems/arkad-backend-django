@@ -40,9 +40,9 @@ class FCMHelper:
             raise FileNotFoundError(f"Firebase cert not found at {cert_path}")
 
     @staticmethod
-    def send_to_token(user: User, title: str, body: str) -> str:
+    def send_to_user(user: User, title: str, body: str) -> str:
         """
-        Sends a notification to a specific device using its FCM token.
+        Sends a notification to a specific user using its FCM token.
         See https://firebase.google.com/docs/cloud-messaging/js/client
         """
         if not user.fcm_token:
@@ -103,7 +103,7 @@ class FCMHelper:
             return
 
         if event.verify_user_has_ticket(user.id):
-            FCMHelper.send_to_token(user, title, body)
+            FCMHelper.send_to_user(user, title, body)
 
     def send_student_session_reminder(
         self,
@@ -119,7 +119,6 @@ class FCMHelper:
         the current time is within 10 minutes of the notification time (session start time - time_delta).
         10 minutes is used to account for possible delays in task scheduling.
         """
-        from django.utils import timezone
 
         if not user.fcm_token:
             return
@@ -131,7 +130,7 @@ class FCMHelper:
         if not application or not application.is_accepted():
             return
 
-        FCMHelper.send_to_token(user, title, body)
+        FCMHelper.send_to_user(user, title, body)
 
     def send_student_session_application_accepted(
         self, user: User, session: StudentSession
@@ -145,13 +144,11 @@ class FCMHelper:
         if session.session_type == SessionType.REGULAR:
             title = f"You have been accepted to a student session with {session.company.name}!"
             body = f"Congratulations! You have been accepted to a student session with {session.company.name}, check the app for more info."
-            FCMHelper.send_to_token(user, title, body)
+            FCMHelper.send_to_user(user, title, body)
         elif session.session_type == SessionType.COMPANY_EVENT:
-            title = (
-                f"You have been accepted to a company event with {session.company.name}!"
-            )
+            title = f"You have been accepted to a company event with {session.company.name}!"
             body = f"Congratulations! You have been accepted to a company event with {session.company.name}, check the app for more info."
-            FCMHelper.send_to_token(user, title, body)
+            FCMHelper.send_to_user(user, title, body)
 
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)

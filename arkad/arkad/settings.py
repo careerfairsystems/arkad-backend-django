@@ -234,3 +234,4 @@ else:
     logging.warning("CELERY_BROKER_URL is not set, Celery will not work!")
 
 FIREBASE_CERT_PATH = BASE_DIR / "firebase_cert.json"
+APP_BASE_URL: str = "https://app.arkadtlth.se/"

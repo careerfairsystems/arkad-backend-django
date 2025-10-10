@@ -30,10 +30,34 @@ from email_app.views import (
 urlpatterns = [
     path("test/reset", test_reset, name="test_reset"),
     path("test/sign_up", test_sign_up, name="test_sign_up"),
-    path("test/generic_information", test_generic_information, name="test_generic_information"),
-    path("test/event_closing_reminder", test_event_closing_reminder, name="test_event_closing_reminder"),
-    path("test/event_reminder_tomorrow", test_event_reminder_tomorrow, name="test_event_reminder_tomorrow"),
-    path("test/event_reminder_one_hour", test_event_reminder_one_hour, name="test_event_reminder_one_hour"),
-    path("test/event_selection_student_session", test_event_selection_student_session, name="test_event_selection_student_session"),
-    path("test/event_selection_company_visit", test_event_selection_company_visit, name="test_event_selection_company_visit"),
+    path(
+        "test/generic_information",
+        test_generic_information,
+        name="test_generic_information",
+    ),
+    path(
+        "test/event_closing_reminder",
+        test_event_closing_reminder,
+        name="test_event_closing_reminder",
+    ),
+    path(
+        "test/event_reminder_tomorrow",
+        test_event_reminder_tomorrow,
+        name="test_event_reminder_tomorrow",
+    ),
+    path(
+        "test/event_reminder_one_hour",
+        test_event_reminder_one_hour,
+        name="test_event_reminder_one_hour",
+    ),
+    path(
+        "test/event_selection_student_session",
+        test_event_selection_student_session,
+        name="test_event_selection_student_session",
+    ),
+    path(
+        "test/event_selection_company_visit",
+        test_event_selection_company_visit,
+        name="test_event_selection_company_visit",
+    ),
 ]

@@ -57,7 +57,9 @@ class StudentSessionApplication(models.Model):
 
     task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
     task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
-    task_notify_timeslot_booking_closes_tomorrow = models.CharField(default=None, null=True)
+    task_notify_timeslot_booking_closes_tomorrow = models.CharField(
+        default=None, null=True
+    )
 
     class Meta:
         constraints = [
@@ -128,7 +130,12 @@ class StudentSessionApplication(models.Model):
             self.cv.delete(save=False)
         return super().delete(*args, **kwargs)
 
-    def schedule_notifications(self, start_time: datetime.datetime, unbook_closes_at: datetime.datetime, timeslot_id: int) -> None:
+    def schedule_notifications(
+        self,
+        start_time: datetime.datetime,
+        unbook_closes_at: datetime.datetime,
+        timeslot_id: int,
+    ) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         assert self.is_accepted(), (
             "Can only schedule notifications for accepted applications"
@@ -147,12 +154,13 @@ class StudentSessionApplication(models.Model):
         )
         self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
 
-        task_booking_closes_at = tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
-            args=[timeslot_id, self.id],
-            eta=unbook_closes_at - timedelta(days=1),
+        task_booking_closes_at = (
+            tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
+                args=[timeslot_id, self.id],
+                eta=unbook_closes_at - timedelta(days=1),
+            )
         )
         self.task_notify_timeslot_booking_closes_tomorrow = task_booking_closes_at.id
-
 
     def remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:
@@ -191,7 +199,6 @@ class StudentSessionTimeslot(models.Model):
 
     booking_closes_at = models.DateTimeField(
         default=STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
-        null=True,
         help_text="The time the timeslot is no longer bookable",
     )
 
@@ -245,7 +252,11 @@ class StudentSessionTimeslot(models.Model):
     def _schedule_notifications(self) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         for application in self.selected_applications.all():
-            application.schedule_notifications(self.start_time, unbook_closes_at=self.booking_closes_at, timeslot_id=self.id)
+            application.schedule_notifications(
+                self.start_time,
+                unbook_closes_at=self.booking_closes_at,
+                timeslot_id=self.id,
+            )
 
     def _remove_notifications(self) -> None:
         for application in self.selected_applications.all():
@@ -301,6 +312,12 @@ class StudentSession(models.Model):
         null=True,
         blank=True,
         help_text="The date and time of the company event, if applicable",
+    )
+    name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Name for the session, if not used the company name is shown",
     )
 
     def __str__(self) -> str:
