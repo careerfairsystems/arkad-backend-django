@@ -64,7 +64,7 @@ class Ticket(models.Model):
             AsyncResult(self.task_id_notify_event_in_one_hour).revoke()
             self.task_id_notify_event_in_one_hour = None
 
-    def save(self, *args, **kwargs) -> None:  # type: ignore
+    def save(self, *args: object, **kwargs: object) -> None:  # type: ignore
         # On update, remove old notifications
         if not self._state.adding:
             old_instance = Ticket.objects.get(pk=self.pk)
@@ -77,10 +77,17 @@ class Ticket(models.Model):
 
 
 @receiver(post_save, sender=Ticket)
-def schedule_ticket_notifications(sender, instance: Ticket, created: bool, **kwargs) -> None:
+def schedule_ticket_notifications(
+    sender, instance: Ticket, created: bool, **kwargs
+) -> None:
     if created:
         instance.schedule_notifications(instance.event.start_time)
-        instance.save(update_fields=['task_id_notify_event_tomorrow', 'task_id_notify_event_in_one_hour'])
+        instance.save(
+            update_fields=[
+                "task_id_notify_event_tomorrow",
+                "task_id_notify_event_in_one_hour",
+            ]
+        )
 
 
 class Event(models.Model):
@@ -146,7 +153,7 @@ class Event(models.Model):
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
 
-    def save(self, *args, **kwargs) -> None:  # type: ignore
+    def save(self, *args: object, **kwargs: object) -> None:
         # On update, remove old notifications
         if not self._state.adding:
             old_instance = Event.objects.get(pk=self.pk)
@@ -178,7 +185,9 @@ class Event(models.Model):
 
 
 @receiver(post_save, sender=Event)
-def schedule_event_notifications(sender, instance: Event, created: bool, **kwargs) -> None:
+def schedule_event_notifications(
+    sender, instance: Event, created: bool, **kwargs
+) -> None:
     if created:
         instance._schedule_notifications()
-        instance.save(update_fields=['task_id_notify_registration_opening'])
+        instance.save(update_fields=["task_id_notify_registration_opening"])
