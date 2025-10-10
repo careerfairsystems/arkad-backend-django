@@ -25,10 +25,10 @@ class Ticket(models.Model):
     used = models.BooleanField(default=False)
 
     task_id_notify_event_tomorrow = models.CharField(
-        default=None, null=True, blank=True
+        default=None, null=True, blank=True, editable=False
     )
     task_id_notify_event_in_one_hour = models.CharField(
-        default=None, null=True, blank=True
+        default=None, null=True, blank=True, editable=False
     )
 
     def __str__(self) -> str:
@@ -121,7 +121,7 @@ class Event(models.Model):
     capacity = models.IntegerField(null=False)
 
     task_id_notify_registration_opening = models.CharField(
-        default=None, null=True, blank=True
+        default=None, null=True, blank=True, editable=False
     )
 
     class Meta:
@@ -202,3 +202,5 @@ def schedule_event_notifications(
     if created:
         instance._schedule_notifications()
         instance.save(update_fields=["task_id_notify_registration_opening"])
+
+

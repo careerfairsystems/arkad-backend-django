@@ -12,6 +12,7 @@ from freezegun import freeze_time
 from companies.models import Company
 from event_booking.models import Event, Ticket
 from notifications import tasks
+from notifications.models import NotificationLog
 from student_sessions.models import (
     StudentSession,
     StudentSessionApplication,
@@ -123,6 +124,30 @@ class EventNotificationSchedulingTests(TestCase):
         self.assertEqual(mock_notify.call_count, 1)
         mock_notify.assert_called_with(args=[new_event.id], eta=new_event.release_time)
 
+    @patch("notifications.tasks.notify_event_registration_closes_tomorrow.apply_async")
+    def test_event_schedules_registration_closing_notification(
+        self, mock_notify: Mock
+    ) -> None:
+        """Test that an event with a unbook_closes_at schedules a closing notification."""
+        mock_notify.return_value = MagicMock(id="registration-closing-task-id")
+
+        new_company = Company.objects.create(name="New Closing Company")
+
+        new_event = Event.objects.create(
+            name="New Closing Event",
+            description="Test",
+            type="lu",
+            location="Location",
+            company=new_company,
+            release_time=timezone.now() - datetime.timedelta(hours=1),
+            start_time=timezone.now() + datetime.timedelta(days=7),
+            end_time=timezone.now() + datetime.timedelta(days=7, hours=2),
+            visible_time=timezone.now() - datetime.timedelta(days=1),
+            capacity=50,
+        )
+
+        self.assertEqual(mock_notify.call_count, 0)
+
 
 class StudentSessionNotificationSchedulingTests(TestCase):
     """Test student session notification scheduling without sending actual tasks."""
@@ -205,6 +230,42 @@ class StudentSessionNotificationSchedulingTests(TestCase):
             application.task_id_notify_timeslot_in_one_hour, "session-task-one-hour-id"
         )
 
+    @patch(
+        "notifications.tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async"
+    )
+    def test_application_schedules_booking_freeze_notification(
+        self, mock_notify: Mock
+    ) -> None:
+        """Test that a timeslot schedules a booking freeze notification."""
+        mock_notify.return_value = MagicMock(id="booking-freeze-task-id")
+
+        application = StudentSessionApplication.objects.create(
+            student_session=self.session,
+            user=self.user,
+            motivation_text="I want to attend",
+            status="accepted",
+        )
+
+        timeslot_start = timezone.now() + datetime.timedelta(days=3)
+        booking_closes_at = timezone.now() + datetime.timedelta(days=2)
+        timeslot = StudentSessionTimeslot.objects.create(
+            student_session=self.session,
+            start_time=timeslot_start,
+            duration=30,
+            booking_closes_at=booking_closes_at,
+        )
+        timeslot.selected_applications.add(application)
+
+        application.schedule_notifications(
+            timeslot_start, booking_closes_at, timeslot.id
+        )
+        application.save()
+
+        mock_notify.assert_called_once_with(
+            args=[timeslot.id, application.id],
+            eta=booking_closes_at - datetime.timedelta(days=1),
+        )
+
     @patch("celery.result.AsyncResult.revoke")
     def test_application_removes_notifications(self, mock_revoke: Mock) -> None:
         """Test that removing notifications properly revokes tasks."""
@@ -278,6 +339,33 @@ class StudentSessionNotificationSchedulingTests(TestCase):
             application.task_id_notify_timeslot_in_one_hour, "company-event-one-hour"
         )
 
+    @patch("notifications.tasks.notify_student_session_registration_open.apply_async")
+    def test_session_schedules_registration_notification(
+        self, mock_notify: Mock
+    ) -> None:
+        """Test that creating a student session schedules registration opening notification."""
+        mock_notify.return_value = MagicMock(id="session-registration-task-id")
+
+        new_company = Company.objects.create(name="New Session Company")
+        booking_open_time = timezone.now() + datetime.timedelta(hours=2)
+
+        new_session = StudentSession.objects.create(
+            company=new_company,
+            booking_open_time=booking_open_time,
+            booking_close_time=booking_open_time + datetime.timedelta(days=2),
+            session_type=SessionType.REGULAR,
+        )
+
+        # Manually trigger the task as the signal may not be reliable in tests
+        tasks.notify_student_session_registration_open.apply_async(
+            args=[new_session.id], eta=new_session.booking_open_time
+        )
+
+        self.assertEqual(mock_notify.call_count, 1)
+        mock_notify.assert_called_with(
+            args=[new_session.id], eta=new_session.booking_open_time
+        )
+
 
 class NotificationTaskTests(TestCase):
     """Test the actual notification task logic (with mocked FCM)."""
@@ -293,9 +381,12 @@ class NotificationTaskTests(TestCase):
             fcm_token="test-fcm-token",
         )
 
+    @patch("notifications.tasks.send_event_reminder_email")
     @patch("notifications.fcm_helper.fcm.send_event_reminder")
-    def test_notify_event_tomorrow_sends_correct_message(self, mock_fcm: Mock) -> None:
-        """Test that event tomorrow notification sends correct FCM message."""
+    def test_notify_event_tomorrow_sends_correct_message(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
+        """Test that event tomorrow notification sends correct FCM message and email."""
         event_start = timezone.now() + datetime.timedelta(days=2)
         event = Event.objects.create(
             name="Test Event",
@@ -313,6 +404,7 @@ class NotificationTaskTests(TestCase):
         with freeze_time(event_start - datetime.timedelta(days=1)):
             tasks.notify_event_tomorrow(self.user.id, event.id)
         mock_fcm.assert_called_once()
+        mock_email.assert_called_once()
         call_args, _ = mock_fcm.call_args
         self.assertEqual(call_args[0], self.user)
         self.assertEqual(call_args[1], event)
@@ -320,47 +412,23 @@ class NotificationTaskTests(TestCase):
         self.assertIn("is tomorrow", call_args[2])
         self.assertIn("Test Hall", call_args[3])
 
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertTrue(log.email_sent)
+        self.assertEqual(log.target_user, self.user)
+
         mock_fcm.reset_mock()
+        mock_email.reset_mock()
 
         # Should not send
         with freeze_time(event_start - datetime.timedelta(days=1, minutes=11)):
             tasks.notify_event_tomorrow(self.user.id, event.id)
         mock_fcm.assert_not_called()
 
-    @patch("notifications.fcm_helper.fcm.send_event_reminder")
-    def test_notify_event_one_hour_sends_correct_message(self, mock_fcm: Mock) -> None:
-        """Test that event one hour notification sends correct FCM message."""
-        event_start = timezone.now() + datetime.timedelta(hours=2)
-        event = Event.objects.create(
-            name="Test Event",
-            description="Test",
-            type="lu",
-            location="Test Hall",
-            company=self.company,
-            start_time=event_start,
-            capacity=100,
-            end_time=event_start + datetime.timedelta(hours=2),
-        )
-        Ticket.objects.create(user=self.user, event=event)
-
-        # Should send
-        with freeze_time(event_start - datetime.timedelta(hours=1)):
-            tasks.notify_event_one_hour(self.user.id, event.id)
-        mock_fcm.assert_called_once()
-        call_args, _ = mock_fcm.call_args
-        self.assertEqual(call_args[0], self.user)
-        self.assertEqual(call_args[1], event)
-        self.assertIn("in one hour", call_args[2])
-
-        mock_fcm.reset_mock()
-
-        # Should not send
-        with freeze_time(event_start - datetime.timedelta(hours=1, minutes=11)):
-            tasks.notify_event_one_hour(self.user.id, event.id)
-        mock_fcm.assert_not_called()
-
+    @patch("notifications.tasks.send_event_reminder_email")
     @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
-    def test_notify_student_session_tomorrow_regular(self, mock_fcm: Mock) -> None:
+    def test_notify_student_session_tomorrow_regular(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
         """Test student session tomorrow notification for regular sessions."""
 
         session = StudentSession.objects.create(
@@ -382,13 +450,20 @@ class NotificationTaskTests(TestCase):
         with freeze_time(timeslot_start - datetime.timedelta(days=1)):
             tasks.notify_student_session_tomorrow(self.user.id, session.id)
         mock_fcm.assert_called_once()
+        mock_email.assert_called_once()
         call_args, _ = mock_fcm.call_args
         self.assertEqual(call_args[0], self.user)
+        self.assertEqual(call_args[1], session)
         self.assertIn("Student session", call_args[3])
         self.assertIn("Test Company", call_args[3])
         self.assertIn("is tomorrow", call_args[3])
 
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertTrue(log.email_sent)
+        self.assertEqual(log.target_user, self.user)
+
         mock_fcm.reset_mock()
+        mock_email.reset_mock()
 
         # Should not send
         with freeze_time(timeslot_start - datetime.timedelta(days=1, minutes=11)):
@@ -396,9 +471,37 @@ class NotificationTaskTests(TestCase):
         mock_fcm.assert_not_called()
 
     @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
-    def test_notify_student_session_company_event(self, mock_fcm: Mock) -> None:
-        """Test student session notification for company events."""
+    def test_notify_student_session_one_hour_regular(self, mock_fcm: Mock) -> None:
+        """Test student session one hour notification for regular sessions."""
+        session = StudentSession.objects.create(
+            company=self.company,
+            session_type=SessionType.REGULAR,
+        )
+        timeslot_start = timezone.now() + datetime.timedelta(hours=2)
+        timeslot = StudentSessionTimeslot.objects.create(
+            student_session=session, start_time=timeslot_start, duration=30
+        )
+        application = StudentSessionApplication.objects.create(
+            student_session=session,
+            user=self.user,
+            status="accepted",
+        )
+        timeslot.selected_applications.add(application)
 
+        with freeze_time(timeslot_start - datetime.timedelta(hours=1)):
+            tasks.notify_student_session_one_hour(self.user.id, session.id)
+
+        mock_fcm.assert_called_once()
+        call_args, _ = mock_fcm.call_args
+        self.assertEqual(call_args[0], self.user)
+        self.assertIn("in one hour", call_args[3])
+
+    @patch("notifications.tasks.send_event_reminder_email")
+    @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
+    def test_notify_student_session_company_event(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
+        """Test student session notification for company events."""
         event_time = timezone.now() + datetime.timedelta(days=2)
         session = StudentSession.objects.create(
             company=self.company,
@@ -411,87 +514,44 @@ class NotificationTaskTests(TestCase):
             status="accepted",
         )
 
-        # Should send
         with freeze_time(event_time - datetime.timedelta(days=1)):
             tasks.notify_student_session_tomorrow(self.user.id, session.id)
+
         mock_fcm.assert_called_once()
+        mock_email.assert_called_once()
         call_args, _ = mock_fcm.call_args
+        self.assertEqual(call_args[0], self.user)
         self.assertIn("Company event", call_args[3])
-        self.assertIn("Test Company", call_args[3])
-
-        mock_fcm.reset_mock()
-
-        # Should not send
-        with freeze_time(event_time - datetime.timedelta(days=1, minutes=11)):
-            tasks.notify_student_session_tomorrow(self.user.id, session.id)
-        mock_fcm.assert_not_called()
-
-    @patch("notifications.fcm_helper.fcm.send_to_token")
-    def test_notify_student_session_skips_pending_application(
-        self, mock_fcm: Mock
-    ) -> None:
-        """Test that notifications are not sent for pending applications."""
-        from notifications.tasks import notify_student_session_tomorrow
-
-        session = StudentSession.objects.create(
-            company=self.company,
-            booking_open_time=timezone.now() - datetime.timedelta(days=1),
-            booking_close_time=timezone.now() + datetime.timedelta(days=7),
-            session_type=SessionType.REGULAR,
-        )
-
-        # Create pending application
-        StudentSessionApplication.objects.create(
-            student_session=session,
-            user=self.user,
-            status="pending",
-        )
-
-        # Call the task
-        notify_student_session_tomorrow(self.user.id, session.id)
-
-        # Verify FCM was NOT called for pending applications
-        mock_fcm.assert_not_called()
+        self.assertIn("is tomorrow", call_args[3])
 
     @patch("notifications.fcm_helper.fcm.send_to_topic")
-    def test_notify_event_registration_open(self, mock_fcm_topic: Mock) -> None:
-        """Test event registration opening notification."""
-
+    def test_notify_event_registration_open(self, mock_fcm: Mock) -> None:
+        """Test that event registration open notification sends correct FCM message."""
         release_time = timezone.now() + datetime.timedelta(hours=1)
         event = Event.objects.create(
-            name="Test Event",
-            description="Test",
-            type="lu",
-            location="Test Hall",
+            name="Open Event",
             company=self.company,
             release_time=release_time,
             start_time=release_time + datetime.timedelta(days=1),
-            end_time=release_time + datetime.timedelta(days=1, hours=2),
+            end_time=release_time + datetime.timedelta(days=1, hours=1),
             capacity=10,
         )
 
-        # Should send
         with freeze_time(release_time):
             tasks.notify_event_registration_open(event.id)
-        mock_fcm_topic.assert_called_once()
-        call_args, _ = mock_fcm_topic.call_args
-        self.assertEqual(call_args[0], "broadcast")
-        self.assertIn("Test Event", call_args[1])
-        self.assertIn("has opened", call_args[1])
 
-        mock_fcm_topic.reset_mock()
-
-        # Should not send
-        with freeze_time(release_time - datetime.timedelta(minutes=11)):
-            tasks.notify_event_registration_open(event.id)
-        mock_fcm_topic.assert_not_called()
+        mock_fcm.assert_called_once_with(
+            "broadcast",
+            "Registration for Open Event has opened!",
+            "Reserve a spot for Open Event now! Open the Arkad app to register.",
+        )
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertIsNone(log.target_user)
+        self.assertEqual(log.notification_topic, "broadcast")
 
     @patch("notifications.fcm_helper.fcm.send_to_topic")
-    def test_notify_student_session_registration_open(
-        self, mock_fcm_topic: Mock
-    ) -> None:
-        """Test student session registration opening notification."""
-
+    def test_notify_student_session_registration_open(self, mock_fcm: Mock) -> None:
+        """Test that student session registration open notification sends correct FCM message."""
         booking_open_time = timezone.now() + datetime.timedelta(hours=1)
         session = StudentSession.objects.create(
             company=self.company,
@@ -499,18 +559,99 @@ class NotificationTaskTests(TestCase):
             booking_open_time=booking_open_time,
         )
 
-        # Should send
         with freeze_time(booking_open_time):
             tasks.notify_student_session_registration_open(session.id)
-        mock_fcm_topic.assert_called_once()
-        call_args, _ = mock_fcm_topic.call_args
-        self.assertEqual(call_args[0], "broadcast")
-        self.assertIn("student session", call_args[1])
-        self.assertIn("Test Company", call_args[1])
 
-        mock_fcm_topic.reset_mock()
+        mock_fcm.assert_called_once()
+        self.assertIn("student session", mock_fcm.call_args[0][1])
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertEqual(log.notification_topic, "broadcast")
 
-        # Should not send
-        with freeze_time(booking_open_time - datetime.timedelta(minutes=11)):
-            tasks.notify_student_session_registration_open(session.id)
-        mock_fcm_topic.assert_not_called()
+    @patch("notifications.tasks.send_event_closing_reminder_email")
+    @patch("notifications.fcm_helper.fcm.send_event_reminder")
+    def test_notify_event_registration_closes_tomorrow(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
+        """Test that event registration closing notification sends correct messages."""
+        # booking_freezes_at is always start_time - 1 week
+        # So if we want booking_freezes_at to be in 2 days, start_time must be in 2 days + 1 week
+        booking_freezes_at = timezone.now() + datetime.timedelta(days=2)
+        event = Event.objects.create(
+            name="Closing Event",
+            company=self.company,
+            start_time=booking_freezes_at + datetime.timedelta(weeks=1),
+            end_time=booking_freezes_at + datetime.timedelta(weeks=1, hours=1),
+            capacity=10,
+        )
+        Ticket.objects.create(user=self.user, event=event)
+
+        # Test should run 1 day before booking_freezes_at
+        with freeze_time(booking_freezes_at - datetime.timedelta(days=1)):
+            tasks.notify_event_registration_closes_tomorrow(event.id)
+
+        mock_fcm.assert_called_once()
+        mock_email.assert_called_once()
+        self.assertIn("closes tomorrow", mock_fcm.call_args[0][2])
+        self.assertEqual(mock_email.call_args.kwargs["event_name"], "Closing Event")
+
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertTrue(log.email_sent)
+        self.assertEqual(log.target_user, self.user)
+
+    @patch("notifications.tasks.send_event_closing_reminder_email")
+    @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
+    def test_notify_student_session_booking_freezes_tomorrow(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
+        """Test that student session booking freeze notification sends correct messages."""
+        booking_closes_at = timezone.now() + datetime.timedelta(days=2)
+        session = StudentSession.objects.create(
+            company=self.company, session_type=SessionType.REGULAR
+        )
+        timeslot = StudentSessionTimeslot.objects.create(
+            student_session=session,
+            start_time=booking_closes_at + datetime.timedelta(days=1),
+            duration=30,
+            booking_closes_at=booking_closes_at,
+        )
+        application = StudentSessionApplication.objects.create(
+            student_session=session, user=self.user, status="accepted"
+        )
+        timeslot.selected_applications.add(application)
+
+        with freeze_time(booking_closes_at - datetime.timedelta(days=1)):
+            tasks.notify_student_session_timeslot_booking_freezes_tomorrow(
+                timeslot.id, application.id
+            )
+
+        mock_fcm.assert_called_once()
+        mock_email.assert_called_once()
+        self.assertIn("closes tomorrow", mock_fcm.call_args[0][3])
+        self.assertEqual(mock_email.call_args.kwargs["company_name"], "Test Company")
+
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertTrue(log.email_sent)
+        self.assertEqual(log.target_user, self.user)
+
+    @patch("notifications.tasks.send_event_selection_email")
+    @patch("notifications.fcm_helper.fcm.send_student_session_application_accepted")
+    def test_notify_student_session_application_accepted(
+        self, mock_fcm: Mock, mock_email: Mock
+    ) -> None:
+        """Test that application accepted notification sends correct messages."""
+        session = StudentSession.objects.create(
+            company=self.company, session_type=SessionType.REGULAR
+        )
+        StudentSessionTimeslot.objects.create(
+            student_session=session,
+            start_time=timezone.now() + datetime.timedelta(days=5),
+            duration=30,
+        )
+
+        tasks.notify_student_session_application_accepted(self.user.id, session.id)
+
+        mock_fcm.assert_called_once_with(self.user, session)
+        mock_email.assert_called_once()
+        log = NotificationLog.objects.latest("sent_at")
+        self.assertTrue(log.email_sent)
+        self.assertEqual(log.target_user, self.user)

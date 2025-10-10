@@ -83,25 +83,6 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
         f"Reminder: {event.name} is in one hour!",
         f"Don't forget to come to {event.location} in one hour at {event.start_time.strftime('%H:%M')}!",
     )
-    send_event_reminder_email(
-        email=user.email,
-        event_name=event.name or "",
-        company_name=event.company.name if event.company else "",
-        event_type=event.get_event_type_display(),
-        event_start=event.start_time,
-        event_description=event.description or "",
-        location=event.location,
-        button_link=f"{APP_BASE_URL}/events/detail/{event.id}",
-        hours_before=1,
-    )
-    NotificationLog.objects.create(
-        target_user=user,
-        notification_topic=f"event_reminder_{event.id}",
-        title=f"Reminder: {event.name} is in one hour!",
-        body=f"Don't forget to come to {event.location} in one hour at {event.start_time.strftime('%H:%M')}!",
-        email_sent=True,
-    )
-
 
 @shared_task  # type: ignore
 def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> None:
@@ -193,26 +174,6 @@ def notify_student_session_one_hour(user_id: int, student_session_id: int) -> No
         )
 
     fcm.send_student_session_reminder(user, session, timedelta(hours=1), title, body)
-    if notification_time:
-        send_event_reminder_email(
-            email=user.email,
-            event_name=session.name or "",
-            company_name=session.company.name if session.company else "",
-            event_type="Student Session"
-            if session.session_type == SessionType.REGULAR
-            else "Company Event",
-            event_start=notification_time,
-            event_description=session.description or "",
-            button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
-            hours_before=1,
-        )
-    NotificationLog.objects.create(
-        target_user=user,
-        notification_topic=f"student_session_reminder_{session.id}",
-        title=title,
-        body=body,
-        email_sent=True,
-    )
 
 
 @shared_task  # type: ignore
