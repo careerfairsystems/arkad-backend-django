@@ -202,5 +202,3 @@ def schedule_event_notifications(
     if created:
         instance._schedule_notifications()
         instance.save(update_fields=["task_id_notify_registration_opening"])
-
-

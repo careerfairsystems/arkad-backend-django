@@ -55,8 +55,12 @@ class StudentSessionApplication(models.Model):
         default=ApplicationStatus.PENDING,
     )
 
-    task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True, editable=False)
-    task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True, editable=False)
+    task_id_notify_timeslot_tomorrow = models.CharField(
+        default=None, null=True, editable=False
+    )
+    task_id_notify_timeslot_in_one_hour = models.CharField(
+        default=None, null=True, editable=False
+    )
     task_notify_timeslot_booking_closes_tomorrow = models.CharField(
         default=None, null=True, editable=False
     )

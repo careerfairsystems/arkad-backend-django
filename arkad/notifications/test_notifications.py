@@ -133,7 +133,7 @@ class EventNotificationSchedulingTests(TestCase):
 
         new_company = Company.objects.create(name="New Closing Company")
 
-        new_event = Event.objects.create(
+        Event.objects.create(
             name="New Closing Event",
             description="Test",
             type="lu",

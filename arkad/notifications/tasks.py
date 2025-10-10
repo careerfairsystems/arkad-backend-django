@@ -84,6 +84,7 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
         f"Don't forget to come to {event.location} in one hour at {event.start_time.strftime('%H:%M')}!",
     )
 
+
 @shared_task  # type: ignore
 def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> None:
     # Notify the user that they have a student session tomorrow
