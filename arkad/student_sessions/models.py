@@ -134,13 +134,13 @@ class StudentSessionApplication(models.Model):
         )
         from notifications import tasks
 
-        task_notify_tmrw = tasks.notify_event_tomorrow.apply_async(
+        task_notify_tmrw = tasks.notify_student_session_tomorrow.apply_async(
             args=[self.user.id, self.student_session.id],
             eta=start_time - timedelta(hours=24),
         )
         self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
-        task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
+        task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
             args=[self.user.id, self.student_session.id],
             eta=start_time - timedelta(hours=1),
         )
@@ -151,9 +151,9 @@ class StudentSessionApplication(models.Model):
             AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
             self.task_id_notify_timeslot_tomorrow = None
 
-        if self.task_id_notify_timeslot_tomorrow:
-            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
-            self.notify_one_day_id = None
+        if self.task_id_notify_timeslot_in_one_hour:
+            AsyncResult(self.task_id_notify_timeslot_in_one_hour).revoke()
+            self.task_id_notify_timeslot_in_one_hour = None
 
 
 class StudentSessionTimeslot(models.Model):
