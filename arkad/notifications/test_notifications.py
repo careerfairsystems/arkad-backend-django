@@ -179,7 +179,9 @@ class StudentSessionNotificationSchedulingTests(TestCase):
         timeslot.selected_applications.add(application)
 
         # Manually trigger notification scheduling
-        application.schedule_notifications(timeslot_start)
+        application.schedule_notifications(
+            timeslot_start, timeslot.booking_closes_at, timeslot.id
+        )
         application.save()
 
         # Verify notifications were scheduled
@@ -252,7 +254,9 @@ class StudentSessionNotificationSchedulingTests(TestCase):
         )
 
         # Schedule notifications
-        application.schedule_notifications(event_time)
+        application.schedule_notifications(
+            event_time, company_event.booking_close_time, None
+        )
         application.save()
 
         # Verify notifications were scheduled with correct timing
@@ -288,7 +292,7 @@ class NotificationTaskTests(TestCase):
             fcm_token="test-fcm-token",
         )
 
-    @patch("notifications.fcm_helper.fcm.send_to_token")
+    @patch("notifications.fcm_helper.fcm.send_event_reminder")
     def test_notify_event_tomorrow_sends_correct_message(self, mock_fcm: Mock) -> None:
         """Test that event tomorrow notification sends correct FCM message."""
         event_start = timezone.now() + datetime.timedelta(days=2)
@@ -309,10 +313,11 @@ class NotificationTaskTests(TestCase):
             tasks.notify_event_tomorrow(self.user.id, event.id)
         mock_fcm.assert_called_once()
         call_args, _ = mock_fcm.call_args
-        self.assertEqual(call_args[0], "test-fcm-token")
-        self.assertIn("Test Event", call_args[1])
-        self.assertIn("imorgon", call_args[1])
-        self.assertIn("Test Hall", call_args[2])
+        self.assertEqual(call_args[0], self.user)
+        self.assertEqual(call_args[1], event)
+        self.assertIn("Test Event", call_args[2])
+        self.assertIn("is tomorrow", call_args[2])
+        self.assertIn("Test Hall", call_args[3])
 
         mock_fcm.reset_mock()
 
@@ -321,7 +326,7 @@ class NotificationTaskTests(TestCase):
             tasks.notify_event_tomorrow(self.user.id, event.id)
         mock_fcm.assert_not_called()
 
-    @patch("notifications.fcm_helper.fcm.send_to_token")
+    @patch("notifications.fcm_helper.fcm.send_event_reminder")
     def test_notify_event_one_hour_sends_correct_message(self, mock_fcm: Mock) -> None:
         """Test that event one hour notification sends correct FCM message."""
         event_start = timezone.now() + datetime.timedelta(hours=2)
@@ -342,8 +347,9 @@ class NotificationTaskTests(TestCase):
             tasks.notify_event_one_hour(self.user.id, event.id)
         mock_fcm.assert_called_once()
         call_args, _ = mock_fcm.call_args
-        self.assertEqual(call_args[0], "test-fcm-token")
-        self.assertIn("om en timme", call_args[1])
+        self.assertEqual(call_args[0], self.user)
+        self.assertEqual(call_args[1], event)
+        self.assertIn("in one hour", call_args[2])
 
         mock_fcm.reset_mock()
 
@@ -352,7 +358,7 @@ class NotificationTaskTests(TestCase):
             tasks.notify_event_one_hour(self.user.id, event.id)
         mock_fcm.assert_not_called()
 
-    @patch("notifications.fcm_helper.fcm.send_to_token")
+    @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
     def test_notify_student_session_tomorrow_regular(self, mock_fcm: Mock) -> None:
         """Test student session tomorrow notification for regular sessions."""
 
@@ -376,10 +382,10 @@ class NotificationTaskTests(TestCase):
             tasks.notify_student_session_tomorrow(self.user.id, session.id)
         mock_fcm.assert_called_once()
         call_args, _ = mock_fcm.call_args
-        self.assertEqual(call_args[0], "test-fcm-token")
-        self.assertIn("Student session", call_args[1])
-        self.assertIn("Test Company", call_args[1])
-        self.assertIn("imorgon", call_args[1])
+        self.assertEqual(call_args[0], self.user)
+        self.assertIn("Student session", call_args[3])
+        self.assertIn("Test Company", call_args[3])
+        self.assertIn("is tomorrow", call_args[3])
 
         mock_fcm.reset_mock()
 
@@ -388,7 +394,7 @@ class NotificationTaskTests(TestCase):
             tasks.notify_student_session_tomorrow(self.user.id, session.id)
         mock_fcm.assert_not_called()
 
-    @patch("notifications.fcm_helper.fcm.send_to_token")
+    @patch("notifications.fcm_helper.fcm.send_student_session_reminder")
     def test_notify_student_session_company_event(self, mock_fcm: Mock) -> None:
         """Test student session notification for company events."""
 
@@ -409,8 +415,8 @@ class NotificationTaskTests(TestCase):
             tasks.notify_student_session_tomorrow(self.user.id, session.id)
         mock_fcm.assert_called_once()
         call_args, _ = mock_fcm.call_args
-        self.assertIn("Företagsevent", call_args[1])
-        self.assertIn("Test Company", call_args[1])
+        self.assertIn("Company event", call_args[3])
+        self.assertIn("Test Company", call_args[3])
 
         mock_fcm.reset_mock()
 
@@ -470,7 +476,7 @@ class NotificationTaskTests(TestCase):
         call_args, _ = mock_fcm_topic.call_args
         self.assertEqual(call_args[0], "broadcast")
         self.assertIn("Test Event", call_args[1])
-        self.assertIn("öppnat", call_args[1])
+        self.assertIn("has opened", call_args[1])
 
         mock_fcm_topic.reset_mock()
 

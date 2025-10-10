@@ -131,22 +131,6 @@ class FCMHelper:
         if not application or not application.is_accepted():
             return
 
-        notification_time = None
-        if session.session_type == SessionType.REGULAR:
-            timeslot = session.timeslots.first()
-            if timeslot:
-                notification_time = timeslot.start_time
-        elif session.session_type == SessionType.COMPANY_EVENT:
-            notification_time = session.company_event_at
-
-        if not notification_time:
-            return
-
-        if abs(timezone.now() - (notification_time - time_delta)) > timedelta(
-            minutes=10
-        ):
-            return
-
         FCMHelper.send_to_token(user, title, body)
 
     def send_student_session_application_accepted(

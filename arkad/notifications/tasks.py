@@ -54,6 +54,23 @@ def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> No
     # Notify the user that they have a student session tomorrow
     user = User.objects.get(id=user_id)
     session: StudentSession = StudentSession.objects.get(id=student_session_id)
+
+    notification_time = None
+    if session.session_type == SessionType.REGULAR:
+        timeslot = session.timeslots.first()
+        if timeslot:
+            notification_time = timeslot.start_time
+    elif session.session_type == SessionType.COMPANY_EVENT:
+        notification_time = session.company_event_at
+
+    if not notification_time:
+        return
+
+    if abs(timezone.now() - (notification_time - timedelta(days=1))) > timedelta(
+        minutes=10
+    ):
+        return
+
     title = ""
     body = ""
     if session.session_type == SessionType.REGULAR:
@@ -74,6 +91,23 @@ def notify_student_session_one_hour(user_id: int, student_session_id: int) -> No
     # Notify the user that they have a student session in one hour
     user = User.objects.get(id=user_id)
     session: StudentSession = StudentSession.objects.get(id=student_session_id)
+
+    notification_time = None
+    if session.session_type == SessionType.REGULAR:
+        timeslot = session.timeslots.first()
+        if timeslot:
+            notification_time = timeslot.start_time
+    elif session.session_type == SessionType.COMPANY_EVENT:
+        notification_time = session.company_event_at
+
+    if not notification_time:
+        return
+
+    if abs(timezone.now() - (notification_time - timedelta(hours=1))) > timedelta(
+        minutes=10
+    ):
+        return
+
     title = ""
     body = ""
     if session.session_type == SessionType.REGULAR:
