@@ -161,3 +161,6 @@ class Event(models.Model):
         if self.task_id_notify_registration_opening:
             AsyncResult(self.task_id_notify_registration_opening).revoke()
             self.task_id_notify_registration_opening = None
+
+    def verify_user_has_ticket(self, user_id: int) -> bool:
+        return self.tickets.filter(user_id=user_id, used=False).exists()

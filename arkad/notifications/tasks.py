@@ -1,14 +1,27 @@
 from celery import shared_task  # type: ignore[import-untyped]
 
+from event_booking.models import Event
+from fcm_helper import fcm
+from student_sessions.models import StudentSession, SessionType
+from user_models.models import User
+
 
 @shared_task  # type: ignore
 def notify_event_tomorrow(user_id: int, event_id: int) -> None:
-    pass
+    # Notify the user that they have an event tomorrow
+    token: str = User.objects.get(id=user_id).fcm_token
+    event: Event = Event.objects.get(id=event_id)
+    if event.verify_user_has_ticket(user_id):
+        fcm.send_to_token(token, f"Påminnelse: {event.name} är imorgon!", f"Glöm inte att komma till {event.location} imorgon klockan {event.start_time.strftime('%H:%M')}!")
 
 
 @shared_task  # type: ignore
 def notify_event_one_hour(user_id: int, event_id: int) -> None:
-    pass
+    # Notify the user that they have an event in one hour
+    token: str = User.objects.get(id=user_id).fcm_token
+    event: Event = Event.objects.get(id=event_id)
+    if event.verify_user_has_ticket(user_id):
+        fcm.send_to_token(token, f"Påminnelse: {event.name} är om en timme!", f"Glöm inte att komma till {event.location} om en timme klockan {event.start_time.strftime('%H:%M')}!")
 
 
 @shared_task  # type: ignore
@@ -16,17 +29,34 @@ def notify_event_registration_open(event_id: int) -> None:
     # Both for lunch lectures, company visits (events?), and Student sessions
     # Anmälan för lunchföreläsning med XXX har öppnat -Bara notis
     # Anmälan för företagsbesök med XXX har öppnat - Bara notis
-    pass
+    # Send by topic
+    event: Event = Event.objects.get(id=event_id)
+    fcm.send_to_topic("all", f"Anmälan för {event.name} har öppnat!", f"Reservera en plats till {event.name} nu! Öppna Arkadappen för att anmäla dig.")
 
 
 @shared_task  # type: ignore
-def notify_registration_closes_tomorrow(event_id: int) -> None:
-    # Defence companies (SAAB and FMV, any more?), append "swedish citizenship required"
-    pass
+def notify_event_registration_closes_tomorrow(event_id: int) -> None:
+    # THIS IS FOR STUDENT SESSIONS: Defence companies (SAAB and FMV, any more?), append "swedish citizenship required"
+    event = Event.objects.get(id=event_id)
+    fcm.send_to_topic("all", f"Anmälan för {event.name} stänger imorgon!", f"Skynda att anmäla dig till {event.name}! Öppna Arkadappen för att anmäla dig.)")
+
+@shared_task
+def notify_student_session_registration_open(student_session_id: int) -> None:
+    session: StudentSession = StudentSession.objects.get(id=student_session_id)
+    if session.session_type == SessionType.REGULAR:
+        fcm.send_to_topic("all", f"Anmälan för student session med {session.company.name} har öppnat!", f"Reservera en plats till student session med {session.company.name} nu! Öppna Arkadappen för att anmäla dig.")
+    elif session.session_type == SessionType.COMPANY_EVENT:
+        fcm.send_to_topic("all", f"Anmälan för företagsevent med {session.company.name} har öppnat!", f"Reservera en plats till företagsevent med {session.company.name} nu! Öppna Arkadappen för att anmäla dig.")
 
 
 @shared_task  # type: ignore
-def notify_application_accepted(user_id: int, event_id: int) -> None:
+def notify_student_session_application_accepted(user_id: int, student_session_id: int) -> None:
     # Notify that a user has gotten their application accepted
     # Not a scheduled notification - this is triggered
-    pass
+    session: StudentSession = StudentSession.objects.get(id=student_session_id)
+    user: User = User.objects.get(id=user_id)
+
+    if session.session_type == SessionType.REGULAR:
+        fcm.send_to_token(user.fcm_token, f"Du har blivit antagen till en student session med {session.company.name}!", f"Grattis! Du har blivit antagen till en student session med {session.company.name}, kolla i appen för mer info.")
+    elif session.session_type == SessionType.COMPANY_EVENT:
+        fcm.send_to_token(user.fcm_token, f"Du har blivit antagen till ett företagsevent med {session.company.name}!", f"Grattis! Du har blivit antagen till ett företagsevent med {session.company.name}, kolla i appen för mer info.")
