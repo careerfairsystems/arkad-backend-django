@@ -57,7 +57,7 @@ class StudentSessionApplication(models.Model):
 
     task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
     task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
-    task_notify_timeslot_booking_closes_tomorrow = models.CharField()
+    task_notify_timeslot_booking_closes_tomorrow = models.CharField(default=None, null=True)
 
     class Meta:
         constraints = [
