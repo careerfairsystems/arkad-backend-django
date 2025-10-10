@@ -45,26 +45,37 @@ class Ticket(models.Model):
         from notifications import tasks
 
         # (Du har anmält dig till) YYY (som är) med XXX är imorgon
-        task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
-            args=[self.user.id, self.event.id],
-            eta=start_time - timedelta(hours=24),
-        )
-        self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
+        eta1 = start_time - timedelta(hours=24)
+        if eta1 > timezone.now():
+            task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
+                args=[self.user.id, self.event.id],
+                eta=eta1,
+            )
+            self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
+        else:
+            self.task_id_notify_event_tomorrow = None
 
-        # (Du har anmält dig till) YYY (som är) med XXX är om en timme
-        task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
-            args=[self.user.id, self.event.id],
-            eta=start_time - timedelta(hours=1),
-        )
-        self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
-
+        eta2 = start_time - timedelta(hours=1)
+        if eta2 > timezone.now():
+            # (Du har anmält dig till) YYY (som är) med XXX är om en timme
+            task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
+                args=[self.user.id, self.event.id],
+                eta=eta2
+            )
+            self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
+        else:
+            self.task_id_notify_event_in_one_hour = None
         # Anmälan för YYY med XXX stänger imorgon
         booking_freezes_at = self.event.booking_freezes_at
-        task_notify_registration_closes = tasks.notify_event_registration_closes_tomorrow.apply_async(
-            args=[self.event.id],
-            eta=booking_freezes_at - timedelta(days=1),
-        )
-        self.task_id_notify_registration_closes_tomorrow = task_notify_registration_closes.id
+        eta3 = booking_freezes_at - timedelta(hours=1)
+        if eta3 > timezone.now():
+            task_notify_registration_closes = tasks.notify_event_registration_closes_tomorrow.apply_async(
+                args=[self.event.id],
+                eta=eta3,
+            )
+            self.task_id_notify_registration_closes_tomorrow = task_notify_registration_closes.id
+        else:
+            self.task_id_notify_registration_closes_tomorrow = None
 
     def remove_notifications(self) -> None:
         """Remove scheduled notifications for this ticket."""
@@ -175,9 +186,19 @@ class Event(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         # On update, remove old notifications
-        if not self._state.adding:
-            old_instance = Event.objects.get(pk=self.pk)
-            old_instance._remove_notifications()
+        self._remove_notifications()
+        self._schedule_notifications()
+        for ticket in self.tickets.all():
+            # Reschedule notifications for all tickets
+            ticket.remove_notifications()
+            ticket.schedule_notifications(self.start_time)
+            ticket.save(
+                update_fields=[
+                    "task_id_notify_event_tomorrow",
+                    "task_id_notify_event_in_one_hour",
+                    "task_id_notify_registration_closes_tomorrow",
+                ]
+            )
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
@@ -188,7 +209,7 @@ class Event(models.Model):
         from notifications import tasks
 
         # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
-        if self.release_time:
+        if self.release_time and self.release_time > timezone.now():
             task_notify_registration_open = (
                 tasks.notify_event_registration_open.apply_async(
                     args=[self.id], eta=self.release_time
@@ -217,17 +238,3 @@ class Event(models.Model):
             return "Banquet"
         else:
             return "Event"
-
-
-@receiver(post_save, sender=Event)
-def schedule_event_notifications(
-    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
-) -> None:
-    if created:
-        instance._schedule_notifications()
-        instance.save(
-            update_fields=[
-                "task_id_notify_registration_opening",
-                "task_id_notify_registration_closing",
-            ]
-        )

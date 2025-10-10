@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.utils import timezone
@@ -5,15 +6,12 @@ from celery import shared_task  # type: ignore[import-untyped]
 
 from event_booking.models import Event
 from notifications.fcm_helper import fcm
+from notifications.email_helper import email_helper
 from student_sessions.models import StudentSession, SessionType, StudentSessionTimeslot
 from user_models.models import User
-from email_app.emails import (
-    send_event_reminder_email,
-    send_event_closing_reminder_email,
-    send_event_selection_email,
-)
-from notifications.models import NotificationLog
 from arkad.settings import APP_BASE_URL
+
+logger = logging.getLogger(__name__)
 
 """
 The routes to the app are:
@@ -36,19 +34,14 @@ def notify_event_tomorrow(user_id: int, event_id: int) -> None:
     # Notify the user that they have an event tomorrow
     user = User.objects.get(id=user_id)
     event: Event = Event.objects.get(id=event_id)
-    if abs(timezone.now() - (event.start_time - timedelta(days=1))) > timedelta(
-        minutes=10
-    ):
-        return
-
     fcm.send_event_reminder(
         user,
         event,
         f"Reminder: {event.name} is tomorrow!",
         f"Don't forget the event at {event.location} tomorrow at {event.start_time.strftime('%H:%M')}!",
     )
-    send_event_reminder_email(
-        email=user.email,
+    email_helper.send_event_reminder(
+        user=user,
         event_name=event.name or "",
         company_name=event.company.name if event.company else "",
         event_type=event.get_event_type_display(),
@@ -65,10 +58,6 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
     # Notify the user that they have an event in one hour
     user = User.objects.get(id=user_id)
     event: Event = Event.objects.get(id=event_id)
-    if abs(timezone.now() - (event.start_time - timedelta(hours=1))) > timedelta(
-        minutes=10
-    ):
-        return
 
     fcm.send_event_reminder(
         user,
@@ -79,26 +68,13 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
 
 
 @shared_task  # type: ignore
-def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> None:
+def notify_student_session_tomorrow(user_id: int, student_session_id: int, timeslot_id: int) -> None:
     # Notify the user that they have a student session tomorrow
     user = User.objects.get(id=user_id)
     session: StudentSession = StudentSession.objects.get(id=student_session_id)
+    timeslot = StudentSessionTimeslot.objects.get(id=timeslot_id)
 
-    notification_time = None
-    if session.session_type == SessionType.REGULAR:
-        timeslot = session.timeslots.first()
-        if timeslot:
-            notification_time = timeslot.start_time
-    elif session.session_type == SessionType.COMPANY_EVENT:
-        notification_time = session.company_event_at
-
-    if not notification_time:
-        return
-
-    if abs(timezone.now() - (notification_time - timedelta(days=1))) > timedelta(
-        minutes=10
-    ):
-        return
+    notification_time = timeslot.start_time if timeslot else None
 
     title = ""
     body = ""
@@ -112,42 +88,25 @@ def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> No
         body = f"Don't forget your company event with {session.company.name} tomorrow!"
 
     fcm.send_student_session_reminder(user, session, timedelta(days=1), title, body)
-    if notification_time:
-        send_event_reminder_email(
-            email=user.email,
-            event_name=session.name or "",
-            company_name=session.company.name if session.company else "",
-            event_type="Student Session"
-            if session.session_type == SessionType.REGULAR
-            else "Company Event",
-            event_start=notification_time,
-            event_description=session.description or "",
-            button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
-            hours_before=24,
-        )
+    email_helper.send_event_reminder(
+        user=user,
+        event_name=session.name or "",
+        company_name=session.company.name if session.company else "",
+        event_type="Student Session"
+        if session.session_type == SessionType.REGULAR
+        else "Company Event",
+        event_start=notification_time,
+        event_description=session.description or "",
+        button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
+        hours_before=24,
+    )
 
 
 @shared_task  # type: ignore
-def notify_student_session_one_hour(user_id: int, student_session_id: int) -> None:
+def notify_student_session_one_hour(user_id: int, student_session_id: int, timeslot_id: int) -> None:
     # Notify the user that they have a student session in one hour
     user = User.objects.get(id=user_id)
     session: StudentSession = StudentSession.objects.get(id=student_session_id)
-
-    notification_time = None
-    if session.session_type == SessionType.REGULAR:
-        timeslot = session.timeslots.first()
-        if timeslot:
-            notification_time = timeslot.start_time
-    elif session.session_type == SessionType.COMPANY_EVENT:
-        notification_time = session.company_event_at
-
-    if not notification_time:
-        return
-
-    if abs(timezone.now() - (notification_time - timedelta(hours=1))) > timedelta(
-        minutes=10
-    ):
-        return
 
     title = ""
     body = ""
@@ -170,10 +129,6 @@ def notify_event_registration_open(event_id: int) -> None:
     # Registration for company visit with XXX has opened - Just a notification
     # Send by topic
     event: Event = Event.objects.get(id=event_id)
-    if event.release_time and abs(timezone.now() - event.release_time) > timedelta(
-        minutes=10
-    ):
-        return
     fcm.send_to_topic(
         "broadcast",
         f"Registration for {event.name} has opened!",
@@ -184,10 +139,6 @@ def notify_event_registration_open(event_id: int) -> None:
 @shared_task  # type: ignore
 def notify_student_session_registration_open(student_session_id: int) -> None:
     session: StudentSession = StudentSession.objects.get(id=student_session_id)
-    if not session.booking_open_time or abs(
-        timezone.now() - session.booking_open_time
-    ) > timedelta(minutes=10):
-        return
     if session.session_type == SessionType.REGULAR:
         fcm.send_to_topic(
             "broadcast",
@@ -210,10 +161,6 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
     24 hours before booking freezes.
     """
     event = Event.objects.get(id=event_id)
-    if event.booking_freezes_at and abs(
-        timezone.now() - (event.booking_freezes_at - timedelta(days=1))
-    ) > timedelta(minutes=10):
-        return
     for user_ticket in event.tickets.prefetch_related("user").filter(used=False).all():
         fcm.send_event_reminder(
             user_ticket.user,
@@ -221,22 +168,21 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
             f"Reminder: Registration for {event.name} closes tomorrow!",
             f"Don't forget to unbook your spot for {event.name} if you can't attend!",
         )
-        if event.booking_freezes_at:
-            send_event_closing_reminder_email(
-                email=user_ticket.user.email,
-                event_name=event.name or "",
-                company_name=event.company.name if event.company else "",
-                event_type=event.get_event_type_display(),
-                closes_at=event.booking_freezes_at,
-                event_description=event.description or "",
-                location=event.location,
-                button_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
-            )
+        email_helper.send_event_closing_reminder(
+            user=user_ticket.user,
+            event_name=event.name or "",
+            company_name=event.company.name if event.company else "",
+            event_type=event.get_event_type_display(),
+            closes_at=event.booking_freezes_at,
+            event_description=event.description or "",
+            location=event.location,
+            button_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
+        )
 
 
 @shared_task  # type: ignore
 def notify_student_session_timeslot_booking_freezes_tomorrow(
-    timeslot_id: int, application_id: int
+        timeslot_id: int, application_id: int
 ) -> None:
     """
     This should only be sent to user which have been accepted to the session.
@@ -249,14 +195,6 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     application = timeslot_obj.selected_applications.get(id=application_id)
     ss = timeslot_obj.student_session
 
-    # Verify accepted and timing
-    if (
-        not application.is_accepted()
-        or not timeslot_obj.booking_closes_at
-        or abs(timezone.now() - (timeslot_obj.booking_closes_at - timedelta(days=1)))
-        > timedelta(minutes=10)
-    ):
-        return
     fcm.send_student_session_reminder(
         application.user,
         timeslot_obj.student_session,
@@ -268,46 +206,13 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
         if ss.disclaimer
         else "",
     )
-    if timeslot_obj.booking_closes_at:
-        send_event_closing_reminder_email(
-            email=application.user.email,
-            event_name=ss.name or "",
-            company_name=ss.company.name if ss.company else "",
-            event_type="Student Session",
-            closes_at=timeslot_obj.booking_closes_at,
-            event_description=ss.description or "",
-            button_link=f"{APP_BASE_URL}/sessions/book/{ss.company.id if ss.company else ''}",
-            disclaimer=ss.disclaimer,
-        )
-
-
-@shared_task  # type: ignore
-def notify_student_session_application_accepted(
-    user_id: int, student_session_id: int
-) -> None:
-    # Notify that a user has gotten their application accepted
-    # Not a scheduled notification - this is triggered
-    user = User.objects.get(id=user_id)
-    session = StudentSession.objects.get(id=student_session_id)
-    application = session.studentsessionapplication_set.filter(user_id=user_id, status="accepted").first()
-    if not application:
-        print("No accepted application found")
-        return
-
-    fcm.send_student_session_application_accepted(user, session)
-    event_start_time = None
-    if session.session_type == SessionType.COMPANY_EVENT:
-        event_start_time = session.company_event_at
-
-    send_event_selection_email(
-        email=user.email,
-        event_name=session.name or "",
-        company_name=session.company.name if session.company else "",
-        event_type="Student Session"
-        if session.session_type == SessionType.REGULAR
-        else "Company Event",
-        event_start=event_start_time,
-        event_description=session.description or "",
-        button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
-        disclaimer=session.disclaimer,
+    email_helper.send_event_closing_reminder(
+        user=application.user,
+        event_name=ss.name or "",
+        company_name=ss.company.name if ss.company else "",
+        event_type="Student Session",
+        closes_at=timeslot_obj.booking_closes_at,
+        event_description=ss.description or "",
+        button_link=f"{APP_BASE_URL}/sessions/book/{ss.company.id if ss.company else ''}",
+        disclaimer=ss.disclaimer,
     )

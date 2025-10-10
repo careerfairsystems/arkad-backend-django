@@ -15,6 +15,7 @@ from arkad.defaults import (
     STUDENT_SESSIONS_CLOSE_UTC,
     STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
 )
+from arkad.settings import APP_BASE_URL
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
@@ -93,17 +94,26 @@ class StudentSessionApplication(models.Model):
                 )
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
-            self.user.email_user(
-                "Application accepted",
-                f"Your application has been accepted for the company event at {self.student_session.company.name}. ",
-            )
 
-        if self.student_session.session_type == SessionType.REGULAR:
-            self.user.email_user(
-                "Application accepted",
-                f"Your application to {self.student_session.company.name} has been accepted, enter the app and select a timeslot\n "
-                "They may run out at any time.\n",
-            )
+        from notifications.fcm_helper import fcm
+        from notifications.email_helper import email_helper
+        fcm.send_student_session_application_accepted(self.user, self.student_session)
+        event_start_time = None
+        if self.student_session.session_type == SessionType.COMPANY_EVENT:
+            event_start_time = self.student_session.company_event_at
+
+        email_helper.send_event_selection(
+            user=self.user,
+            event_name=self.student_session.name or "",
+            company_name=self.student_session.company.name if self.student_session.company else "",
+            event_type="Student Session"
+            if self.student_session.session_type == SessionType.REGULAR
+            else "Company Event",
+            event_start=event_start_time,
+            event_description=self.student_session.description or "",
+            button_link=f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}",
+            disclaimer=self.student_session.disclaimer,
+        )
         self.save()
 
     def deny(self) -> None:
@@ -147,13 +157,13 @@ class StudentSessionApplication(models.Model):
         from notifications import tasks
 
         task_notify_tmrw = tasks.notify_student_session_tomorrow.apply_async(
-            args=[self.user.id, self.student_session.id],
+            args=[self.user.id, self.student_session.id, timeslot_id],
             eta=start_time - timedelta(hours=24),
         )
         self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
         task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
-            args=[self.user.id, self.student_session.id],
+            args=[self.user.id, self.student_session.id, timeslot_id],
             eta=start_time - timedelta(hours=1),
         )
         self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id

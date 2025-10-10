@@ -72,16 +72,18 @@ class FCMHelper:
         The topic must be created in the Firebase console and the user must be subscribed to the topic.
         See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
         """
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-            topic=topic,
-        )
+        response = "Debug mode - not sent"
+        if not DEBUG:  # Avoid sending messages to topics in debug mode
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                ),
+                topic=topic,
+            )
 
-        response = messaging.send(message)
-        log_notification(message)
+            response = messaging.send(message)
+            log_notification(message)
         NotificationLog.objects.create(
             notification_topic=topic,
             title=title,

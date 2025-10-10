@@ -291,6 +291,7 @@ def send_event_selection_email(
     event_name: str,
     company_name: str,
     event_type: str,
+    message: str,
     event_start: datetime | None,
     event_description: str = "",
     location: str | None = "",
@@ -316,10 +317,6 @@ def send_event_selection_email(
     subject = f"You've been selected for {event_type} with {company_name}!"
     greeting = "Congratulations!"
     heading = f"You've been selected for {event_type}"
-    message = (
-        "We're happy to inform you that you've been selected for this event. "
-        "Please confirm your attendance as soon as possible."
-    )
     button_text = "View event details"
 
     event_date = event_start.strftime("%Y-%m-%d") if event_start else None
