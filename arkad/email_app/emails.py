@@ -291,7 +291,7 @@ def send_event_selection_email(
     event_name: str,
     company_name: str,
     event_type: str,
-    event_start: datetime,
+    event_start: datetime | None,
     event_description: str = "",
     location: str | None = "",
     button_link: str = "",
@@ -322,8 +322,8 @@ def send_event_selection_email(
     )
     button_text = "View event details"
 
-    event_date = event_start.strftime("%Y-%m-%d")
-    event_time = event_start.strftime("%H:%M")
+    event_date = event_start.strftime("%Y-%m-%d") if event_start else None
+    event_time = event_start.strftime("%H:%M") if event_start else None
 
     base_url = get_base_url(request) if request else get_base_url_from_settings()
     html_message = render_to_string(

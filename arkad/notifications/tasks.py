@@ -5,7 +5,7 @@ from celery import shared_task  # type: ignore[import-untyped]
 
 from event_booking.models import Event
 from notifications.fcm_helper import fcm
-from student_sessions.models import StudentSession, SessionType
+from student_sessions.models import StudentSession, SessionType, StudentSessionTimeslot
 from user_models.models import User
 from email_app.emails import (
     send_event_reminder_email,
@@ -57,13 +57,6 @@ def notify_event_tomorrow(user_id: int, event_id: int) -> None:
         location=event.location,
         button_link=f"{APP_BASE_URL}/events/detail/{event.id}",
         hours_before=24,
-    )
-    NotificationLog.objects.create(
-        target_user=user,
-        notification_topic=f"event_reminder_{event.id}",
-        title=f"Reminder: {event.name} is tomorrow!",
-        body=f"Don't forget the event at {event.location} tomorrow at {event.start_time.strftime('%H:%M')}!",
-        email_sent=True,
     )
 
 
@@ -132,13 +125,6 @@ def notify_student_session_tomorrow(user_id: int, student_session_id: int) -> No
             button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
             hours_before=24,
         )
-    NotificationLog.objects.create(
-        target_user=user,
-        notification_topic=f"student_session_reminder_{session.id}",
-        title=title,
-        body=body,
-        email_sent=True,
-    )
 
 
 @shared_task  # type: ignore
@@ -193,11 +179,6 @@ def notify_event_registration_open(event_id: int) -> None:
         f"Registration for {event.name} has opened!",
         f"Reserve a spot for {event.name} now! Open the Arkad app to register.",
     )
-    NotificationLog.objects.create(
-        notification_topic="broadcast",
-        title=f"Registration for {event.name} has opened!",
-        body=f"Reserve a spot for {event.name} now! Open the Arkad app to register.",
-    )
 
 
 @shared_task  # type: ignore
@@ -213,21 +194,11 @@ def notify_student_session_registration_open(student_session_id: int) -> None:
             f"Registration for student session with {session.company.name} has opened!",
             f"Reserve a spot for the student session with {session.company.name} now! Open the Arkad app to register.",
         )
-        NotificationLog.objects.create(
-            notification_topic="broadcast",
-            title=f"Registration for student session with {session.company.name} has opened!",
-            body=f"Reserve a spot for the student session with {session.company.name} now! Open the Arkad app to register.",
-        )
     elif session.session_type == SessionType.COMPANY_EVENT:
         fcm.send_to_topic(
             "broadcast",
             f"Registration for company event with {session.company.name} has opened!",
             f"Reserve a spot for the company event with {session.company.name} now! Open the Arkad app to register.",
-        )
-        NotificationLog.objects.create(
-            notification_topic="broadcast",
-            title=f"Registration for company event with {session.company.name} has opened!",
-            body=f"Reserve a spot for the company event with {session.company.name} now! Open the Arkad app to register.",
         )
 
 
@@ -261,13 +232,6 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
                 location=event.location,
                 button_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
             )
-        NotificationLog.objects.create(
-            target_user=user_ticket.user,
-            notification_topic=f"event_closing_reminder_{event.id}",
-            title=f"Reminder: Registration for {event.name} closes tomorrow!",
-            body=f"Don't forget to unbook your spot for {event.name} if you can't attend!",
-            email_sent=True,
-        )
 
 
 @shared_task  # type: ignore
@@ -315,17 +279,6 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
             button_link=f"{APP_BASE_URL}/sessions/book/{ss.company.id if ss.company else ''}",
             disclaimer=ss.disclaimer,
         )
-    NotificationLog.objects.create(
-        target_user=application.user,
-        notification_topic=f"student_session_closing_reminder_{ss.id}",
-        title=f"Reminder: Booking for timeslot {timeslot_obj.start_time.strftime('%Y-%m-%d %H:%M')} closes tomorrow!",
-        body="Don't forget to unbook your spot if you can no longer attend."
-        + " Remember the following disclaimer: "
-        + (ss.disclaimer or "")
-        if ss.disclaimer
-        else "",
-        email_sent=True,
-    )
 
 
 @shared_task  # type: ignore
@@ -336,32 +289,25 @@ def notify_student_session_application_accepted(
     # Not a scheduled notification - this is triggered
     user = User.objects.get(id=user_id)
     session = StudentSession.objects.get(id=student_session_id)
+    application = session.studentsessionapplication_set.filter(user_id=user_id, status="accepted").first()
+    if not application:
+        print("No accepted application found")
+        return
+
     fcm.send_student_session_application_accepted(user, session)
     event_start_time = None
     if session.session_type == SessionType.COMPANY_EVENT:
         event_start_time = session.company_event_at
-    else:
-        first_timeslot = session.timeslots.first()
-        if first_timeslot:
-            event_start_time = first_timeslot.start_time
 
-    if event_start_time:
-        send_event_selection_email(
-            email=user.email,
-            event_name=session.name or "",
-            company_name=session.company.name if session.company else "",
-            event_type="Student Session"
-            if session.session_type == SessionType.REGULAR
-            else "Company Event",
-            event_start=event_start_time,
-            event_description=session.description or "",
-            button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
-            disclaimer=session.disclaimer,
-        )
-    NotificationLog.objects.create(
-        target_user=user,
-        notification_topic=f"student_session_accepted_{session.id}",
-        title=f"You've been selected for {session.name}!",
-        body=f"Congratulations! You've been selected for the student session with {session.company.name}.",
-        email_sent=True,
+    send_event_selection_email(
+        email=user.email,
+        event_name=session.name or "",
+        company_name=session.company.name if session.company else "",
+        event_type="Student Session"
+        if session.session_type == SessionType.REGULAR
+        else "Company Event",
+        event_start=event_start_time,
+        event_description=session.description or "",
+        button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
+        disclaimer=session.disclaimer,
     )

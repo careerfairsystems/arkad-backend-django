@@ -30,6 +30,9 @@ class Ticket(models.Model):
     task_id_notify_event_in_one_hour = models.CharField(
         default=None, null=True, blank=True, editable=False
     )
+    task_id_notify_registration_closes_tomorrow = models.CharField(
+        default=None, null=True, blank=True, editable=False
+    )
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -55,6 +58,14 @@ class Ticket(models.Model):
         )
         self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
 
+        # Anmälan för YYY med XXX stänger imorgon
+        booking_freezes_at = self.event.booking_freezes_at
+        task_notify_registration_closes = tasks.notify_event_registration_closes_tomorrow.apply_async(
+            args=[self.event.id],
+            eta=booking_freezes_at - timedelta(days=1),
+        )
+        self.task_id_notify_registration_closes_tomorrow = task_notify_registration_closes.id
+
     def remove_notifications(self) -> None:
         """Remove scheduled notifications for this ticket."""
         if self.task_id_notify_event_tomorrow:
@@ -64,6 +75,10 @@ class Ticket(models.Model):
         if self.task_id_notify_event_in_one_hour:
             AsyncResult(self.task_id_notify_event_in_one_hour).revoke()
             self.task_id_notify_event_in_one_hour = None
+
+        if self.task_id_notify_registration_closes_tomorrow:
+            AsyncResult(self.task_id_notify_registration_closes_tomorrow).revoke()
+            self.task_id_notify_registration_closes_tomorrow = None
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         # On update, remove old notifications
@@ -87,6 +102,7 @@ def schedule_ticket_notifications(
             update_fields=[
                 "task_id_notify_event_tomorrow",
                 "task_id_notify_event_in_one_hour",
+                "task_id_notify_registration_closes_tomorrow",
             ]
         )
 
@@ -121,6 +137,9 @@ class Event(models.Model):
     capacity = models.IntegerField(null=False)
 
     task_id_notify_registration_opening = models.CharField(
+        default=None, null=True, blank=True, editable=False
+    )
+    task_id_notify_registration_closing = models.CharField(
         default=None, null=True, blank=True, editable=False
     )
 
@@ -169,17 +188,22 @@ class Event(models.Model):
         from notifications import tasks
 
         # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
-        task_notify_registration_open = (
-            tasks.notify_event_registration_open.apply_async(
-                args=[self.id], eta=self.release_time
+        if self.release_time:
+            task_notify_registration_open = (
+                tasks.notify_event_registration_open.apply_async(
+                    args=[self.id], eta=self.release_time
+                )
             )
-        )
-        self.task_id_notify_registration_opening = task_notify_registration_open.id
+            self.task_id_notify_registration_opening = task_notify_registration_open.id
 
     def _remove_notifications(self) -> None:
         if self.task_id_notify_registration_opening:
             AsyncResult(self.task_id_notify_registration_opening).revoke()
             self.task_id_notify_registration_opening = None
+
+        if self.task_id_notify_registration_closing:
+            AsyncResult(self.task_id_notify_registration_closing).revoke()
+            self.task_id_notify_registration_closing = None
 
     def verify_user_has_ticket(self, user_id: int) -> bool:
         return self.tickets.filter(user_id=user_id, used=False).exists()
@@ -201,4 +225,9 @@ def schedule_event_notifications(
 ) -> None:
     if created:
         instance._schedule_notifications()
-        instance.save(update_fields=["task_id_notify_registration_opening"])
+        instance.save(
+            update_fields=[
+                "task_id_notify_registration_opening",
+                "task_id_notify_registration_closing",
+            ]
+        )

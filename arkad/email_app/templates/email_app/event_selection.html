@@ -13,8 +13,10 @@
                 {% if location %}
                 <p style="font-size: 14px; margin: 5px 0; opacity: 0.9;">📍 {{ location }}</p>
                 {% endif %}
+                {% if event_date %}
                 <p style="font-size: 14px; margin: 5px 0; opacity: 0.9;">📅 {{ event_date }}</p>
                 <p style="font-size: 14px; margin: 5px 0; opacity: 0.9;">🕐 {{ event_time }}</p>
+                {% endif %}
             </div>
 
             {% if description %}
