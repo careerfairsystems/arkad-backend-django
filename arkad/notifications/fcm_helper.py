@@ -98,7 +98,7 @@ class FCMHelper:
         if cert_path.exists() and not firebase_admin._apps:
             cred = credentials.Certificate(cert_path)
             firebase_admin.initialize_app(cred)
-        elif not DEBUG:
+        elif not DEBUG and ENVIRONMENT == "production":
             raise FileNotFoundError(f"Firebase cert not found at {cert_path}")
 
     @staticmethod
