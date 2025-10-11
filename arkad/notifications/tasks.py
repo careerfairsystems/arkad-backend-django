@@ -1,6 +1,4 @@
 import logging
-from datetime import timedelta
-
 import uuid
 from celery import shared_task  # type: ignore[import-untyped]
 
@@ -59,12 +57,12 @@ def notify_event_tomorrow(ticket_uuid: uuid.UUID) -> None:
 
     # 1. FCM/Notification Body (Concise)
     title = f"Reminder: {event.name} is Tomorrow! 📅"
-    fcm_body = f"Your event, **{event.name}**, starts tomorrow at {local_start_time}{location_str}. Don't miss out!"
+    fcm_body = f"Your event, {event.name}, starts tomorrow at {local_start_time}{location_str}. Don't miss out!"
 
     # 2. Email Body (Rich/Detailed)
     email_body = (
-        f"You have a confirmed ticket for the event **{event.name}** starting tomorrow at **{local_start_time}**."
-        f"{f' It will be held at **{event.location}**.' if event.location else ''}"
+        f"You have a confirmed ticket for the event {event.name} starting tomorrow at {local_start_time}."
+        f"{f' It will be held at {event.location}.' if event.location else ''}"
         f"\n\nPlease arrive on time to ensure you get your spot! If your plans have changed, we kindly ask you to unbook your ticket."
     )
     email_note = "We look forward to seeing you there!"
@@ -125,7 +123,6 @@ def _get_session_notification_texts(
     )
     company_name = session.company.name if session.company else "a company"
 
-
     # Calculate local times
     local_start_time = make_local_time(timeslot.start_time).strftime("%H:%M")
 
@@ -150,7 +147,7 @@ def _get_session_notification_texts(
     # Add disclaimer if present (used in both FCM and Email body)
     disclaimer_str = ""
     if session.disclaimer:
-        disclaimer_str = f" **Remember the following disclaimer:** {session.disclaimer}"
+        disclaimer_str = f" Remember the following disclaimer: {session.disclaimer}"
 
     return title, fcm_body, email_heading, email_note, time_info, disclaimer_str
 
@@ -185,10 +182,10 @@ def notify_student_session_tomorrow(
 
     # 2. Email Body (Rich/Detailed)
     email_body = (
-        f"You have a confirmed timeslot for a **{email_heading.replace('Your ', '').split(' Tomorrow')[0]}** with **{session.company.name}** tomorrow. "
+        f"You have a confirmed timeslot for a {email_heading.replace('Your ', '').split(' Tomorrow')[0]} with {session.company.name} tomorrow. "
         f"{time_info} "
         f"\n\nPlease make sure to be on time for your session. "
-        f"{disclaimer_str.replace('**Remember the following disclaimer:**', 'It is important to remember the following disclaimer:')}"
+        f"{disclaimer_str.replace(' Remember the following disclaimer:', ' It is important to remember the following disclaimer:')}"
     )
 
     Notification.objects.create(
@@ -258,7 +255,7 @@ def notify_event_registration_open(event_id: int) -> None:
     Notification.objects.create(
         notification_topic="broadcast",
         title=f"Registration Open: {event.name}! 🎉",
-        body=f"Registration for **{event.name}** is now open! Reserve your spot right away.",
+        body=f"Registration for {event.name} is now open! Reserve your spot right away.",
         fcm_sent=True,
     )
 
@@ -284,7 +281,7 @@ def notify_student_session_registration_open(student_session_id: int) -> None:
         event_type = "Event"
 
     title = f"Registration Open: {event_type} with {company_name}! 🤩"
-    body = f"Registration for the **{event_type}** with **{company_name}** is now open! Apply or register via the app."
+    body = f"Registration for the {event_type} with {company_name} is now open! Apply or register via the app."
 
     Notification.objects.create(
         notification_topic="broadcast",
@@ -316,11 +313,11 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
         title = f"Action Required: Unbooking for {event.name} Closes Tomorrow! ⚠️"
 
         # 1. FCM/Notification Body (Concise)
-        fcm_body = f"Registration/unbooking for **{event.name}** closes tomorrow! Please unbook your spot now if you can no longer attend."
+        fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
 
         # 2. Email Body (Rich/Detailed)
         email_body = (
-            f"The registration and unbooking window for **{event.name}** closes tomorrow. "
+            f"The registration and unbooking window for {event.name} closes tomorrow. "
             f"If you are unable to attend, please unbook your ticket immediately. This is crucial to allow students on the waiting list to get a spot! "
             f"Thank you for being considerate."
         )
@@ -382,9 +379,7 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     )
 
     disclaimer_info = (
-        f" **Remember the following disclaimer:** {ss.disclaimer}"
-        if ss.disclaimer
-        else ""
+        f" Remember the following disclaimer: {ss.disclaimer}" if ss.disclaimer else ""
     )
 
     title = (
@@ -392,13 +387,13 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     )
 
     # 1. FCM/Notification Body (Concise)
-    fcm_body: str = f"Booking for your confirmed timeslot ({local_start_time}) with **{company_name}** closes tomorrow. Finalize your booking or unbook your entire spot! {disclaimer_info}"
+    fcm_body: str = f"Booking for your confirmed timeslot ({local_start_time}) with {company_name} closes tomorrow. Finalize your booking or unbook your entire spot! {disclaimer_info}"
 
     # 2. Email Body (Rich/Detailed)
     email_body: str = (
-        f"The deadline for booking (and unbooking) your timeslot for the **{session_type_name}** with **{company_name}** is tomorrow. "
-        f"Your specific timeslot starts at **{local_start_time}**."
-        f"\n\n**Please take action now:** Ensure you have confirmed your booking or unbook your spot if you can no longer attend. "
+        f"The deadline for booking (and unbooking) your timeslot for the {session_type_name} with {company_name} is tomorrow. "
+        f"Your specific timeslot starts at {local_start_time}."
+        f"\n\nPlease take action now: Ensure you have confirmed your booking or unbook your spot if you can no longer attend. "
         f"{f'It is important to remember the following disclaimer: {ss.disclaimer}' if ss.disclaimer else ''}"
     )
 

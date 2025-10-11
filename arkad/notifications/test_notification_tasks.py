@@ -1,5 +1,5 @@
 import datetime
-from datetime import timedelta # ADDED: Required for timedelta usage throughout setUp
+from datetime import timedelta  # ADDED: Required for timedelta usage throughout setUp
 from unittest.mock import patch
 import uuid
 
@@ -18,7 +18,7 @@ from student_sessions.models import (
     SessionType,
     StudentSessionTimeslot,
     StudentSessionApplication,
-    ApplicationStatus
+    ApplicationStatus,
 )
 from user_models.models import User
 from notifications.models import Notification
@@ -29,12 +29,15 @@ MOCK_APP_BASE_URL = "https://example.com/app"
 # MOCK_LOCAL_TIME_STR is 13:00 due to the mock_make_local_time implementation
 MOCK_LOCAL_TIME_STR = "13:00"
 
+
 # Mock implementation for make_local_time to return a predictable, formatted time.
 def mock_make_local_time(dt: datetime.datetime) -> datetime.datetime:
     """Mock utility to return a predictable timezone-aware datetime."""
     # Ensure the returned time, when formatted in tasks, produces consistent output (13:00).
     # FIXED: Using datetime.timezone.utc which is available since 'import datetime' is present.
-    return dt.replace(hour=13, minute=0, second=0, microsecond=0, tzinfo=datetime.timezone.utc)
+    return dt.replace(
+        hour=13, minute=0, second=0, microsecond=0, tzinfo=datetime.timezone.utc
+    )
 
 
 class NotificationTasksTestCase(TestCase):
@@ -42,29 +45,54 @@ class NotificationTasksTestCase(TestCase):
     Tests for all notification Celery tasks defined in notifications.tasks.
     We assert on the creation and content of Notification objects, not on actual Celery scheduling.
     """
+
     def setUp(self):
         # 1. Setup Mock Time (Oct 10, 2025 @ 12:00 UTC)
         # FIXED: Using datetime.timezone.utc to resolve AttributeError
-        self.mock_now = timezone.datetime(2025, 10, 10, 12, 0, tzinfo=datetime.timezone.utc)
-        self.now_patcher = patch('django.utils.timezone.now', return_value=self.mock_now)
+        self.mock_now = timezone.datetime(
+            2025, 10, 10, 12, 0, tzinfo=datetime.timezone.utc
+        )
+        self.now_patcher = patch(
+            "django.utils.timezone.now", return_value=self.mock_now
+        )
         self.now_patcher.start()
 
         # 2. Setup Utility Mock (Used for time formatting in task bodies)
         self.make_local_time_patcher = patch(
-            'notifications.tasks.make_local_time', side_effect=mock_make_local_time
+            "notifications.tasks.make_local_time", side_effect=mock_make_local_time
         )
         self.make_local_time_patcher.start()
 
         # 3. Setup App Base URL Mock
-        self.app_base_url_patcher = patch('notifications.tasks.APP_BASE_URL', MOCK_APP_BASE_URL)
+        self.app_base_url_patcher = patch(
+            "notifications.tasks.APP_BASE_URL", MOCK_APP_BASE_URL
+        )
         self.app_base_url_patcher.start()
 
         # 4. Create Required Mock Data
 
         # Users
-        self.user1 = User.objects.create(id=1, first_name="Alice", email="alice@test.com", username="alice@test.com", fcm_token="TEST_FCM_TOKEN")
-        self.user2 = User.objects.create(id=2, first_name="Bob", email="bob@test.com", username="bob@test.com", fcm_token="TEST_FCM_TOKEN_2")
-        self.user3 = User.objects.create(id=3, first_name="Charlie", email="charlie@test.com", username="charlie@test.com", fcm_token="TEST_FCM_TOKEN_3")
+        self.user1 = User.objects.create(
+            id=1,
+            first_name="Alice",
+            email="alice@test.com",
+            username="alice@test.com",
+            fcm_token="TEST_FCM_TOKEN",
+        )
+        self.user2 = User.objects.create(
+            id=2,
+            first_name="Bob",
+            email="bob@test.com",
+            username="bob@test.com",
+            fcm_token="TEST_FCM_TOKEN_2",
+        )
+        self.user3 = User.objects.create(
+            id=3,
+            first_name="Charlie",
+            email="charlie@test.com",
+            username="charlie@test.com",
+            fcm_token="TEST_FCM_TOKEN_3",
+        )
         self.company = Company.objects.create(id=100, name="Test Company")
 
         # --- Event Setup ---
@@ -74,7 +102,7 @@ class NotificationTasksTestCase(TestCase):
             start_time=self.mock_now + timedelta(days=1, hours=1),
             end_time=self.mock_now + timedelta(days=1, hours=2),
             location="Test Location Hall A",
-            capacity=100
+            capacity=100,
         )
         self.ticket1_uuid = uuid.uuid4()
         self.ticket1 = Ticket.objects.create(
@@ -110,7 +138,7 @@ class NotificationTasksTestCase(TestCase):
             id=100,
             student_session=self.ss_reg,
             user=self.user1,
-            status=ApplicationStatus.ACCEPTED
+            status=ApplicationStatus.ACCEPTED,
         )
         # Link application to timeslot for test context
         self.timeslot_reg.selected_applications.add(self.app_reg)
@@ -158,7 +186,7 @@ class NotificationTasksTestCase(TestCase):
 
         self.assertEqual(
             notification.button_link,
-            f"{MOCK_APP_BASE_URL}/events/detail/{self.event.id}/ticket"
+            f"{MOCK_APP_BASE_URL}/events/detail/{self.event.id}/ticket",
         )
 
     def test_notify_event_tomorrow_missing_ticket_or_used(self):
@@ -201,14 +229,14 @@ class NotificationTasksTestCase(TestCase):
 
     def test_notify_event_registration_closes_tomorrow(self):
         """Tests unbooking reminder is sent to active ticket holders."""
-        ticket3 = Ticket.objects.create(
+        Ticket.objects.create(
             user=self.user2, event=self.event, used=False, uuid=uuid.uuid4()
         )
 
         tasks.notify_event_registration_closes_tomorrow(self.event.id)
 
         self.assertEqual(Notification.objects.count(), 2)
-        notifications = Notification.objects.order_by('target_user__id')
+        notifications = Notification.objects.order_by("target_user__id")
 
         # Check notification for user1 (Alice)
         self.assertEqual(notifications[0].target_user, self.user1)
@@ -227,7 +255,6 @@ class NotificationTasksTestCase(TestCase):
         # Check that the used ticket holder did NOT receive a notification.
         self.assertNotIn(self.ticket_used2.user, [n.target_user for n in notifications])
 
-
     # --- Student Session Task Tests (REGULAR SESSION) ---
 
     def test_notify_student_session_tomorrow_regular(self):
@@ -243,7 +270,9 @@ class NotificationTasksTestCase(TestCase):
 
         # Check time and disclaimer are included
         self.assertIn(MOCK_LOCAL_TIME_STR, notification.body)
-        self.assertIn(self.ss_reg.disclaimer.split('.')[0], notification.body) # 'Only Swedish citizens'
+        self.assertIn(
+            self.ss_reg.disclaimer.split(".")[0], notification.body
+        )  # 'Only Swedish citizens'
 
         # Check session type naming
         self.assertIn("Student Session with Test Company", notification.title)
@@ -256,7 +285,7 @@ class NotificationTasksTestCase(TestCase):
 
         self.assertEqual(
             notification.button_link,
-            f"{MOCK_APP_BASE_URL}/sessions/book/{self.company.id}"
+            f"{MOCK_APP_BASE_URL}/sessions/book/{self.company.id}",
         )
 
     def test_notify_student_session_one_hour_regular(self):
@@ -275,8 +304,7 @@ class NotificationTasksTestCase(TestCase):
         self.assertIn("Student Session with Test Company", notification.title)
         self.assertIn("starts in one hour", notification.body)
         self.assertIn(MOCK_LOCAL_TIME_STR, notification.body)
-        self.assertIn(self.ss_reg.disclaimer.split('.')[0], notification.body)
-
+        self.assertIn(self.ss_reg.disclaimer.split(".")[0], notification.body)
 
     # --- Student Session Task Tests (COMPANY EVENT) ---
 
@@ -287,13 +315,13 @@ class NotificationTasksTestCase(TestCase):
             id=2000,
             student_session=self.ss_event,
             start_time=self.mock_now + timedelta(days=1, hours=1),
-            duration=480, # 8 hours
+            duration=480,  # 8 hours
         )
         app_event = StudentSessionApplication.objects.create(
             id=200,
             student_session=self.ss_event,
             user=self.user2,
-            status=ApplicationStatus.ACCEPTED
+            status=ApplicationStatus.ACCEPTED,
         )
         timeslot_event.selected_applications.add(app_event)
 
@@ -307,13 +335,12 @@ class NotificationTasksTestCase(TestCase):
         # Check session type naming
         self.assertIn("Company Event with Test Company", notification.title)
         self.assertIn("Company Event Tomorrow", notification.heading)
-        self.assertIn("confirmed timeslot for a **Company Event**", notification.email_body)
+        self.assertIn("confirmed timeslot for a Company Event", notification.email_body)
 
         # Check for missing disclaimer
         self.assertNotIn("disclaimer", notification.body)
         self.assertNotIn("disclaimer", notification.email_body)
         self.assertIn("13:00", notification.body)
-
 
     # --- Booking Freeze Task Test ---
 
@@ -332,7 +359,9 @@ class NotificationTasksTestCase(TestCase):
 
         # Check that disclaimer is included in the email
         self.assertIn(self.ss_reg.disclaimer, notification.email_body)
-        self.assertIn("important to remember the following disclaimer", notification.email_body)
+        self.assertIn(
+            "important to remember the following disclaimer", notification.email_body
+        )
 
         # Check that the date/time is included in the email body (2025-10-11 is tomorrow)
         self.assertIn("2025-10-11 13:00", notification.email_body)
@@ -341,9 +370,8 @@ class NotificationTasksTestCase(TestCase):
 
         self.assertEqual(
             notification.button_link,
-            f"{MOCK_APP_BASE_URL}/sessions/book/{self.company.id}"
+            f"{MOCK_APP_BASE_URL}/sessions/book/{self.company.id}",
         )
-
 
     # --- Registration Open Task Test (SS version) ---
 

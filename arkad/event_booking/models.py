@@ -226,15 +226,16 @@ class Event(models.Model):
         else:
             return "Event"
 
+
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(
     sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
     # On update, remove old notifications
     if (
-            instance.send_notifications_for_event
-            or instance.task_id_notify_registration_opening is not None
-            or instance.task_id_notify_registration_closing is not None
+        instance.send_notifications_for_event
+        or instance.task_id_notify_registration_opening is not None
+        or instance.task_id_notify_registration_closing is not None
     ):
         instance._remove_notifications()
     if instance.send_notifications_for_event:
