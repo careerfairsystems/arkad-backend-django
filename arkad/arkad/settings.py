@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import logging
+import zoneinfo
 import os
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "True".lower()
+ENVIRONMENT: str = os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT")
 if not DEBUG:
     import sentry_sdk
 
@@ -35,7 +38,7 @@ if not DEBUG:
         # run the profiler on when there is an active transaction
         profile_lifecycle="trace",
         enable_logs=True,
-        environment=os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT"),
+        environment=ENVIRONMENT,
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -234,3 +237,10 @@ else:
     logging.warning("CELERY_BROKER_URL is not set, Celery will not work!")
 
 FIREBASE_CERT_PATH = BASE_DIR / "firebase_cert.json"
+APP_BASE_URL: str = "https://app.arkadtlth.se/"
+
+
+def make_local_time(dt: datetime) -> datetime:
+    """Convert a datetime to Swedish time."""
+    swedish_tz = zoneinfo.ZoneInfo(TIME_ZONE)
+    return dt.astimezone(swedish_tz)

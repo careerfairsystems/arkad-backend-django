@@ -15,6 +15,7 @@ from arkad.defaults import (
     STUDENT_SESSIONS_CLOSE_UTC,
     STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
 )
+from arkad.settings import APP_BASE_URL
 from arkad.utils import unique_file_upload_path
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
@@ -55,8 +56,15 @@ class StudentSessionApplication(models.Model):
         default=ApplicationStatus.PENDING,
     )
 
-    task_id_notify_timeslot_tomorrow = models.CharField(default=None, null=True)
-    task_id_notify_timeslot_in_one_hour = models.CharField(default=None, null=True)
+    task_id_notify_timeslot_tomorrow = models.CharField(
+        default=None, null=True, editable=False
+    )
+    task_id_notify_timeslot_in_one_hour = models.CharField(
+        default=None, null=True, editable=False
+    )
+    task_notify_timeslot_booking_closes_tomorrow = models.CharField(
+        default=None, null=True, editable=False
+    )
 
     class Meta:
         constraints = [
@@ -86,17 +94,21 @@ class StudentSessionApplication(models.Model):
                 )
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
-            self.user.email_user(
-                "Application accepted",
-                f"Your application has been accepted for the company event at {self.student_session.company.name}. ",
-            )
 
-        if self.student_session.session_type == SessionType.REGULAR:
-            self.user.email_user(
-                "Application accepted",
-                f"Your application to {self.student_session.company.name} has been accepted, enter the app and select a timeslot\n "
-                "They may run out at any time.\n",
-            )
+        from notifications.models import Notification  # Avoid circular import
+
+        Notification.objects.create(
+            target_user=self.user,
+            title=f"Your application to {self.student_session.company.name} has been accepted",
+            body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted. Enter the app to see more information",
+            greeting=f"Hi {self.user.first_name},",
+            heading="Application Accepted",
+            button_text="View Session",
+            button_link=f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}",
+            note="We look forward to seeing you there!",
+            email_sent=True,
+            fcm_sent=True,
+        )
         self.save()
 
     def deny(self) -> None:
@@ -127,33 +139,50 @@ class StudentSessionApplication(models.Model):
             self.cv.delete(save=False)
         return super().delete(*args, **kwargs)
 
-    def schedule_notifications(self, start_time: datetime.datetime) -> None:
+    def schedule_notifications(
+        self,
+        start_time: datetime.datetime,
+        unbook_closes_at: datetime.datetime,
+        timeslot_id: int,
+    ) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         assert self.is_accepted(), (
             "Can only schedule notifications for accepted applications"
         )
         from notifications import tasks
 
-        task_notify_tmrw = tasks.notify_event_tomorrow.apply_async(
-            args=[self.user.id, self.student_session.id],
+        task_notify_tmrw = tasks.notify_student_session_tomorrow.apply_async(
+            args=[self.user.id, self.student_session.id, timeslot_id],
             eta=start_time - timedelta(hours=24),
         )
         self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
-        task_notify_one_hour = tasks.notify_event_one_hour.apply_async(
-            args=[self.user.id, self.student_session.id],
+        task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
+            args=[self.user.id, self.student_session.id, timeslot_id],
             eta=start_time - timedelta(hours=1),
         )
         self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
+
+        task_booking_closes_at = (
+            tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
+                args=[timeslot_id, self.id],
+                eta=unbook_closes_at - timedelta(days=1),
+            )
+        )
+        self.task_notify_timeslot_booking_closes_tomorrow = task_booking_closes_at.id
 
     def remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:
             AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
             self.task_id_notify_timeslot_tomorrow = None
 
-        if self.task_id_notify_timeslot_tomorrow:
-            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
-            self.notify_one_day_id = None
+        if self.task_id_notify_timeslot_in_one_hour:
+            AsyncResult(self.task_id_notify_timeslot_in_one_hour).revoke()
+            self.task_id_notify_timeslot_in_one_hour = None
+
+        if self.task_notify_timeslot_booking_closes_tomorrow:
+            AsyncResult(self.task_notify_timeslot_booking_closes_tomorrow).revoke()
+            self.task_notify_timeslot_booking_closes_tomorrow = None
 
 
 class StudentSessionTimeslot(models.Model):
@@ -179,7 +208,6 @@ class StudentSessionTimeslot(models.Model):
 
     booking_closes_at = models.DateTimeField(
         default=STUDENT_TIMESLOT_BOOKING_CLOSE_UTC,
-        null=True,
         help_text="The time the timeslot is no longer bookable",
     )
 
@@ -233,7 +261,11 @@ class StudentSessionTimeslot(models.Model):
     def _schedule_notifications(self) -> None:
         # You have registered for YYY with XXX is tomorrow/ in one hour
         for application in self.selected_applications.all():
-            application.schedule_notifications(self.start_time)
+            application.schedule_notifications(
+                self.start_time,
+                unbook_closes_at=self.booking_closes_at,
+                timeslot_id=self.id,
+            )
 
     def _remove_notifications(self) -> None:
         for application in self.selected_applications.all():
@@ -241,7 +273,7 @@ class StudentSessionTimeslot(models.Model):
 
 
 class StudentSession(models.Model):
-    company = models.OneToOneField(
+    company = models.ForeignKey(  # Must be a foreign key to Company, as a company may have a student session and a company event
         Company,
         on_delete=models.CASCADE,
         null=False,
@@ -290,6 +322,15 @@ class StudentSession(models.Model):
         blank=True,
         help_text="The date and time of the company event, if applicable",
     )
+    name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Name for the session, if not used the company name is shown",
+    )
+    task_id_notify_registration_open = models.CharField(
+        default=None, null=True, editable=False
+    )
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
@@ -313,11 +354,26 @@ class StudentSession(models.Model):
             )
         return super().clean()
 
+    def schedule_notifications(self) -> None:
+        from notifications import tasks
+
+        if self.task_id_notify_registration_open:
+            AsyncResult(self.task_id_notify_registration_open).revoke()
+        if self.booking_open_time and self.booking_open_time > timezone.now():
+            # Check that booking_open_time is in the future
+            self.task_id_notify_registration_open = (
+                tasks.notify_student_session_registration_open.apply_async(
+                    args=[self.id],
+                    eta=self.booking_open_time,
+                ).id
+            )
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Calls full clean before saving to ensure constraints are checked.
         """
         self.full_clean()
+        self.schedule_notifications()
         return super().save(*args, **kwargs)
 
 

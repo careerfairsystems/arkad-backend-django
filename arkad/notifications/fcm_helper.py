@@ -7,6 +7,8 @@ from firebase_admin import credentials, messaging
 from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 
 from arkad import settings
+from arkad.settings import DEBUG, ENVIRONMENT
+from user_models.models import User
 
 
 def log_notification(msg: Message) -> None:
@@ -27,33 +29,54 @@ class FCMHelper:
         if cert_path.exists() and not firebase_admin._apps:
             cred = credentials.Certificate(cert_path)
             firebase_admin.initialize_app(cred)
+        elif not DEBUG and ENVIRONMENT == "production":
+            raise FileNotFoundError(f"Firebase cert not found at {cert_path}")
 
     @staticmethod
-    def send_to_token(token: str, title: str, body: str) -> str:
+    def send_to_user(user: User, title: str, body: str) -> bool:
+        """
+        Sends a notification to a specific user using its FCM token.
+        See https://firebase.google.com/docs/cloud-messaging/js/client
+        """
+        if not user.fcm_token:
+            return False
+        if user.fcm_token.startswith("TEST_FCM_TOKEN"):
+            # Mock for testing
+            return True
         msg = messaging.Message(
             notification=messaging.Notification(
                 title=title,
                 body=body,
             ),
-            token=token,
+            token=user.fcm_token,
         )
-        response = messaging.send(msg)
+        logging.info(messaging.send(msg))
         log_notification(msg)
-        return str(response)
+        return True
 
     @staticmethod
-    def send_to_topic(topic: str, title: str, body: str) -> str:
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-            topic=topic,
-        )
+    def send_to_topic(topic: str, title: str, body: str) -> bool:
+        """
+        Sends a notification to a topic.
+        The topic must be created in the Firebase console and the user must be subscribed to the topic.
+        See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
+        """
 
-        response = messaging.send(message)
-        log_notification(message)
-        return str(response)
+        send_topic_message_condition: bool = not DEBUG and ENVIRONMENT == "production"
+        if (
+            send_topic_message_condition
+        ):  # Avoid sending messages to topics in debug mode
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                ),
+                topic=topic,
+            )
+
+            logging.info(messaging.send(message))
+            log_notification(message)
+        return send_topic_message_condition
 
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)

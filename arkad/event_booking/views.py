@@ -48,6 +48,7 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                 visible_time=visible_time,
                 capacity=amount,
                 location="Restaurant",
+                send_notifications_for_event=False,
             )
             event.name = f"Automatic LunchEvent {event.id}"
             event.save()

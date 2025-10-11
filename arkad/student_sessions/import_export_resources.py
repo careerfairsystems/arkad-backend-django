@@ -150,27 +150,7 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
 
         # If status changed to accepted, call accept() method
         if new_status == "accepted" and original_status != "accepted":
-            # Already saved with new status, now run the accept logic
-            from .models import StudentSessionTimeslot, SessionType
-
-            if instance.student_session.session_type == SessionType.COMPANY_EVENT:
-                if instance.student_session.company_event_at:
-                    timeslot, created = StudentSessionTimeslot.objects.get_or_create(
-                        student_session=instance.student_session,
-                        start_time=instance.student_session.company_event_at,
-                        defaults={"duration": 480},
-                    )
-                    if not timeslot.selected_applications.filter(
-                        id=instance.id
-                    ).exists():
-                        timeslot.add_selection(instance)
-
-            # Send email
-            instance.user.email_user(
-                "Application accepted",
-                "Your application has been accepted, enter the app and select a timeslot\n "
-                "They may run out at any time.\n",
-            )
+            instance.accept()
         # If status changed to rejected, call deny() method
         elif new_status == "rejected" and original_status != "rejected":
             # Send email
