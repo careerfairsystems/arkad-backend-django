@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import firebase_admin  # type: ignore[import-untyped]
@@ -8,12 +8,6 @@ from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 
 from arkad import settings
 from arkad.settings import DEBUG, ENVIRONMENT
-from event_booking.models import Event
-from student_sessions.models import (
-    StudentSession,
-    StudentSessionApplication,
-    SessionType,
-)
 from user_models.models import User
 
 
@@ -28,69 +22,6 @@ def log_notification(msg: Message) -> None:
         logging.info(
             msg=f"Sent notification with title {msg.notification.title} and body {msg.notification.body} to {recipient} at {datetime.now()}"
         )
-
-
-def send_student_session_reminder(
-    user: User,
-    session: StudentSession,
-    time_delta: timedelta,
-    title: str,
-    body: str,
-) -> None:
-    """
-    Sends a notification to the user that they have a student session coming up.
-    The notification is only sent if the user has been accepted to the session and
-    the current time is within 10 minutes of the notification time (session start time - time_delta).
-    10 minutes is used to account for possible delays in task scheduling.
-    """
-
-    if not user.fcm_token:
-        return
-
-    application = StudentSessionApplication.objects.filter(
-        user_id=user.id, student_session_id=session.id
-    ).first()
-
-    if not application or not application.is_accepted():
-        return
-
-    FCMHelper.send_to_user(user, title, body)
-
-
-def send_student_session_application_accepted(
-    user: User, session: StudentSession
-) -> None:
-    """
-    Sends a notification to the user that their application to the student session has been accepted.
-    """
-    if not user.fcm_token:
-        return
-
-    if session.session_type == SessionType.REGULAR:
-        title = (
-            f"You have been accepted to a student session with {session.company.name}!"
-        )
-        body = f"Congratulations! You have been accepted to a student session with {session.company.name}, check the app for more info."
-        FCMHelper.send_to_user(user, title, body)
-    elif session.session_type == SessionType.COMPANY_EVENT:
-        title = (
-            f"You have been accepted to a company event with {session.company.name}!"
-        )
-        body = f"Congratulations! You have been accepted to a company event with {session.company.name}, check the app for more info."
-        FCMHelper.send_to_user(user, title, body)
-
-
-def send_event_reminder(user: User, event: Event, title: str, body: str) -> None:
-    """
-    Sends a notification to the user that they have an event coming up.
-    The notification is only sent if the user has a ticket to the event.
-    10 minutes is used to account for possible delays in task scheduling.
-    """
-    if not user.fcm_token:
-        return
-
-    if event.verify_user_has_ticket(user.id):
-        FCMHelper.send_to_user(user, title, body)
 
 
 class FCMHelper:

@@ -399,9 +399,7 @@ class NotificationTasksTestCase(TestCase):
 
         # Check that disclaimer is included in the email
         self.assertIn(self.ss_reg.disclaimer or "", email_body)
-        self.assertIn(
-            "important to remember the following disclaimer", email_body
-        )
+        self.assertIn("important to remember the following disclaimer", email_body)
 
         # Check that the date/time is included in the email body (2025-10-11 is tomorrow)
         self.assertIn("2025-10-11 13:00", email_body)
