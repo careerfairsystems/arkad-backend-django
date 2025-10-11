@@ -91,13 +91,6 @@ class Ticket(models.Model):
             AsyncResult(self.task_id_notify_registration_closes_tomorrow).revoke()
             self.task_id_notify_registration_closes_tomorrow = None
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        # On update, remove old notifications
-        if not self._state.adding:
-            old_instance = Ticket.objects.get(pk=self.pk)
-            old_instance.remove_notifications()
-        super().save(*args, **kwargs)
-
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self.remove_notifications()
         return super().delete(*args, **kwargs)

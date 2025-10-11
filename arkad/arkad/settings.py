@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import logging
+import zoneinfo
 import os
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -235,3 +237,8 @@ else:
 
 FIREBASE_CERT_PATH = BASE_DIR / "firebase_cert.json"
 APP_BASE_URL: str = "https://app.arkadtlth.se/"
+
+def make_local_time(dt: datetime) -> datetime:
+    """Convert a datetime to Swedish time."""
+    swedish_tz = zoneinfo.ZoneInfo(TIME_ZONE)
+    return dt.astimezone(swedish_tz)

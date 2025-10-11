@@ -9,7 +9,7 @@ from notifications.fcm_helper import fcm
 from notifications.email_helper import email_helper
 from student_sessions.models import StudentSession, SessionType, StudentSessionTimeslot
 from user_models.models import User
-from arkad.settings import APP_BASE_URL
+from arkad.settings import APP_BASE_URL, TIME_ZONE, make_local_time
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,10 @@ The routes to the app are:
       "apply": "/sessions/apply/{companyId}",
       "book": "/sessions/book/{companyId}"
     },
+    "companies": {
+      "list": "/companies",
+      "detail": "/companies/detail/{companyId}"
+    },
 """
 
 
@@ -34,11 +38,15 @@ def notify_event_tomorrow(user_id: int, event_id: int) -> None:
     # Notify the user that they have an event tomorrow
     user = User.objects.get(id=user_id)
     event: Event = Event.objects.get(id=event_id)
+
+    # Convert to local timezone for display
+    local_start_time = make_local_time(event.start_time)
+
     fcm.send_event_reminder(
         user,
         event,
         f"Reminder: {event.name} is tomorrow!",
-        f"Don't forget the event at {event.location} tomorrow at {event.start_time.strftime('%H:%M')}!",
+        f"Don't forget the event at {event.location} tomorrow at {local_start_time.strftime('%H:%M')}!",
     )
     email_helper.send_event_reminder(
         user=user,
@@ -59,11 +67,14 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
     user = User.objects.get(id=user_id)
     event: Event = Event.objects.get(id=event_id)
 
+    # Convert to local timezone for display
+    local_start_time = make_local_time(event.start_time)
+
     fcm.send_event_reminder(
         user,
         event,
         f"Reminder: {event.name} is in one hour!",
-        f"Don't forget to come to {event.location} in one hour at {event.start_time.strftime('%H:%M')}!",
+        f"Don't forget to come to {event.location} in one hour at {local_start_time.strftime('%H:%M')}!",
     )
 
 
@@ -195,11 +206,14 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     application = timeslot_obj.selected_applications.get(id=application_id)
     ss = timeslot_obj.student_session
 
+    # Convert to local timezone for display
+    local_start_time = make_local_time(timeslot_obj.start_time)
+
     fcm.send_student_session_reminder(
         application.user,
         timeslot_obj.student_session,
         timedelta(days=1),
-        f"Reminder: Booking for timeslot {timeslot_obj.start_time.strftime('%Y-%m-%d %H:%M')} closes tomorrow!",
+        f"Reminder: Booking for timeslot {local_start_time.strftime('%Y-%m-%d %H:%M')} closes tomorrow!",
         "Don't forget to unbook your spot if you can no longer attend."
         + " Remember the following disclaimer: "
         + (ss.disclaimer or "")

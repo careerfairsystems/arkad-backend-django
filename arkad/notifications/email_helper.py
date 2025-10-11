@@ -1,6 +1,9 @@
 import logging
 from datetime import datetime
 
+from django.utils import timezone
+
+from arkad.settings import make_local_time
 from email_app.emails import (
     send_event_reminder_email,
     send_event_closing_reminder_email,
@@ -39,7 +42,7 @@ class EmailHelper:
             event_name: Name of the event
             company_name: Name of the company
             event_type: Type of event (e.g., 'Lunch', 'Company Visit', 'Student Session')
-            event_start: When the event starts
+            event_start: When the event starts (timezone-aware)
             event_description: Description of the event
             location: Event location
             button_link: Link to event details
@@ -47,8 +50,10 @@ class EmailHelper:
             hours_before: 24 for tomorrow, 1 for one hour before
         """
         time_phrase = "tomorrow" if hours_before == 24 else "in one hour"
+        # Convert to local timezone for display
+        local_time = make_local_time(event_start)
         title = f"Reminder: {event_name} is {time_phrase}!"
-        body = f"Don't forget the event at {location} {time_phrase} at {event_start.strftime('%H:%M')}!"
+        body = f"Don't forget the event at {location} {time_phrase} at {local_time.strftime('%H:%M')}!"
 
         try:
             send_event_reminder_email(
@@ -94,7 +99,7 @@ class EmailHelper:
             event_name: Name of the event
             company_name: Name of the company
             event_type: Type of event
-            closes_at: When registration closes
+            closes_at: When registration closes (timezone-aware)
             event_description: Description of the event
             location: Event location
             button_link: Link to manage booking
@@ -146,7 +151,7 @@ class EmailHelper:
             event_name: Name of the event
             company_name: Name of the company
             event_type: Type of event
-            event_start: When the event starts
+            event_start: When the event starts (timezone-aware)
             event_description: Description of the event
             location: Event location
             button_link: Link to event details
@@ -160,8 +165,8 @@ class EmailHelper:
                 email=user.email,
                 event_name=event_name,
                 company_name=company_name,
-                message=body,
                 event_type=event_type,
+                message=body,
                 event_start=event_start,
                 event_description=event_description,
                 location=location,

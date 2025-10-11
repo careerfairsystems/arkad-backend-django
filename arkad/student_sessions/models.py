@@ -333,6 +333,9 @@ class StudentSession(models.Model):
         blank=True,
         help_text="Name for the session, if not used the company name is shown",
     )
+    task_id_notify_registration_open = models.CharField(
+        default=None, null=True, editable=False
+    )
 
     def __str__(self) -> str:
         return f"ID {self.id}: {self.company.name}"
@@ -356,11 +359,24 @@ class StudentSession(models.Model):
             )
         return super().clean()
 
+    def schedule_notifications(self) -> None:
+        from notifications import tasks
+
+        if self.task_id_notify_registration_open:
+            AsyncResult(self.task_id_notify_registration_open).revoke()
+        if self.booking_open_time and self.booking_open_time > timezone.now():
+            # Check that booking_open_time is in the future
+            self.task_id_notify_registration_open = tasks.notify_student_session_registration_open.apply_async(
+                args=[self.id],
+                eta=self.booking_open_time,
+            ).id
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Calls full clean before saving to ensure constraints are checked.
         """
         self.full_clean()
+        self.schedule_notifications()
         return super().save(*args, **kwargs)
 
 
