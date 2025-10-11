@@ -21,6 +21,9 @@ class Notification(models.Model):
     )  # FCM topic
     title = models.CharField(max_length=255)  # Subject if email
     body = models.TextField()  # Message if email
+    email_body = models.TextField(
+        null=True, blank=True
+    )  # Optional custom email body, if not set body is used
 
     greeting = models.CharField(
         max_length=255, null=True, blank=True
@@ -88,7 +91,7 @@ def send_notification(sender: Any, instance: Notification, **kwargs: Any) -> Non
                 name=instance.target_user.first_name,
                 greeting=instance.greeting or "Hello!",
                 heading=instance.heading or instance.title,
-                message=instance.body or "",
+                message=instance.email_body or instance.body or "",
                 button_text=instance.button_text or "",
                 button_link=instance.button_link or "",
                 note=instance.note or "Best regards, Arkad IT Team",
