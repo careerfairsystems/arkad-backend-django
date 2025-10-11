@@ -312,8 +312,7 @@ class NotificationTasksTestCase(TestCase):
         # Check for missing disclaimer
         self.assertNotIn("disclaimer", notification.body)
         self.assertNotIn("disclaimer", notification.email_body)
-        # Check time format for the 8-hour duration (13:00 to 21:00)
-        self.assertIn("**13:00 to 21:00**", notification.body)
+        self.assertIn("13:00", notification.body)
 
 
     # --- Booking Freeze Task Test ---

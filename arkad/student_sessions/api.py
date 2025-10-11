@@ -143,7 +143,7 @@ def get_exhibitor_sessions(request: AuthenticatedRequestSession):
 
 @router.get(
     "/exhibitor/applicants",
-    response={200: ListType[ApplicantSchema], 401: str, 404: str},
+    response={200: ListType[ApplicantSchema], 401: str, 404: str, 406: str},
 )
 @exhibitor_check
 def get_student_session_applicants(request: AuthenticatedRequestSession):

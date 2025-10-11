@@ -188,29 +188,6 @@ class Event(models.Model):
     def __str__(self) -> str:
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        # On update, remove old notifications
-        if (
-            self.send_notifications_for_event
-            or self.task_id_notify_registration_opening is not None
-            or self.task_id_notify_registration_closing is not None
-        ):
-            self._remove_notifications()
-        if self.send_notifications_for_event:
-            self._schedule_notifications()
-            for ticket in self.tickets.all():
-                # Reschedule notifications for all tickets
-                ticket.remove_notifications()
-                ticket.schedule_notifications(self.start_time)
-                ticket.save(
-                    update_fields=[
-                        "task_id_notify_event_tomorrow",
-                        "task_id_notify_event_in_one_hour",
-                        "task_id_notify_registration_closes_tomorrow",
-                    ]
-                )
-        super().save(*args, **kwargs)
-
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self._remove_notifications()
         return super().delete(*args, **kwargs)
@@ -248,3 +225,28 @@ class Event(models.Model):
             return "Banquet"
         else:
             return "Event"
+
+@receiver(post_save, sender=Event)
+def schedule_event_notifications(
+    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
+) -> None:
+    # On update, remove old notifications
+    if (
+            instance.send_notifications_for_event
+            or instance.task_id_notify_registration_opening is not None
+            or instance.task_id_notify_registration_closing is not None
+    ):
+        instance._remove_notifications()
+    if instance.send_notifications_for_event:
+        instance._schedule_notifications()
+        for ticket in instance.tickets.all():
+            # Reschedule notifications for all tickets
+            ticket.remove_notifications()
+            ticket.schedule_notifications(instance.start_time)
+            ticket.save(
+                update_fields=[
+                    "task_id_notify_event_tomorrow",
+                    "task_id_notify_event_in_one_hour",
+                    "task_id_notify_registration_closes_tomorrow",
+                ]
+            )
