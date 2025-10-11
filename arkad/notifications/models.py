@@ -47,7 +47,6 @@ class Notification(models.Model):
 @receiver(pre_save, sender=Notification)
 def send_notification(sender, instance: Notification, **kwargs):
     created = instance.pk is None  # Check if the instance is being created
-    print("Notification pre_save signal triggered: " + str(created))
     if created:
         sent_fsm: bool = False
         sent_email: bool = False
