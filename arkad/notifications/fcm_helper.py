@@ -7,7 +7,7 @@ from firebase_admin import credentials, messaging
 from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 
 from arkad import settings
-from arkad.settings import DEBUG
+from arkad.settings import DEBUG, ENVIRONMENT
 from event_booking.models import Event
 from notifications.models import NotificationLog
 from student_sessions.models import (
@@ -72,8 +72,10 @@ class FCMHelper:
         The topic must be created in the Firebase console and the user must be subscribed to the topic.
         See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
         """
+
+        send_topic_message_condition: bool = not DEBUG and ENVIRONMENT == "production"
         response = "Debug mode - not sent"
-        if not DEBUG:  # Avoid sending messages to topics in debug mode
+        if send_topic_message_condition:  # Avoid sending messages to topics in debug mode
             message = messaging.Message(
                 notification=messaging.Notification(
                     title=title,

@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 
 DEBUG = os.environ.get("DEBUG", "False").lower() == "True".lower()
+ENVIRONMENT: str = os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT")
 if not DEBUG:
     import sentry_sdk
 
@@ -37,7 +38,7 @@ if not DEBUG:
         # run the profiler on when there is an active transaction
         profile_lifecycle="trace",
         enable_logs=True,
-        environment=os.environ.get("SENTRY_ENVIRONMENT", "UNSET_ENVIRONMENT"),
+        environment=ENVIRONMENT,
     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
