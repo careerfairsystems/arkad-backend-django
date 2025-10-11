@@ -95,24 +95,19 @@ class StudentSessionApplication(models.Model):
                 # Automatically add this application to the timeslot
                 timeslot.add_selection(self)
 
-        from notifications.fcm_helper import fcm
-        from notifications.email_helper import email_helper
-        send_student_session_application_accepted(self.user, self.student_session)
-        event_start_time = None
-        if self.student_session.session_type == SessionType.COMPANY_EVENT:
-            event_start_time = self.student_session.company_event_at
+        from notifications.models import Notification  # Avoid circular import
 
-        email_helper.send_event_selection(
-            user=self.user,
-            event_name=self.student_session.name or "",
-            company_name=self.student_session.company.name if self.student_session.company else "",
-            event_type="Student Session"
-            if self.student_session.session_type == SessionType.REGULAR
-            else "Company Event",
-            event_start=event_start_time,
-            event_description=self.student_session.description or "",
+        Notification.objects.create(
+            target_user=self.user,
+            title=f"Your application to {self.student_session.company.name} has been accepted",
+            body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted. Enter the app to see more information",
+            greeting=f"Hi {self.user.first_name},",
+            heading="Application Accepted",
+            button_text="View Session",
             button_link=f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}",
-            disclaimer=self.student_session.disclaimer,
+            note="We look forward to seeing you there!",
+            email_sent=True,
+            fcm_sent=True,
         )
         self.save()
 
@@ -366,11 +361,12 @@ class StudentSession(models.Model):
             AsyncResult(self.task_id_notify_registration_open).revoke()
         if self.booking_open_time and self.booking_open_time > timezone.now():
             # Check that booking_open_time is in the future
-            self.task_id_notify_registration_open = tasks.notify_student_session_registration_open.apply_async(
-                args=[self.id],
-                eta=self.booking_open_time,
-            ).id
-
+            self.task_id_notify_registration_open = (
+                tasks.notify_student_session_registration_open.apply_async(
+                    args=[self.id],
+                    eta=self.booking_open_time,
+                ).id
+            )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """

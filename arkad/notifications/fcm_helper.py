@@ -31,7 +31,7 @@ def log_notification(msg: Message) -> None:
 
 
 def send_student_session_reminder(
-        user: User,
+    user: User,
     session: StudentSession,
     time_delta: timedelta,
     title: str,
@@ -58,7 +58,7 @@ def send_student_session_reminder(
 
 
 def send_student_session_application_accepted(
-        user: User, session: StudentSession
+    user: User, session: StudentSession
 ) -> None:
     """
     Sends a notification to the user that their application to the student session has been accepted.
@@ -67,18 +67,20 @@ def send_student_session_application_accepted(
         return
 
     if session.session_type == SessionType.REGULAR:
-        title = f"You have been accepted to a student session with {session.company.name}!"
+        title = (
+            f"You have been accepted to a student session with {session.company.name}!"
+        )
         body = f"Congratulations! You have been accepted to a student session with {session.company.name}, check the app for more info."
         FCMHelper.send_to_user(user, title, body)
     elif session.session_type == SessionType.COMPANY_EVENT:
-        title = f"You have been accepted to a company event with {session.company.name}!"
+        title = (
+            f"You have been accepted to a company event with {session.company.name}!"
+        )
         body = f"Congratulations! You have been accepted to a company event with {session.company.name}, check the app for more info."
         FCMHelper.send_to_user(user, title, body)
 
 
-def send_event_reminder(
-        user: User, event: Event, title: str, body: str
-) -> None:
+def send_event_reminder(user: User, event: Event, title: str, body: str) -> None:
     """
     Sends a notification to the user that they have an event coming up.
     The notification is only sent if the user has a ticket to the event.
@@ -127,7 +129,9 @@ class FCMHelper:
         """
 
         send_topic_message_condition: bool = not DEBUG and ENVIRONMENT == "production"
-        if send_topic_message_condition:  # Avoid sending messages to topics in debug mode
+        if (
+            send_topic_message_condition
+        ):  # Avoid sending messages to topics in debug mode
             message = messaging.Message(
                 notification=messaging.Notification(
                     title=title,

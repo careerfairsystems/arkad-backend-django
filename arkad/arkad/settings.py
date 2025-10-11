@@ -239,6 +239,7 @@ else:
 FIREBASE_CERT_PATH = BASE_DIR / "firebase_cert.json"
 APP_BASE_URL: str = "https://app.arkadtlth.se/"
 
+
 def make_local_time(dt: datetime) -> datetime:
     """Convert a datetime to Swedish time."""
     swedish_tz = zoneinfo.ZoneInfo(TIME_ZONE)

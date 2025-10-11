@@ -48,7 +48,7 @@ class Ticket(models.Model):
         eta1 = start_time - timedelta(hours=24)
         if eta1 > timezone.now():
             task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
-                args=[self.user.id, self.event.id],
+                args=[self.uuid],
                 eta=eta1,
             )
             self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
@@ -59,8 +59,10 @@ class Ticket(models.Model):
         if eta2 > timezone.now():
             # (Du har anmält dig till) YYY (som är) med XXX är om en timme
             task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
-                args=[self.user.id, self.event.id],
-                eta=eta2
+                args=[
+                    self.uuid,
+                ],
+                eta=eta2,
             )
             self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
         else:
@@ -69,11 +71,15 @@ class Ticket(models.Model):
         booking_freezes_at = self.event.booking_freezes_at
         eta3 = booking_freezes_at - timedelta(hours=1)
         if eta3 > timezone.now():
-            task_notify_registration_closes = tasks.notify_event_registration_closes_tomorrow.apply_async(
-                args=[self.event.id],
-                eta=eta3,
+            task_notify_registration_closes = (
+                tasks.notify_event_registration_closes_tomorrow.apply_async(
+                    args=[self.event.id],
+                    eta=eta3,
+                )
             )
-            self.task_id_notify_registration_closes_tomorrow = task_notify_registration_closes.id
+            self.task_id_notify_registration_closes_tomorrow = (
+                task_notify_registration_closes.id
+            )
         else:
             self.task_id_notify_registration_closes_tomorrow = None
 
