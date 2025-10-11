@@ -157,8 +157,10 @@ class EmailHelper:
             button_link: Link to event details
             disclaimer: Special disclaimer
         """
+        string_start_time = f" on {make_local_time(event_start).strftime('%Y-%m-%d %H:%M')}" if event_start else ""
+        location_string = f" at {location}" if location else ""
         title = f"You have been accepted to a {event_type.lower()} with {company_name}!"
-        body = f"Congratulations! You have been accepted to a {event_type.lower()} with {company_name}, check the app for more info."
+        body = f"Congratulations! You have been accepted to a {event_type.lower()} with {company_name}{string_start_time}{location_string}, check the app for more info."
 
         try:
             send_event_selection_email(

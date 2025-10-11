@@ -371,6 +371,7 @@ class StudentSession(models.Model):
                 eta=self.booking_open_time,
             ).id
 
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Calls full clean before saving to ensure constraints are checked.
