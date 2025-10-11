@@ -125,11 +125,13 @@ def _get_session_notification_texts(
     )
     company_name = session.company.name if session.company else "a company"
 
+
     # Calculate local times
     local_start_time = make_local_time(timeslot.start_time).strftime("%H:%M")
     local_end_time = make_local_time(
         timeslot.start_time + timedelta(minutes=timeslot.duration)
     ).strftime("%H:%M")
+    print("TEST: ", local_start_time, local_end_time, timeslot.duration)
 
     time_info = f"Your timeslot is from **{local_start_time} to {local_end_time}**."
 

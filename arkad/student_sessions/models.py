@@ -273,7 +273,7 @@ class StudentSessionTimeslot(models.Model):
 
 
 class StudentSession(models.Model):
-    company = models.OneToOneField(
+    company = models.ForeignKey(  # Must be a foreign key to Company, as a company may have a student session and a company event
         Company,
         on_delete=models.CASCADE,
         null=False,

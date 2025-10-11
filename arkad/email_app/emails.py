@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.http import HttpRequest
@@ -102,6 +104,11 @@ def send_generic_information_email(
 
     from_email: str = settings.DEFAULT_FROM_EMAIL
     recipient_list: list[str] = [email]
+
+    if email.endswith("@test.com"):
+        # Skip sending emails to test.com addresses
+        logging.warning("Skipping email to test.com address: %s", email)
+        return
 
     send_mail(
         subject=subject,
