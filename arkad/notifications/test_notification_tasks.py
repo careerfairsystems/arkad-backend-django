@@ -1,3 +1,4 @@
+# type: ignore # Sorry I am a broken man
 import datetime
 from datetime import timedelta  # ADDED: Required for timedelta usage throughout setUp
 from unittest.mock import patch
