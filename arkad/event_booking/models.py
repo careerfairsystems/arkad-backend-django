@@ -153,6 +153,11 @@ class Event(models.Model):
         default=None, null=True, blank=True, editable=False
     )
 
+    send_notifications_for_event = models.BooleanField(
+        default=True,
+        help_text="If false, no notifications will be sent for this event.",
+    )
+
     class Meta:
         constraints = [
             CheckConstraint(
@@ -185,19 +190,25 @@ class Event(models.Model):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         # On update, remove old notifications
-        self._remove_notifications()
-        self._schedule_notifications()
-        for ticket in self.tickets.all():
-            # Reschedule notifications for all tickets
-            ticket.remove_notifications()
-            ticket.schedule_notifications(self.start_time)
-            ticket.save(
-                update_fields=[
-                    "task_id_notify_event_tomorrow",
-                    "task_id_notify_event_in_one_hour",
-                    "task_id_notify_registration_closes_tomorrow",
-                ]
-            )
+        if (
+            self.send_notifications_for_event
+            or self.task_id_notify_registration_opening is not None
+            or self.task_id_notify_registration_closing is not None
+        ):
+            self._remove_notifications()
+        if self.send_notifications_for_event:
+            self._schedule_notifications()
+            for ticket in self.tickets.all():
+                # Reschedule notifications for all tickets
+                ticket.remove_notifications()
+                ticket.schedule_notifications(self.start_time)
+                ticket.save(
+                    update_fields=[
+                        "task_id_notify_event_tomorrow",
+                        "task_id_notify_event_in_one_hour",
+                        "task_id_notify_registration_closes_tomorrow",
+                    ]
+                )
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
