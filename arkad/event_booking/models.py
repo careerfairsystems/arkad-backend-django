@@ -69,7 +69,7 @@ class Ticket(models.Model):
             self.task_id_notify_event_in_one_hour = None
         # Anmälan för YYY med XXX stänger imorgon
         booking_freezes_at = self.event.booking_freezes_at
-        eta3 = booking_freezes_at - timedelta(hours=1)
+        eta3 = booking_freezes_at - timedelta(days=1)
         if eta3 > timezone.now():
             task_notify_registration_closes = (
                 tasks.notify_event_registration_closes_tomorrow.apply_async(
