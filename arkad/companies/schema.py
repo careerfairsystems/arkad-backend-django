@@ -50,7 +50,6 @@ class CompanyOut(Schema):
     url_youtube: Optional[str] = None
     website: Optional[str] = None
     student_session_motivation: Optional[str] = None
-    days_with_studentsession: int
     desired_degrees: List[str] = []
     desired_programme: List[str] = []
     desired_competences: List[str] = []
@@ -59,3 +58,4 @@ class CompanyOut(Schema):
     employees_locally: Optional[int] = None
     employees_globally: Optional[int] = None
     jobs: List[JobSchema] = []
+    has_student_session: bool = False
