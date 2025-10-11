@@ -4,7 +4,7 @@ from typing import Any
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-from firebase_admin.messaging import UnregisteredError
+from firebase_admin.messaging import UnregisteredError  # type: ignore[import-untyped]
 
 from email_app.emails import send_generic_information_email
 from notifications.fcm_helper import fcm
