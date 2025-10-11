@@ -1,13 +1,10 @@
 # Create your tests here.
 from django.test import TestCase
-from django.core.cache import cache
 from .models import Company
 
 
 class TestGetCompanies(TestCase):
     def setUp(self):
-        # Ensure cache is isolated for this test run
-        cache.delete("companies_list_cache")
         # Create companies
         Company.objects.create(name="Company A", description="Description A")
         Company.objects.create(name="Company B", description="Description B")
