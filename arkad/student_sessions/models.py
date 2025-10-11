@@ -97,7 +97,7 @@ class StudentSessionApplication(models.Model):
 
         from notifications.fcm_helper import fcm
         from notifications.email_helper import email_helper
-        fcm.send_student_session_application_accepted(self.user, self.student_session)
+        send_student_session_application_accepted(self.user, self.student_session)
         event_start_time = None
         if self.student_session.session_type == SessionType.COMPANY_EVENT:
             event_start_time = self.student_session.company_event_at

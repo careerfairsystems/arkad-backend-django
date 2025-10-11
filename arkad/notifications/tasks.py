@@ -42,13 +42,13 @@ def notify_event_tomorrow(user_id: int, event_id: int) -> None:
     # Convert to local timezone for display
     local_start_time = make_local_time(event.start_time)
 
-    fcm.send_event_reminder(
+    send_event_reminder(
         user,
         event,
         f"Reminder: {event.name} is tomorrow!",
         f"Don't forget the event at {event.location} tomorrow at {local_start_time.strftime('%H:%M')}!",
     )
-    email_helper.send_event_reminder(
+    send_event_reminder(
         user=user,
         event_name=event.name or "",
         company_name=event.company.name if event.company else "",
@@ -70,7 +70,7 @@ def notify_event_one_hour(user_id: int, event_id: int) -> None:
     # Convert to local timezone for display
     local_start_time = make_local_time(event.start_time)
 
-    fcm.send_event_reminder(
+    send_event_reminder(
         user,
         event,
         f"Reminder: {event.name} is in one hour!",
@@ -98,8 +98,8 @@ def notify_student_session_tomorrow(user_id: int, student_session_id: int, times
         title = f"Reminder: Company event with {session.company.name} is tomorrow!"
         body = f"Don't forget your company event with {session.company.name} tomorrow!"
 
-    fcm.send_student_session_reminder(user, session, timedelta(days=1), title, body)
-    email_helper.send_event_reminder(
+    send_student_session_reminder(user, session, timedelta(days=1), title, body)
+    send_event_reminder(
         user=user,
         event_name=session.name or "",
         company_name=session.company.name if session.company else "",
@@ -130,7 +130,7 @@ def notify_student_session_one_hour(user_id: int, student_session_id: int, times
             f"Don't forget your company event with {session.company.name} in one hour!"
         )
 
-    fcm.send_student_session_reminder(user, session, timedelta(hours=1), title, body)
+    send_student_session_reminder(user, session, timedelta(hours=1), title, body)
 
 
 @shared_task  # type: ignore
@@ -173,7 +173,7 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
     """
     event = Event.objects.get(id=event_id)
     for user_ticket in event.tickets.prefetch_related("user").filter(used=False).all():
-        fcm.send_event_reminder(
+        send_event_reminder(
             user_ticket.user,
             event,
             f"Reminder: Registration for {event.name} closes tomorrow!",
@@ -209,7 +209,7 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     # Convert to local timezone for display
     local_start_time = make_local_time(timeslot_obj.start_time)
 
-    fcm.send_student_session_reminder(
+    send_student_session_reminder(
         application.user,
         timeslot_obj.student_session,
         timedelta(days=1),

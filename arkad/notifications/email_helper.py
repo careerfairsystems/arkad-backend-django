@@ -9,7 +9,7 @@ from email_app.emails import (
     send_event_closing_reminder_email,
     send_event_selection_email,
 )
-from notifications.models import NotificationLog
+from notifications.models import Notification
 from user_models.models import User
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class EmailHelper:
                 disclaimer=disclaimer,
                 hours_before=hours_before,
             )
-            NotificationLog.objects.create(
+            Notification.objects.create(
                 target_user=user,
                 title=title,
                 body=body,
@@ -120,7 +120,7 @@ class EmailHelper:
                 button_link=button_link,
                 disclaimer=disclaimer,
             )
-            NotificationLog.objects.create(
+            Notification.objects.create(
                 target_user=user,
                 title=title,
                 body=body,
@@ -175,7 +175,7 @@ class EmailHelper:
                 button_link=button_link,
                 disclaimer=disclaimer,
             )
-            NotificationLog.objects.create(
+            Notification.objects.create(
                 target_user=user,
                 title=title,
                 body=body,
