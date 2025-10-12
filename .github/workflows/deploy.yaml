@@ -98,12 +98,13 @@ jobs:
       - name: Run tests
         env:
           DEBUG: True
+          SENTRY_ENVIRONMENT: TESTING
           POSTGRES_PASSWORD: password
           DB_HOST: localhost
           DATABASE_NAME: arkad
           DATABASE_USER: arkad_db_user
           REDIS_URL: redis://localhost:6379/0
-        run: (cd arkad && python manage.py test)
+        run: (cd arkad && python manage.py test --parallel)
 
   deploy-staging:
     if: github.ref == 'refs/heads/staging'  # Only run on the staging branch

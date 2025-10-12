@@ -43,6 +43,8 @@ class FCMHelper:
         if user.fcm_token.startswith("TEST_FCM_TOKEN"):
             # Mock for testing
             return True
+        if ENVIRONMENT == "TESTING":
+            return True
         msg = messaging.Message(
             notification=messaging.Notification(
                 title=title,
@@ -61,7 +63,8 @@ class FCMHelper:
         The topic must be created in the Firebase console and the user must be subscribed to the topic.
         See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
         """
-
+        if ENVIRONMENT == "TESTING":
+            return True
         production_mode: bool = not DEBUG and ENVIRONMENT == "production"
         topic = (
             "debug_" + topic
