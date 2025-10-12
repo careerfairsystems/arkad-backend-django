@@ -62,21 +62,23 @@ class FCMHelper:
         See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
         """
 
-        send_topic_message_condition: bool = not DEBUG and ENVIRONMENT == "production"
-        if (
-            send_topic_message_condition
-        ):  # Avoid sending messages to topics in debug mode
-            message = messaging.Message(
-                notification=messaging.Notification(
-                    title=title,
-                    body=body,
-                ),
-                topic=topic,
-            )
+        production_mode: bool = not DEBUG and ENVIRONMENT == "production"
+        topic = (
+            "debug_" + topic
+            if not production_mode and not topic.startswith("debug_")
+            else topic
+        )
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            topic=topic,
+        )
 
-            logging.info(messaging.send(message))
-            log_notification(message)
-        return send_topic_message_condition
+        logging.info(messaging.send(message))
+        log_notification(message)
+        return True
 
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)
