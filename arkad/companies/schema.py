@@ -59,3 +59,4 @@ class CompanyOut(Schema):
     employees_globally: Optional[int] = None
     jobs: List[JobSchema] = []
     has_student_session: bool = False
+    visible_in_company_list: bool = True
