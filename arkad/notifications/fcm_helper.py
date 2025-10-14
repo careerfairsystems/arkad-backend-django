@@ -60,15 +60,11 @@ class FCMHelper:
             body=body,
         )
 
-        # Add link for WebPush / Android Click Actions
+        # Add link for Android Click Actions
         android_notification = None
-        webpush_config = None
         if link:
             android_notification = messaging.AndroidNotification(
                 click_action="FLUTTER_NOTIFICATION_CLICK"
-            )
-            webpush_config = messaging.WebpushConfig(
-                fcm_options=messaging.WebpushFCMOptions(link=link)
             )
             if data is None:
                 data = {}
@@ -82,7 +78,6 @@ class FCMHelper:
             android=messaging.AndroidConfig(notification=android_notification)
             if android_notification
             else None,
-            webpush=webpush_config,
         )
 
         logging.info(messaging.send(msg))
