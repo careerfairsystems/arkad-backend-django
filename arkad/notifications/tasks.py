@@ -76,7 +76,7 @@ def notify_event_tomorrow(ticket_uuid: uuid.UUID) -> None:
         # Email fields
         greeting=f"Hi {user.first_name},",
         heading=f"Upcoming Event: {event.name}",
-        button_text="View Your Ticket",
+        button_text="View Event",
         button_link=link,
         fcm_link=link,
         note=email_note,
