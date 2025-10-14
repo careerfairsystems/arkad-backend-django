@@ -95,8 +95,8 @@ class FCMHelper:
         user: User,
         title: str,
         body: str,
-        data: dict | None = None,
-        link: str | None = None,  # type: ignore[type-arg]
+        data: dict | None = None,  # type: ignore[type-arg]
+        link: str | None = None,
     ) -> bool:
         if not user.fcm_token:
             return False
@@ -114,8 +114,8 @@ class FCMHelper:
         topic: str,
         title: str,
         body: str,
-        data: dict | None = None,
-        link: str | None = None,  # type: ignore[type-arg]
+        data: dict | None = None,  # type: ignore[type-arg]
+        link: str | None = None,
     ) -> bool:
         production_mode: bool = not DEBUG and ENVIRONMENT == "production"
         topic = (
