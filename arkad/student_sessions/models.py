@@ -154,7 +154,7 @@ class StudentSessionApplication(models.Model):
         from notifications import tasks
 
         eta1 = start_time - timedelta(hours=24)
-        if eta1 < timezone.now():
+        if eta1 > timezone.now():
             task_notify_tmrw = tasks.notify_student_session_tomorrow.apply_async(
                 args=[self.user.id, self.student_session.id, timeslot_id],
                 eta=eta1,
@@ -162,14 +162,14 @@ class StudentSessionApplication(models.Model):
             self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
         eta2 = start_time - timedelta(hours=1)
-        if eta2 < timezone.now():
+        if eta2 > timezone.now():
             task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
                 args=[self.user.id, self.student_session.id, timeslot_id], eta=eta2
             )
             self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
 
         eta3 = unbook_closes_at - timedelta(days=1)
-        if eta3 < timezone.now():
+        if eta3 > timezone.now():
             task_booking_closes_at = tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
                 args=[timeslot_id, self.id], eta=eta3
             )
