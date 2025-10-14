@@ -254,7 +254,6 @@ class NotificationTasksTestCase(TestCase):
         n0_title = notifications[0].title or ""
         n0_body = notifications[0].body or ""
         n0_email_body = notifications[0].email_body or ""
-        n1_title = notifications[1].title or ""
 
         # Check notification for user1 (Alice)
         self.assertEqual(notifications[0].target_user, self.user1)

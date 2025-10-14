@@ -91,7 +91,12 @@ class FCMHelper:
 
     @classmethod
     def send_to_user(
-        cls, user: User, title: str, body: str, data: dict | None = None, link: str | None = None  # type: ignore[type-arg]
+        cls,
+        user: User,
+        title: str,
+        body: str,
+        data: dict | None = None,
+        link: str | None = None,  # type: ignore[type-arg]
     ) -> bool:
         if not user.fcm_token:
             return False
@@ -105,7 +110,12 @@ class FCMHelper:
 
     @classmethod
     def send_to_topic(
-        cls, topic: str, title: str, body: str, data: dict | None = None, link: str | None = None  # type: ignore[type-arg]
+        cls,
+        topic: str,
+        title: str,
+        body: str,
+        data: dict | None = None,
+        link: str | None = None,  # type: ignore[type-arg]
     ) -> bool:
         production_mode: bool = not DEBUG and ENVIRONMENT == "production"
         topic = (
