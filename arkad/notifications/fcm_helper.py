@@ -15,7 +15,9 @@ from user_models.models import User
 def log_notification(msg: Message) -> None:
     recipient = None
     if msg.token:
-        recipient = msg.token
+        token = msg.token
+        masked = (token[:4] + "…" + token[-4:]) if len(token) >= 8 else "****"
+        recipient = f"token {masked}"
     elif msg.topic:
         recipient = f"topic {msg.topic}"
 
