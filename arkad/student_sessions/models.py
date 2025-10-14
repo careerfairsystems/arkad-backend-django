@@ -97,6 +97,7 @@ class StudentSessionApplication(models.Model):
 
         from notifications.models import Notification  # Avoid circular import
 
+        link = f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}"
         Notification.objects.create(
             target_user=self.user,
             title=f"Your application to {self.student_session.company.name} has been accepted",
@@ -104,7 +105,8 @@ class StudentSessionApplication(models.Model):
             greeting=f"Hi {self.user.first_name},",
             heading="Application Accepted",
             button_text="View Session",
-            button_link=f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}",
+            button_link=link,
+            fcm_link=link,
             note="We look forward to seeing you there!",
             email_sent=True,
             fcm_sent=True,
@@ -162,20 +164,18 @@ class StudentSessionApplication(models.Model):
         eta2 = start_time - timedelta(hours=1)
         if eta2 < timezone.now():
             task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
-                args=[self.user.id, self.student_session.id, timeslot_id],
-                eta=eta2
+                args=[self.user.id, self.student_session.id, timeslot_id], eta=eta2
             )
             self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
 
         eta3 = unbook_closes_at - timedelta(days=1)
         if eta3 < timezone.now():
-            task_booking_closes_at = (
-                tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
-                    args=[timeslot_id, self.id],
-                    eta=eta3
-                )
+            task_booking_closes_at = tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
+                args=[timeslot_id, self.id], eta=eta3
             )
-            self.task_notify_timeslot_booking_closes_tomorrow = task_booking_closes_at.id
+            self.task_notify_timeslot_booking_closes_tomorrow = (
+                task_booking_closes_at.id
+            )
 
     def remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:

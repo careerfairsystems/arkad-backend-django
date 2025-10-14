@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Optional, Dict
 
 import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import credentials, messaging
@@ -33,55 +34,92 @@ class FCMHelper:
             raise FileNotFoundError(f"Firebase cert not found at {cert_path}")
 
     @staticmethod
-    def send_to_user(user: User, title: str, body: str) -> bool:
+    def send(
+        title: str,
+        body: str,
+        token: Optional[str] = None,
+        topic: Optional[str] = None,
+        data: Optional[Dict[str, str]] = None,
+        link: Optional[str] = None,
+    ) -> bool:
         """
-        Sends a notification to a specific user using its FCM token.
-        See https://firebase.google.com/docs/cloud-messaging/js/client
+        Generic FCM send helper that supports:
+        - token OR topic
+        - optional data payload
+        - optional link (opens page/app)
         """
-        if not user.fcm_token:
-            return False
-        if user.fcm_token.startswith("TEST_FCM_TOKEN"):
-            # Mock for testing
-            return True
         if ENVIRONMENT == "TESTING":
             return True
-        msg = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-            token=user.fcm_token,
+
+        if token and token.startswith("TEST_FCM_TOKEN"):
+            return True
+
+        # Build notification block
+        notification = messaging.Notification(
+            title=title,
+            body=body,
         )
+
+        # Add link for WebPush / Android Click Actions
+        android_notification = None
+        webpush_config = None
+        if link:
+            android_notification = messaging.AndroidNotification(
+                click_action="FLUTTER_NOTIFICATION_CLICK"
+            )
+            webpush_config = messaging.WebpushConfig(
+                fcm_options=messaging.WebpushFCMOptions(link=link)
+            )
+            if data is None:
+                data = {}
+            data["link"] = link
+
+        msg = messaging.Message(
+            notification=notification,
+            token=token,
+            topic=topic,
+            data=data,
+            android=messaging.AndroidConfig(notification=android_notification)
+            if android_notification
+            else None,
+            webpush=webpush_config,
+        )
+
         logging.info(messaging.send(msg))
         log_notification(msg)
         return True
 
-    @staticmethod
-    def send_to_topic(topic: str, title: str, body: str) -> bool:
-        """
-        Sends a notification to a topic.
-        The topic must be created in the Firebase console and the user must be subscribed to the topic.
-        See https://firebase.google.com/docs/cloud-messaging/js/topic-messaging
-        """
-        if ENVIRONMENT == "TESTING":
-            return True
+    @classmethod
+    def send_to_user(
+        cls, user: User, title: str, body: str, data: dict | None = None, link: str | None =None  # type: ignore[type-arg]
+    ) -> bool:
+        if not user.fcm_token:
+            return False
+        return cls.send(
+            title=title,
+            body=body,
+            token=user.fcm_token,
+            data=data,
+            link=link,
+        )
+
+    @classmethod
+    def send_to_topic(
+        cls, topic: str, title: str, body: str, data: dict | None = None, link: str | None = None  # type: ignore[type-arg]
+    ) -> bool:
         production_mode: bool = not DEBUG and ENVIRONMENT == "production"
         topic = (
             "debug_" + topic
             if not production_mode and not topic.startswith("debug_")
             else topic
         )
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
+        return cls.send(
+            title=title,
+            body=body,
             topic=topic,
+            data=data,
+            link=link,
         )
-
-        logging.info(messaging.send(message))
-        log_notification(message)
-        return True
 
 
 fcm = FCMHelper(settings.FIREBASE_CERT_PATH)

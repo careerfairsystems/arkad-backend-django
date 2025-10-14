@@ -19,25 +19,37 @@ class Notification(models.Model):
         blank=True,
     )
     notification_topic = models.CharField(
-        max_length=255, null=True, blank=True
+        max_length=255, null=True, blank=True, verbose_name="FCM Topic"
     )  # FCM topic
-    title = models.CharField(max_length=255)  # Subject if email
-    body = models.TextField()  # Message if email
+    title = models.CharField(
+        max_length=255, verbose_name="Title for notification or subject for email"
+    )  # Subject if email
+    body = models.TextField(
+        verbose_name="Body of notification or email body if email body not set"
+    )  # Message if email
+    fcm_link = models.URLField(
+        null=True, blank=True, help_text="Link opened when notification is clicked"
+    )  # Optional link opened when notification is clicked
+
     email_body = models.TextField(
-        null=True, blank=True
+        null=True, blank=True, verbose_name="Custom email body"
     )  # Optional custom email body, if not set body is used
 
     greeting = models.CharField(
-        max_length=255, null=True, blank=True
+        max_length=255, null=True, blank=True, verbose_name="Greeting used in email"
     )  # Optional greeting for email
     heading = models.CharField(
-        max_length=255, null=True, blank=True
+        max_length=255, null=True, blank=True, verbose_name="Heading used in email"
     )  # Optional heading for email
     button_text = models.CharField(
-        max_length=255, null=True, blank=True
+        max_length=255, null=True, blank=True, verbose_name="Button text used in email"
     )  # Optional button text for email
-    button_link = models.URLField(null=True, blank=True)  # Optional button link for
-    note = models.TextField(null=True, blank=True)  # Optional note for email
+    button_link = models.URLField(
+        null=True, blank=True, help_text="Button link used in email"
+    )  # Optional button link for
+    note = models.TextField(
+        null=True, blank=True, help_text="Note text used in email"
+    )  # Optional note for email
 
     email_sent = models.BooleanField(default=False)
     fcm_sent = models.BooleanField(default=False)
@@ -79,6 +91,7 @@ def send_notification(sender: Any, instance: Notification, **kwargs: Any) -> Non
                     user=instance.target_user,
                     title=instance.title,
                     body=instance.body,
+                    link=instance.fcm_link,
                 )
             elif instance.notification_topic and instance.fcm_sent:
                 # Send FCM notification to the topic
@@ -86,6 +99,7 @@ def send_notification(sender: Any, instance: Notification, **kwargs: Any) -> Non
                     topic=instance.notification_topic,
                     title=instance.title,
                     body=instance.body,
+                    link=instance.fcm_link,
                 )
         except UnregisteredError as e:
             # The FCM token is no longer valid, clear it from the user

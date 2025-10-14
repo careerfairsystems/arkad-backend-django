@@ -67,6 +67,7 @@ def notify_event_tomorrow(ticket_uuid: uuid.UUID) -> None:
     )
     email_note = "We look forward to seeing you there!"
 
+    link = f"{APP_BASE_URL}/events/detail/{event.id}"
     Notification.objects.create(
         target_user=user,
         title=title,
@@ -76,7 +77,8 @@ def notify_event_tomorrow(ticket_uuid: uuid.UUID) -> None:
         greeting=f"Hi {user.first_name},",
         heading=f"Upcoming Event: {event.name}",
         button_text="View Your Ticket",
-        button_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
+        button_link=link,
+        fcm_link=link,
         note=email_note,
         email_sent=True,
         fcm_sent=True,
@@ -106,6 +108,7 @@ def notify_event_one_hour(ticket_uuid: uuid.UUID) -> None:
         title=f"Heads Up: {event.name} is in 1 Hour! ⏰",
         body=f"Your event starts in one hour{location_str} at {local_start_time}! Get ready.",
         fcm_sent=True,
+        fcm_link=f"{APP_BASE_URL}/events/detail/{event.id}",
     )
 
 
@@ -187,6 +190,9 @@ def notify_student_session_tomorrow(
         f"\n\nPlease make sure to be on time for your session. "
         f"{disclaimer_str.replace(' Remember the following disclaimer:', ' It is important to remember the following disclaimer:')}"
     )
+    link = (
+        f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}"
+    )
 
     Notification.objects.create(
         target_user=user,
@@ -197,7 +203,8 @@ def notify_student_session_tomorrow(
         greeting=f"Hi {user.first_name},",
         heading=email_heading,
         button_text="View Your Session",
-        button_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
+        button_link=link,
+        fcm_link=link,
         note=email_note,
         email_sent=True,
         fcm_sent=True,
@@ -237,6 +244,7 @@ def notify_student_session_one_hour(
         title=title,
         body=fcm_body,  # Used for FCM
         fcm_sent=True,
+        fcm_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
     )
 
 
@@ -257,6 +265,7 @@ def notify_event_registration_open(event_id: int) -> None:
         title=f"Registration Open: {event.name}! 🎉",
         body=f"Registration for {event.name} is now open! Reserve your spot right away.",
         fcm_sent=True,
+        fcm_link=f"{APP_BASE_URL}/events/detail/{event.id}",
     )
 
 
@@ -288,6 +297,7 @@ def notify_student_session_registration_open(student_session_id: int) -> None:
         title=title,
         body=body,
         fcm_sent=True,
+        fcm_link=f"{APP_BASE_URL}/sessions/book/{session.company.id if session.company else ''}",
     )
 
 
@@ -310,7 +320,7 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
 
     for user_ticket in active_tickets:
         user = user_ticket.user
-        title = f"Action Required: Unbooking for {event.name} Closes Tomorrow! ⚠️"
+        title = f"Unbooking for {event.name} Closes Tomorrow! ⚠️"
 
         # 1. FCM/Notification Body (Concise)
         fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
@@ -322,6 +332,7 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
             f"Thank you for being considerate."
         )
 
+        link = f"{APP_BASE_URL}/events/detail/{event.id}/ticket"
         Notification.objects.create(
             target_user=user,
             title=title,
@@ -329,9 +340,10 @@ def notify_event_registration_closes_tomorrow(event_id: int) -> None:
             email_body=email_body,  # Used for Email
             # Email fields
             greeting=f"Hi {user.first_name},",
-            heading=f"Unbooking Reminder: {event.name}",
+            heading=f"Reminder: {event.name}",
             button_text="Manage Your Ticket",
-            button_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
+            button_link=link,
+            fcm_link=link,
             note="Thank you for helping us make the most of every spot!",
             email_sent=True,
             fcm_sent=True,
@@ -382,12 +394,10 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
         f" Remember the following disclaimer: {ss.disclaimer}" if ss.disclaimer else ""
     )
 
-    title = (
-        f"Action Required: Timeslot Booking for {session_type_name} Closes Tomorrow! ⏳"
-    )
+    title = f"Timeslot Booking for {session_type_name} Closes Tomorrow! ⏳"
 
     # 1. FCM/Notification Body (Concise)
-    fcm_body: str = f"Booking for your confirmed timeslot ({local_start_time}) with {company_name} closes tomorrow. Finalize your booking or unbook your entire spot! {disclaimer_info}"
+    fcm_body: str = f"Booking for your confirmed timeslot ({local_start_time}) with {company_name} closes tomorrow. Finalize your booking or unbook your timeslot if you can no longer go! {disclaimer_info}"
 
     # 2. Email Body (Rich/Detailed)
     email_body: str = (
@@ -396,7 +406,7 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
         f"\n\nPlease take action now: Ensure you have confirmed your booking or unbook your spot if you can no longer attend. "
         f"{f'It is important to remember the following disclaimer: {ss.disclaimer}' if ss.disclaimer else ''}"
     )
-
+    link = f"{APP_BASE_URL}/sessions/book/{ss.company.id if ss.company else ''}"
     Notification.objects.create(
         target_user=user,
         title=title,
@@ -406,7 +416,8 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
         greeting=f"Hi {user.first_name},",
         heading=f"Timeslot Booking Closing: {session_type_name} with {company_name}",
         button_text="View & Book Timeslot",
-        button_link=f"{APP_BASE_URL}/sessions/book/{ss.company.id if ss.company else ''}",
+        button_link=link,
+        fcm_link=link,
         note="Please finalize your timeslot or unbook your entire session if needed. Thank you!",
         email_sent=True,
         fcm_sent=True,
