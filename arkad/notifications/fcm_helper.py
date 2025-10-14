@@ -56,6 +56,10 @@ class FCMHelper:
         if token and token.startswith("TEST_FCM_TOKEN"):
             return True
 
+        if not token and not topic:
+            logging.warning("No token or topic provided for FCM message")
+            return False
+
         # Build notification block
         notification = messaging.Notification(
             title=title,
