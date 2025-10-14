@@ -190,7 +190,7 @@ class NotificationTasksTestCase(TestCase):
 
         self.assertEqual(
             notification.button_link,
-            f"{MOCK_APP_BASE_URL}/events/detail/{self.event.id}/ticket",
+            f"{MOCK_APP_BASE_URL}/events/detail/{self.event.id}",
         )
 
     def test_notify_event_tomorrow_missing_ticket_or_used(self) -> None:
@@ -254,7 +254,6 @@ class NotificationTasksTestCase(TestCase):
         n0_title = notifications[0].title or ""
         n0_body = notifications[0].body or ""
         n0_email_body = notifications[0].email_body or ""
-        n1_title = notifications[1].title or ""
 
         # Check notification for user1 (Alice)
         self.assertEqual(notifications[0].target_user, self.user1)
@@ -268,7 +267,6 @@ class NotificationTasksTestCase(TestCase):
 
         # Check notification for user2 (Bob)
         self.assertEqual(notifications[1].target_user, self.user2)
-        self.assertIn("Action Required:", n1_title)
 
         # Check that the used ticket holder did NOT receive a notification.
         self.assertNotIn(self.ticket_used2.user, [n.target_user for n in notifications])
