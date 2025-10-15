@@ -48,7 +48,7 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
             if end_time.tzinfo is None or end_time.tzinfo.utcoffset(end_time) is None:
                 end_time = stockholm_tz.localize(end_time)
             event = Event.objects.create(
-                name="Auto Lunch Event " + str(start_time),
+                name=f"Auto Lunch Event {start_time.strftime('%Y-%m-%d %H:%M')}",
                 type="lu",
                 start_time=start_time,
                 end_time=end_time,

@@ -232,6 +232,8 @@ def schedule_event_notifications(
     sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
     # On update, remove old notifications
+    if getattr(instance, "_signal_receivers_disabled", False):
+        return
     if (
         instance.send_notifications_for_event
         or instance.task_id_notify_registration_opening is not None
@@ -251,3 +253,13 @@ def schedule_event_notifications(
                     "task_id_notify_registration_closes_tomorrow",
                 ]
             )
+    if instance.send_notifications_for_event:
+        # Save but do not trigger the signal again
+        # Ugly fix
+        setattr(instance, "_signal_receivers_disabled", True)
+        instance.save(
+            update_fields=[
+                "task_id_notify_registration_opening",
+                "task_id_notify_registration_closing",
+            ]
+        )

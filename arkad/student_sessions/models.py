@@ -176,6 +176,7 @@ class StudentSessionApplication(models.Model):
             self.task_notify_timeslot_booking_closes_tomorrow = (
                 task_booking_closes_at.id
             )
+        self.save()
 
     def remove_notifications(self) -> None:
         if self.task_id_notify_timeslot_tomorrow:
@@ -189,6 +190,7 @@ class StudentSessionApplication(models.Model):
         if self.task_notify_timeslot_booking_closes_tomorrow:
             AsyncResult(self.task_notify_timeslot_booking_closes_tomorrow).revoke()
             self.task_notify_timeslot_booking_closes_tomorrow = None
+        self.save()
 
 
 class StudentSessionTimeslot(models.Model):
