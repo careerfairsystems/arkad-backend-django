@@ -5,12 +5,19 @@ from django.http import HttpRequest
 from import_export.admin import ImportExportModelAdmin
 
 from .models import StudentSession, StudentSessionApplication, StudentSessionTimeslot
-from .import_export_resources import StudentSessionApplicationResource
+from .import_export_resources import (
+    StudentSessionApplicationResource,
+    StudentSessionAttendeeResource,
+)
 
 
 @admin.register(StudentSessionApplication)
 class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[type-arg]
-    resource_classes = [StudentSessionApplicationResource]
+    # Expose both the regular application resource (import/export) and the attendee export-only resource
+    resource_classes = [
+        StudentSessionApplicationResource,
+        StudentSessionAttendeeResource,
+    ]
 
     # --- Configuration for a better admin list view ---
 

@@ -8,6 +8,8 @@ from typing import Any
 import secrets
 
 from .models import User, StaffEnrollmentToken, StaffEnrollmentUsage
+from email_app.emails import send_generic_information_email
+from notifications.fcm_helper import fcm
 
 
 class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
@@ -87,7 +89,55 @@ class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
         ),
     )
 
-    actions = ["generate_staff_enrollment_link"]
+    actions = ["generate_staff_enrollment_link", "send_test_notification"]
+
+    def send_test_notification(self, request: HttpRequest, queryset: Any) -> None:
+        """Sends a test notification to the selected users."""
+        if not request.user.is_superuser:
+            messages.error(request, "Only superusers can send test notifications.")
+            return
+
+        for user in queryset:
+            # Send test email
+            try:
+                send_generic_information_email(
+                    email=user.email,
+                    subject="Test Notification from Arkad",
+                    name=user.first_name,
+                    greeting="Hello!",
+                    heading="This is a test notification",
+                    message="If you are seeing this, the notification system is working.",
+                    button_text="Go to Arkad",
+                    button_link="https://arkadtlth.se",
+                )
+                messages.success(request, f"Sent test email to {user.username}.")
+            except Exception as e:
+                messages.error(
+                    request, f"Failed to send test email to {user.username}: {e}"
+                )
+
+            # Send test push notification
+            if user.fcm_token:
+                try:
+                    fcm.send_to_user(
+                        user,
+                        title="Test Notification",
+                        body="This is a test notification from Arkad.",
+                    )
+                    messages.success(
+                        request, f"Sent test push notification to {user.username}."
+                    )
+                except Exception as e:
+                    messages.error(
+                        request,
+                        f"Failed to send test push notification to {user.username}: {e}",
+                    )
+            else:
+                messages.warning(
+                    request, f"User {user.username} does not have an FCM token."
+                )
+
+    send_test_notification.short_description = "Send test notification"  # type: ignore[attr-defined]
 
     def is_company_user(self, obj: User) -> bool:
         return obj.is_company

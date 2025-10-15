@@ -1,7 +1,9 @@
 from django.core.cache import cache
+from django.db.models import Exists, OuterRef
 
 from arkad.auth import OPTIONAL_AUTH
 from arkad.customized_django_ninja import Router, ListType
+from student_sessions.models import StudentSession
 from user_models.models import AuthenticatedRequest
 from companies.models import Company
 from companies.schema import CompanyOut
@@ -17,7 +19,15 @@ def get_companies(request: AuthenticatedRequest):
     companies_list_cache_key: str = "companies_list_cache"
     companies = cache.get(companies_list_cache_key)
     if companies is None:
-        companies = Company.objects.prefetch_related("jobs").all()
+        companies = (
+            Company.objects.prefetch_related("jobs")
+            .annotate(
+                has_student_session=Exists(
+                    StudentSession.objects.filter(company_id=OuterRef("pk"))
+                )
+            )
+            .all()
+        )
         cache.set(companies_list_cache_key, companies, 300)
     return companies
 

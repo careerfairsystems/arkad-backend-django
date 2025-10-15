@@ -14,6 +14,7 @@ from event_booking.schemas import (
     EventUserStatus,
 )
 
+
 router = Router(tags=["Events"])
 
 
@@ -27,13 +28,14 @@ def get_events(request: AuthenticatedRequest):
             EventSchema.from_orm(e)
             for e in Event.objects.filter(visible_time__lte=timezone.now()).all()
         ]
-    events: QuerySet[Event] = (
-        Event.objects.prefetch_related("tickets")
-        .filter(visible_time__lte=timezone.now())
-        .all()
-    )
+
+    events: QuerySet[Event] = Event.objects.prefetch_related("tickets")
+
+    if not request.user.is_staff:
+        events = events.filter(visible_time__lte=timezone.now())
+
     result: list[EventSchema] = []
-    for event in events:
+    for event in events.all():
         schema = EventSchema.from_orm(event)
         user_ticket: Ticket | None = event.tickets.filter(
             user_id=request.user.id
@@ -64,17 +66,24 @@ def get_event(request: AuthenticatedRequest, event_id: int):
     Returns a single event
     """
     try:
-        event = Event.objects.get(id=event_id, visible_time__lte=timezone.now())
-        schema = EventSchema.from_orm(event)
-        if request.user.is_authenticated:
-            user_ticket: Ticket | None = event.tickets.filter(
-                user_id=request.user.id
-            ).first()
-            if user_ticket is not None:
-                schema.status = user_ticket.status()
-        return schema
+        event = Event.objects.get(id=event_id)
+
+        # Check that user is staff, or the event is visible
+        if (
+            request.user.is_authenticated and request.user.is_staff
+        ) or event.visible_time <= timezone.now():
+            # OK, return event
+            schema = EventSchema.from_orm(event)
+            if request.user.is_authenticated:
+                user_ticket: Ticket | None = event.tickets.filter(
+                    user_id=request.user.id
+                ).first()
+                if user_ticket is not None:
+                    schema.status = user_ticket.status()
+            return schema
     except Event.DoesNotExist:
-        return 404, "Event not found"
+        pass
+    return 404, "Event not found"
 
 
 @router.get(
@@ -154,6 +163,7 @@ def book_event(request: AuthenticatedRequest, event_id: int):
                 return 409, "Event already ended"
         except Event.DoesNotExist:
             return 404, "Event not found"
+
         if event.number_booked < event.capacity:
             if event.tickets.filter(user_id=request.user.id).exists():
                 return 409, "You have already booked this event"
@@ -164,6 +174,7 @@ def book_event(request: AuthenticatedRequest, event_id: int):
 
             schema = EventSchema.from_orm(event)
             schema.status = ticket.status()
+
             return 200, schema
         else:
             return 409, "Event already fully booked"
@@ -184,10 +195,9 @@ def unbook_event(request: AuthenticatedRequest, event_id: int):
         except Event.DoesNotExist:
             return 404, "Event not found"
 
+        ticket = event.tickets.filter(user_id=request.user.id, used=False)
         # Delete the ticket
-        deleted_count, _ = event.tickets.filter(
-            user_id=request.user.id, used=False
-        ).delete()
+        deleted_count, _ = ticket.delete()
 
         if deleted_count == 0:
             return 404, "You do not have a ticket for this event"

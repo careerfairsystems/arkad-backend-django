@@ -9,7 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlsafe_base64_encode
@@ -127,23 +127,28 @@ def complete_signup(request: AuthenticatedRequest, data: CompleteSignupSchema):
     signup_data_hash_current: str = sha256(
         signup_schema.model_dump_json().encode("utf-8"), usedforsecurity=False
     ).hexdigest()
-    signup_data_hash: str | None = jwt_data.get("signup-data-hash", None)
-    if signup_data_hash is None:
-        return 401, "Signup data hash was empty"
-    if signup_data_hash != signup_data_hash_current:
-        return 401, "Signup data hash does not match"
+    with transaction.atomic():
+        # Check that a user with that email, case-insensitive still does not exist.
+        if User.objects.filter(email__iexact=signup_schema.email).exists():
+            return 401, "User with this email already exists."
 
-    try:
-        # We should not need any validations here, do it in begin_signup
-        return 200, User.objects.create_user(
-            **signup_schema.model_dump(), username=data.email
-        )
-    except IntegrityError as e:
-        logging.error(e)
-        if "duplicate key" in str(e):
-            return 400, "Email already exists"
-        else:
-            return 500, "Something went wrong"
+        signup_data_hash: str | None = jwt_data.get("signup-data-hash", None)
+        if signup_data_hash is None:
+            return 401, "Signup data hash was empty"
+        if signup_data_hash != signup_data_hash_current:
+            return 401, "Signup data hash does not match"
+
+        try:
+            # We should not need any validations here, do it in begin_signup
+            return 200, User.objects.create_user(
+                **signup_schema.model_dump(), username=data.email
+            )
+        except IntegrityError as e:
+            logging.error(e)
+            if "duplicate key" in str(e):
+                return 400, "Email already exists"
+            else:
+                return 500, "Something went wrong"
 
 
 @auth.post("signin", auth=None, response={401: str, 200: str})

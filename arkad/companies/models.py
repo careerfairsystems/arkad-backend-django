@@ -145,6 +145,10 @@ class Company(models.Model):
     employees_globally = models.IntegerField(default=None, null=True, blank=True)
 
     jobs = models.ManyToManyField(Job, blank=True)
+    visible_in_company_list = models.BooleanField(
+        default=True,
+        help_text="If false, the company will not be visible in the company list. Useful if a company for example only has a student session.",
+    )
 
     def __str__(self) -> str:
         return self.name

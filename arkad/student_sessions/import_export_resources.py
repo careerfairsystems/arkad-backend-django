@@ -1,6 +1,8 @@
 from typing import Any
 
 from import_export import resources, fields, widgets
+
+from arkad.settings import make_local_time
 from .models import StudentSessionApplication
 
 
@@ -15,7 +17,8 @@ class StudentSessionApplicationStatusWidget(widgets.CharWidget):
             raise ValueError(
                 f"Invalid status '{value}'. Valid statuses are: {valid_statuses}"
             )
-        return super().clean(value, row, *args, **kwargs)
+        # Parent clean only needs value and row
+        return super().clean(value, row)
 
 
 class StudentSessionApplicationResource(resources.ModelResource):  # type: ignore[type-arg]
@@ -28,7 +31,7 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
 
     def __init__(self, *args: Any, **kwargs: Any):
         self.request = kwargs.pop("request", None)
-        super(StudentSessionApplicationResource, self).__init__(*args, **kwargs)
+        super().__init__()
 
     # The only mutable field "status"
     status = fields.Field(
@@ -150,27 +153,7 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
 
         # If status changed to accepted, call accept() method
         if new_status == "accepted" and original_status != "accepted":
-            # Already saved with new status, now run the accept logic
-            from .models import StudentSessionTimeslot, SessionType
-
-            if instance.student_session.session_type == SessionType.COMPANY_EVENT:
-                if instance.student_session.company_event_at:
-                    timeslot, created = StudentSessionTimeslot.objects.get_or_create(
-                        student_session=instance.student_session,
-                        start_time=instance.student_session.company_event_at,
-                        defaults={"duration": 480},
-                    )
-                    if not timeslot.selected_applications.filter(
-                        id=instance.id
-                    ).exists():
-                        timeslot.add_selection(instance)
-
-            # Send email
-            instance.user.email_user(
-                "Application accepted",
-                "Your application has been accepted, enter the app and select a timeslot\n "
-                "They may run out at any time.\n",
-            )
+            instance.accept()
         # If status changed to rejected, call deny() method
         elif new_status == "rejected" and original_status != "rejected":
             # Send email
@@ -210,4 +193,121 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
         skip_unchanged = True
 
         # Report which rows were skipped.
+        report_skipped = True
+
+
+# --- New export resource: list all users attending student sessions ---
+class StudentSessionAttendeeResource(resources.ModelResource):  # type: ignore[type-arg]
+    """
+    Export-only resource listing attendees (applications assigned to a timeslot),
+    including user, company, session, and timeslot details.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.request = kwargs.pop("request", None)
+        super().__init__()
+
+    # Core identification
+    application_id = fields.Field(
+        attribute="id", column_name="Application ID", readonly=True
+    )
+
+    # User fields
+    first_name = fields.Field(
+        attribute="user__first_name", column_name="First Name", readonly=True
+    )
+    last_name = fields.Field(
+        attribute="user__last_name", column_name="Last Name", readonly=True
+    )
+    email = fields.Field(attribute="user__email", column_name="Email", readonly=True)
+    programme = fields.Field(
+        attribute="user__programme", column_name="Programme", readonly=True
+    )
+    study_year = fields.Field(
+        attribute="user__study_year", column_name="Study Year", readonly=True
+    )
+    food_preferences = fields.Field(
+        attribute="user__food_preferences",
+        column_name="Food Preferences",
+        readonly=True,
+    )
+
+    # Session/company fields
+    company = fields.Field(
+        attribute="student_session__company__name", column_name="Company", readonly=True
+    )
+    session_name = fields.Field(column_name="Session Name", readonly=True)
+    session_type = fields.Field(
+        attribute="student_session__session_type",
+        column_name="Session Type",
+        readonly=True,
+    )
+    session_location = fields.Field(
+        attribute="student_session__location", column_name="Location", readonly=True
+    )
+
+    # Timeslot fields (derived from selected_timeslots)
+    timeslot_id = fields.Field(column_name="Timeslot ID", readonly=True)
+    timeslot_start = fields.Field(column_name="Timeslot Start", readonly=True)
+    timeslot_duration_minutes = fields.Field(
+        column_name="Timeslot Duration (min)", readonly=True
+    )
+
+    def _primary_timeslot(self, application: StudentSessionApplication):  # type: ignore[no-untyped-def]
+        # Choose the earliest selected timeslot consistently
+        return application.selected_timeslots.order_by("start_time").first()
+
+    def dehydrate_session_name(self, application: StudentSessionApplication) -> str:
+        # Fallback to company name if explicit session name isn't set
+        return (
+            application.student_session.name or application.student_session.company.name
+        )
+
+    def dehydrate_timeslot_id(self, application: StudentSessionApplication) -> str:
+        ts = self._primary_timeslot(application)
+        return str(ts.id) if ts else ""
+
+    def dehydrate_timeslot_start(self, application: StudentSessionApplication) -> str:
+        ts = self._primary_timeslot(application)
+        return make_local_time(ts.start_time).isoformat() if ts else ""
+
+    def dehydrate_timeslot_duration_minutes(
+        self, application: StudentSessionApplication
+    ) -> str:
+        ts = self._primary_timeslot(application)
+        return str(ts.duration) if ts else ""
+
+    def get_queryset(self):  # type: ignore[no-untyped-def]
+        # Only include applications which have at least one selected timeslot (i.e., are attending)
+        return (
+            super().get_queryset().filter(selected_timeslots__isnull=False).distinct()
+        )
+
+    def export(self, queryset=None, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+        # Ensure we only export attendees even if admin passes a broader queryset
+        qs = queryset if queryset is not None else self.get_queryset()  # type: ignore[no-untyped-call]
+        qs = qs.filter(selected_timeslots__isnull=False).distinct()
+        return super().export(qs, *args, **kwargs)
+
+    class Meta:
+        model = StudentSessionApplication
+        # Export only; ensure a stable field order
+        fields = (
+            "application_id",
+            "first_name",
+            "last_name",
+            "email",
+            "programme",
+            "study_year",
+            "food_preferences",
+            "company",
+            "session_name",
+            "session_type",
+            "session_location",
+            "timeslot_id",
+            "timeslot_start",
+            "timeslot_duration_minutes",
+        )
+        export_order = fields
+        skip_unchanged = True
         report_skipped = True

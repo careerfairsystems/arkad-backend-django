@@ -14,6 +14,6 @@ class TestGetCompanies(TestCase):
         response = self.client.get("/api/company/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data), 3, data)
         company_names = {company["name"] for company in data}
         self.assertSetEqual(company_names, {"Company A", "Company B", "Company C"})
