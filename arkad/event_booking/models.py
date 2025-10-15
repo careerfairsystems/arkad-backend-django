@@ -1,6 +1,5 @@
 import uuid
 from datetime import timedelta, datetime
-from typing import Any, Type
 
 from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
