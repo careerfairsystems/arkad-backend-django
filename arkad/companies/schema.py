@@ -60,3 +60,4 @@ class CompanyOut(Schema):
     jobs: List[JobSchema] = []
     has_student_session: bool = False
     visible_in_company_list: bool = True
+    days_with_studentsession: int = 0  # Deprecated but kept for backward compatibility with existing apps. TODO remove
