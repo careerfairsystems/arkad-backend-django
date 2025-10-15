@@ -321,6 +321,22 @@ class EventBookingTestCase(TestCase):
         response = self.client.get(f"/api/events/{self.event.id}/", headers=headers)
         self.assertEqual(response.status_code, 404)
 
+    def test_get_event_not_visible_staff(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.staff_user)
+        response = self.client.get(f"/api/events/{self.event.id}/", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "Test Event")
+
+    def test_get_events_not_visible_staff(self):
+        self.event.visible_time = timezone.now() + datetime.timedelta(days=1)
+        self.event.save()
+        headers = self._get_auth_headers(self.staff_user)
+        response = self.client.get("/api/events", headers=headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)  # Event should be visible to staff
+
     def test_acquire_ticket_after_deadline(self):
         self.event.release_time = timezone.now() - datetime.timedelta(days=10)
         self.event.start_time = timezone.now() + datetime.timedelta(days=1)
