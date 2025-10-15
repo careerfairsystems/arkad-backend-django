@@ -39,9 +39,16 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                     year=2500, hour=21, minute=0, second=0, microsecond=0
                 ).replace(tzinfo=None)
             )
-
+            # Start time is in local timezone, make it aware
+            if (
+                start_time.tzinfo is None
+                or start_time.tzinfo.utcoffset(start_time) is None
+            ):
+                start_time = stockholm_tz.localize(start_time)
+            if end_time.tzinfo is None or end_time.tzinfo.utcoffset(end_time) is None:
+                end_time = stockholm_tz.localize(end_time)
             event = Event.objects.create(
-                name="Automatic LunchEvent",
+                name="Auto Lunch Event " + str(start_time),
                 type="lu",
                 start_time=start_time,
                 end_time=end_time,
@@ -50,7 +57,6 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                 location="Restaurant",
                 send_notifications_for_event=False,
             )
-            event.name = f"Automatic LunchEvent {event.id}"
             event.save()
 
             user, created = User.objects.get_or_create(
@@ -96,12 +102,12 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                     c.drawString(
                         x_offset + 20,
                         y_offset + cell_height - 50,
-                        f"Start: {event.start_time.strftime('%Y-%m-%d %H:%M')}",
+                        f"Start: {start_time.strftime('%Y-%m-%d %H:%M')}",
                     )
                     c.drawString(
                         x_offset + 20,
                         y_offset + cell_height - 70,
-                        f"End: {event.end_time.strftime('%Y-%m-%d %H:%M')}",
+                        f"End: {end_time.strftime('%Y-%m-%d %H:%M')}",
                     )
 
                     qr_img = qrcode.make(str(ticket.uuid))
