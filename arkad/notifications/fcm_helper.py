@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,7 @@ from firebase_admin.messaging import Message  # type: ignore[import-untyped]
 from arkad import settings
 from arkad.settings import DEBUG, ENVIRONMENT
 from user_models.models import User
+from django.core.cache import cache
 
 
 def log_notification(msg: Message) -> None:
@@ -76,6 +78,32 @@ class FCMHelper:
                 data = {}
             data["link"] = link
 
+        # Safeguard, if sending with topic check cache key last_topic_notification_{topic}
+        # If it exists do not send and instead raise. This is to avoid spamming topics.
+        # The cache has a 1-minute expiry so only one notification per minute per topic.
+
+        # Include a hashed version of the title in the cache key to allow different notifications
+        # to be sent to the same topic within the rate limit window.
+        # Use a deterministic hash function for consistency across runs.
+        hashed_title: str = hashlib.md5(title.encode()).hexdigest()
+        cache_key: str
+        if topic:
+            cache_key = f"last_topic_notification_{topic}_{hashed_title}"
+            if cache.get(cache_key):
+                logging.exception(
+                    f"Skipping FCM notification to topic {topic} due to rate limiting."
+                )
+                return False
+        if token:
+            # When sending to a token we also rate limit but per token and title.
+            hashed_token: str = hashlib.md5(token.encode()).hexdigest()
+            cache_key = f"last_token_notification_{hashed_token}_{hashed_title}"
+            if cache.get(cache_key):
+                logging.exception(
+                    f"Skipping FCM notification to token {token} due to rate limiting."
+                )
+                return False
+
         msg = messaging.Message(
             notification=notification,
             token=token,
@@ -85,6 +113,9 @@ class FCMHelper:
             if android_notification
             else None,
         )
+
+        if topic:
+            cache.set(cache_key, True, timeout=60)  # 1 minute rate limit
 
         logging.info(messaging.send(msg))
         log_notification(msg)
