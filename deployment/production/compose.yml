@@ -42,16 +42,6 @@ services:
     env_file:
       - .env
 
-  celery-beat:
-    extends:
-      file: ../shared-compose.yaml
-      service: celery-beat
-    container_name: arkad-production-celery-beat
-    environment:
-      - SENTRY_ENVIRONMENT=production
-    env_file:
-      - .env
-
   websocket:
     extends:
       file: ../shared-compose.yaml
@@ -80,4 +70,3 @@ volumes:
   media_volume:
   static_volume:
   redis_data:
-  celery_beat_schedule:

@@ -2,7 +2,7 @@ import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, cast
 
 import firebase_admin  # type: ignore[import-untyped]
 from firebase_admin import credentials, messaging
@@ -86,24 +86,15 @@ class FCMHelper:
         # to be sent to the same topic within the rate limit window.
         # Use a deterministic hash function for consistency across runs.
         hashed_title: str = hashlib.md5(title.encode()).hexdigest()
-        cache_key: str
-        if topic:
-            cache_key = f"last_topic_notification_{topic}_{hashed_title}"
-            if cache.get(cache_key):
-                logging.exception(
-                    f"Skipping FCM notification to topic {topic} due to rate limiting."
-                )
-                return False
-        if token:
-            # When sending to a token we also rate limit but per token and title.
-            hashed_token: str = hashlib.md5(token.encode()).hexdigest()
-            cache_key = f"last_token_notification_{hashed_token}_{hashed_title}"
-            if cache.get(cache_key):
-                logging.exception(
-                    f"Skipping FCM notification to token {token} due to rate limiting."
-                )
-                return False
 
+        # Determine cache key based on whether sending to topic or token
+        target: str = topic if topic else hashlib.md5(cast(str, token).encode()).hexdigest()
+        cache_key: str = f"last_topic_notification_{target}_{hashed_title}"
+        if cache.get(cache_key):
+            logging.exception(
+                f"Skipping FCM notification to {target[:20]} due to rate limiting."
+            )
+            return False
         msg = messaging.Message(
             notification=notification,
             token=token,
@@ -113,9 +104,7 @@ class FCMHelper:
             if android_notification
             else None,
         )
-
-        if topic:
-            cache.set(cache_key, True, timeout=60)  # 1 minute rate limit
+        cache.set(cache_key, True, timeout=60)  # 1 minute rate limit
 
         logging.info(messaging.send(msg))
         log_notification(msg)

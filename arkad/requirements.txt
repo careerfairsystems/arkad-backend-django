@@ -27,7 +27,6 @@ cryptography==44.0.1
 daphne==4.2.1
 diff-match-patch==20241021
 Django==5.2.7
-django-celery-beat==2.8.1
 django-cors-headers==4.7.0
 django-import-export==4.3.10
 django-ninja==1.4.1

@@ -55,7 +55,8 @@ services:
   celery-worker:
     build: ../arkad
     restart: unless-stopped
-    command: celery -A arkad worker -l info --concurrency=4
+    # We do not need many concurrent workers as we are only sending notifications, they can be slightly delayed
+    command: celery -A arkad worker -l info --concurrency=1 --worker-max-memory-per-child=1048576  # 1GB max memory per child
     depends_on:
       db:
         condition: service_healthy
@@ -65,23 +66,6 @@ services:
       - media_volume:/app/arkad/media
       - ${PWD}/config:/app/arkad/config
       - ${PWD}/private:/app/arkad/private
-    networks:
-      - app_network
-
-  celery-beat:
-    build: ../arkad
-    restart: unless-stopped
-    command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info -S django"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - media_volume:/app/arkad/media
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
-      - celery_beat_schedule:/app/arkad/celerybeat
     networks:
       - app_network
 
@@ -118,7 +102,6 @@ volumes:
   media_volume:
   static_volume:
   redis_data:
-  celery_beat_schedule:
 
 networks:
   app_network:
