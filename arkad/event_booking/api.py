@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Prefetch
 from django.utils import timezone
 
 from arkad.auth import OPTIONAL_AUTH
@@ -29,7 +29,13 @@ def get_events(request: AuthenticatedRequest):
             for e in Event.objects.filter(visible_time__lte=timezone.now()).all()
         ]
 
-    events: QuerySet[Event] = Event.objects.prefetch_related("tickets")
+    user_tickets_qs = Ticket.objects.filter(user_id=request.user.id)
+
+    # Use Prefetch to attach only the relevant tickets to the events
+    # The related manager will be named 'user_tickets' instead of the default 'tickets'
+    events: QuerySet[Event] = Event.objects.prefetch_related(
+        Prefetch("tickets", queryset=user_tickets_qs, to_attr="user_tickets")
+    )
 
     if not request.user.is_staff:
         events = events.filter(visible_time__lte=timezone.now())
@@ -37,12 +43,16 @@ def get_events(request: AuthenticatedRequest):
     result: list[EventSchema] = []
     for event in events.all():
         schema = EventSchema.from_orm(event)
-        user_ticket: Ticket | None = event.tickets.filter(
-            user_id=request.user.id
-        ).first()
+
+        # Access the prefetched list, which will contain 0 or 1 ticket
+        user_tickets_list: list[Ticket] = event.user_tickets
+        user_ticket: Ticket | None = user_tickets_list[0] if user_tickets_list else None
+
         if user_ticket is not None:
             schema.status = user_ticket.status()
+
         result.append(schema)
+
     return result
 
 
