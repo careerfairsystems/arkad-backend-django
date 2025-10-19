@@ -61,36 +61,13 @@ services:
     command: >
       sh -c "
         cp -n /keys/* /app/arkad/private/ 2>/dev/null || true &&
-        celery -A arkad worker -l info --concurrency=4
+        celery -A arkad worker -l info --concurrency=1 --worker-max-memory-per-child=1048576  # 1GB max memory per child
       "
     volumes:
       - ../arkad:/app/arkad
       - media_volume:/app/arkad/media
       - ../config:/app/arkad/config
       - ../private:/app/arkad/private
-    env_file:
-      - ../arkad/.env
-
-  celery-beat:
-    extends:
-      file: ../deployment/shared-compose.yaml
-      service: celery-beat
-    container_name: arkad-dev-celery-beat
-    environment:
-      - SENTRY_ENVIRONMENT=development
-      - DJANGO_DEBUG=True
-      - POSTGRES_HOST=db
-    command: >
-      sh -c "
-        cp -n /keys/* /app/arkad/private/ 2>/dev/null || true &&
-        celery -A arkad beat -l info -S django
-      "
-    volumes:
-      - ../arkad:/app/arkad
-      - media_volume:/app/arkad/media
-      - ../config:/app/arkad/config
-      - ../private:/app/arkad/private
-      - celery_beat_schedule:/app/arkad/celerybeat
     env_file:
       - ../arkad/.env
 
@@ -135,4 +112,3 @@ volumes:
   media_volume:
   static_volume:
   redis_data:
-  celery_beat_schedule:

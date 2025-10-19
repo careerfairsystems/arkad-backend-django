@@ -69,23 +69,6 @@ services:
     networks:
       - app_network
 
-  celery-beat:
-    build: ../arkad
-    restart: unless-stopped
-    command: sh -c "mkdir -p /app/arkad/celerybeat && celery -A arkad beat -l info -S django"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - media_volume:/app/arkad/media
-      - ${PWD}/config:/app/arkad/config
-      - ${PWD}/private:/app/arkad/private
-      - celery_beat_schedule:/app/arkad/celerybeat
-    networks:
-      - app_network
-
   websocket:
     restart: unless-stopped
     build: ../arkad
@@ -119,7 +102,6 @@ volumes:
   media_volume:
   static_volume:
   redis_data:
-  celery_beat_schedule:
 
 networks:
   app_network:
