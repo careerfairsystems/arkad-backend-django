@@ -92,7 +92,7 @@ class FCMHelper:
         cache_key: str = f"last_topic_notification_{target}_{hashed_title}"
         if cache.get(cache_key):
             logging.exception(
-                f"Skipping FCM notification to topic {topic} due to rate limiting."
+                f"Skipping FCM notification to {target[:20]} due to rate limiting."
             )
             return False
         msg = messaging.Message(
