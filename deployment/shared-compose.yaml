@@ -56,7 +56,7 @@ services:
     build: ../arkad
     restart: unless-stopped
     # We do not need many concurrent workers as we are only sending notifications, they can be slightly delayed
-    command: celery -A arkad worker -l info --concurrency=1 --worker-max-memory-per-child=1048576  # 1GB max memory per child
+    command: celery -A arkad worker -l info --concurrency=1 --max-memory-per-child=1048576  # 1GB max memory per child
     depends_on:
       db:
         condition: service_healthy
