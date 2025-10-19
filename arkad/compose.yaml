@@ -61,7 +61,7 @@ services:
     command: >
       sh -c "
         cp -n /keys/* /app/arkad/private/ 2>/dev/null || true &&
-        celery -A arkad worker -l info --concurrency=1 --worker-max-memory-per-child=1048576  # 1GB max memory per child
+        celery -A arkad worker -l info --concurrency=1 --max-memory-per-child=1048576  # 1GB max memory per child
       "
     volumes:
       - ../arkad:/app/arkad
