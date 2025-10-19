@@ -29,6 +29,13 @@ services:
       - SENTRY_ENVIRONMENT=staging
     env_file:
       - .env
+    # Override command as we do not require as many workers in staging. 2 should be enough.
+    command: sh -c "
+      python manage.py collectstatic --no-input &&
+      python manage.py createcachetable &&
+      python manage.py migrate &&
+      gunicorn --workers 2 --timeout 16 arkad.wsgi:application --bind 0.0.0.0:8000
+      "
 
   celery-worker:
     extends:
