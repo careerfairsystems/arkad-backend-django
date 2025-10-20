@@ -70,6 +70,7 @@ class StudentSessionNormalUserSchema(Schema):
     id: int
     session_type: Literal["regular", "company_event"]
     company_event_at: datetime | None = None
+    name: str | None
 
 
 class StudentSessionNormalUserListSchema(Schema):

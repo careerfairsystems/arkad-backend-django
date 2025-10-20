@@ -1,10 +1,12 @@
 import os
 from celery import Celery  # type: ignore[import-untyped]
 
+from arkad.settings import ENVIRONMENT
+
 # Set default Django settings module for 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "arkad.settings")
 
-app = Celery("arkad")
+app = Celery("arkad" if ENVIRONMENT == "production" else "arkad_staging")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

@@ -88,7 +88,9 @@ class FCMHelper:
         hashed_title: str = hashlib.md5(title.encode()).hexdigest()
 
         # Determine cache key based on whether sending to topic or token
-        target: str = topic if topic else hashlib.md5(cast(str, token).encode()).hexdigest()
+        target: str = (
+            topic if topic else hashlib.md5(cast(str, token).encode()).hexdigest()
+        )
         cache_key: str = f"last_topic_notification_{target}_{hashed_title}"
         if cache.get(cache_key):
             logging.exception(
