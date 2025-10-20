@@ -112,6 +112,7 @@ class ScheduledCeleryTasksAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "live_status",
         "task_result",
         "task_error",
+        "revoked"
     )
 
     # Custom actions
