@@ -404,8 +404,9 @@ class StudentSession(models.Model):
         Calls full clean before saving to ensure constraints are checked.
         """
         self.full_clean()
-        self.schedule_notifications()
-        return super().save(*args, **kwargs)
+        saved = super().save(*args, **kwargs)
+        self.schedule_notifications()  # After save so id is not None
+        return saved
 
     def revoke_and_reschedule_tasks(self) -> None:
         # Remove and reschedule notifications for the session itself
