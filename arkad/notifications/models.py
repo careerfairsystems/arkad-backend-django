@@ -1,11 +1,17 @@
+import datetime
+import json
 import logging
-from typing import Any
+from typing import Any, cast
 
+from celery import Task  # type: ignore[import-untyped]
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 from firebase_admin.messaging import UnregisteredError  # type: ignore[import-untyped]
 
+from arkad.settings import DEBUG
 from email_app.emails import send_generic_information_email
 from notifications.fcm_helper import fcm
 
@@ -75,6 +81,138 @@ class Notification(models.Model):
                 name="either_user_or_topic_not_both",
             )
         ]
+
+
+class ScheduledCeleryTasks(models.Model):
+    task_name = models.CharField(max_length=255)
+    task_arguments = models.JSONField(default=list)
+    task_id = models.CharField(editable=False, unique=True)
+
+    eta = models.DateTimeField(null=False, blank=False)
+    revoked = models.BooleanField(default=False)
+
+    status = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        editable=False,
+        default="PENDING",
+        verbose_name="Status, must be manually refreshed",
+    )
+    result = models.TextField(null=True, blank=True, editable=False)
+    error = models.TextField(null=True, blank=True, editable=False)
+
+    def __str__(self) -> str:
+        if not self.revoked:
+            return f"Scheduled Task: {self.task_name} at {self.eta}"
+        return f"Revoked Task: {self.task_name} at {self.eta}"
+
+    @classmethod
+    def schedule_task(
+        cls, task_function: Task, eta: datetime.datetime, arguments: list[Any]
+    ) -> "ScheduledCeleryTasks":
+        """
+        Schedule a Celery task to be executed at a specific time (eta) with given arguments.
+        Returns the ScheduledCeleryTasks instance representing the scheduled task.
+        """
+
+        # Make sure that eta is in future
+        if eta <= timezone.now():
+            raise ValueError("ETA must be in the future.")
+
+        task_name: str
+        if hasattr(task_function, "name"):
+            task_name = cast(str, getattr(task_function, "name"))
+        elif hasattr(task_function, "__class__") and hasattr(
+            task_function.__class__, "name"
+        ):
+            task_name = cast(str, getattr(task_function.__class__, "name"))
+        else:
+            task_name = str(task_function)
+
+        scheduled_task = cls.objects.create(
+            task_name=task_name,
+            task_arguments=json.loads(
+                json.dumps(arguments, default=str)
+            ),  # Ensure JSON serializable, if not use str()
+            eta=eta,
+            task_id=task_function.apply_async(args=arguments, eta=eta).id,
+        )
+        logging.info(
+            f"Scheduled task {scheduled_task.task_name} with ID {scheduled_task.task_id} at {scheduled_task.eta}"
+        )
+        return scheduled_task
+
+    @property
+    def fetch_status(self) -> str:
+        """
+        Returns the current Celery task status.
+        Does NOT depend on stored DB state, gets live state from Celery backend.
+        """
+        result = AsyncResult(self.task_id)
+        return str(result.status)
+
+    @property
+    def fetch_result(self) -> Any:
+        """
+        Get the return value of the Celery task if it finished successfully.
+        """
+        result = AsyncResult(self.task_id)
+        if result.successful():
+            return result.result
+        return None
+
+    @property
+    def fetch_error(self) -> Any:
+        """
+        Get error traceback if task failed.
+        """
+        result = AsyncResult(self.task_id)
+        if result.failed():
+            return str(result.result)  # exception message
+        return None
+
+    @classmethod
+    def revoke_task_by_id(cls, task_id: str) -> None:
+        """
+        Revoke a scheduled Celery task.
+        """
+        task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
+        return task.revoke()
+
+    def revoke(self) -> None:
+        """
+        Revoke this scheduled Celery task.
+        """
+        from arkad.celery import app as celery_app
+
+        if not self.revoked:
+            AsyncResult(str(self.task_id), app=celery_app).revoke()
+            self.revoked = True
+            self.save(update_fields=["revoked"])
+        else:
+            logging.warning(f"Task {self.task_id} already revoked.")
+
+    def update_status(self) -> None:
+        self.status = str(self.fetch_status)
+        self.error = str(self.fetch_error)
+        self.result = str(self.fetch_result)
+        self.save()
+
+    @classmethod
+    def is_revoked(cls, task_id: str) -> bool:
+        """
+        Verify that the task with given task_id is not revoked.
+        """
+        try:
+            # This makes tests fail as we manually run the tasks there. If the task_id is None and we are in DEBUG, return False
+            if (task_id is None or task_id == str(None)) and DEBUG:
+                return False
+            task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
+            return task.revoked
+        except cls.DoesNotExist:
+            logging.error(f"Task with ID {task_id} does not exist. Counting as revoked")
+            return True
 
 
 # Automatically send out notifications when a Notification is created
