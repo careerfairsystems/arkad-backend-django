@@ -26,12 +26,16 @@ class EventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         extra_context["show_button"] = True
         return super().changelist_view(request, extra_context=extra_context)
 
-    def revoke_and_reschedule_tasks_action(self, request, queryset):
+    def revoke_and_reschedule_tasks_action(self, request, queryset):  # type: ignore[no-untyped-def]
         for event in queryset:
             event.revoke_and_reschedule_tasks()
-        self.message_user(request, f"Revoked and rescheduled tasks for {queryset.count()} event(s).")
+        self.message_user(
+            request, f"Revoked and rescheduled tasks for {queryset.count()} event(s)."
+        )
 
-    revoke_and_reschedule_tasks_action.short_description = "Revoke and reschedule all scheduled tasks for selected events"
+    revoke_and_reschedule_tasks_action.short_description = (  # type: ignore[attr-defined]
+        "Revoke and reschedule all scheduled tasks for selected events"
+    )
 
 
 admin.site.register(Event, EventAdmin)

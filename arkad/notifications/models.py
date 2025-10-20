@@ -3,8 +3,8 @@ import json
 import logging
 from typing import Any, cast
 
-from celery import Task
-from celery.result import AsyncResult
+from celery import Task  # type: ignore[import-untyped]
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
@@ -72,10 +72,10 @@ class Notification(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=(
-                        models.Q(target_user__isnull=False, notification_topic__isnull=True)
-                        | models.Q(
-                    target_user__isnull=True, notification_topic__isnull=False
-                )
+                    models.Q(target_user__isnull=False, notification_topic__isnull=True)
+                    | models.Q(
+                        target_user__isnull=True, notification_topic__isnull=False
+                    )
                 ),
                 name="either_user_or_topic_not_both",
             )
@@ -90,8 +90,14 @@ class ScheduledCeleryTasks(models.Model):
     eta = models.DateTimeField(null=False, blank=False)
     revoked = models.BooleanField(default=False)
 
-    status = models.CharField(max_length=255, null=True, blank=True, editable=False, default="PENDING",
-                              verbose_name="Status, must be manually refreshed")
+    status = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        editable=False,
+        default="PENDING",
+        verbose_name="Status, must be manually refreshed",
+    )
     result = models.TextField(null=True, blank=True, editable=False)
     error = models.TextField(null=True, blank=True, editable=False)
 
@@ -101,7 +107,9 @@ class ScheduledCeleryTasks(models.Model):
         return f"Revoked Task: {self.task_name} at {self.eta}"
 
     @classmethod
-    def schedule_task(cls, task_function: Task, eta: datetime.datetime, arguments: list[Any]) -> "ScheduledCeleryTasks":
+    def schedule_task(
+        cls, task_function: Task, eta: datetime.datetime, arguments: list[Any]
+    ) -> "ScheduledCeleryTasks":
         """
         Schedule a Celery task to be executed at a specific time (eta) with given arguments.
         Returns the ScheduledCeleryTasks instance representing the scheduled task.
@@ -114,18 +122,24 @@ class ScheduledCeleryTasks(models.Model):
         task_name: str
         if hasattr(task_function, "name"):
             task_name = cast(str, getattr(task_function, "name"))
-        elif hasattr(task_function, "__class__") and hasattr(task_function.__class__, "name"):
+        elif hasattr(task_function, "__class__") and hasattr(
+            task_function.__class__, "name"
+        ):
             task_name = cast(str, getattr(task_function.__class__, "name"))
         else:
             task_name = str(task_function)
 
         scheduled_task = cls.objects.create(
             task_name=task_name,
-            task_arguments=json.loads(json.dumps(arguments, default=str)),  # Ensure JSON serializable, if not use str()
+            task_arguments=json.loads(
+                json.dumps(arguments, default=str)
+            ),  # Ensure JSON serializable, if not use str()
             eta=eta,
-            task_id=task_function.apply_async(args=arguments, eta=eta).id
+            task_id=task_function.apply_async(args=arguments, eta=eta).id,
         )
-        logging.info(f"Scheduled task {scheduled_task.task_name} with ID {scheduled_task.task_id} at {scheduled_task.eta}")
+        logging.info(
+            f"Scheduled task {scheduled_task.task_name} with ID {scheduled_task.task_id} at {scheduled_task.eta}"
+        )
         return scheduled_task
 
     @property
@@ -170,6 +184,7 @@ class ScheduledCeleryTasks(models.Model):
         Revoke this scheduled Celery task.
         """
         from arkad.celery import app as celery_app
+
         if not self.revoked:
             AsyncResult(str(self.task_id), app=celery_app).revoke()
             self.revoked = True
@@ -177,7 +192,7 @@ class ScheduledCeleryTasks(models.Model):
         else:
             logging.warning(f"Task {self.task_id} already revoked.")
 
-    def update_status(self):
+    def update_status(self) -> None:
         self.status = str(self.fetch_status)
         self.error = str(self.fetch_error)
         self.result = str(self.fetch_result)
@@ -194,6 +209,7 @@ class ScheduledCeleryTasks(models.Model):
         except cls.DoesNotExist:
             logging.error(f"Task with ID {task_id} does not exist. Counting as revoked")
             return True
+
 
 # Automatically send out notifications when a Notification is created
 @receiver(pre_save, sender=Notification)

@@ -2,7 +2,6 @@ import uuid
 from datetime import timedelta, datetime
 from typing import Type, Any
 
-from celery.result import AsyncResult  # type: ignore[import-untyped]
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, CheckConstraint
@@ -25,11 +24,30 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_event_tomorrow", blank=True)
-    notify_event_in_one_hour = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                 default=None, related_name="notify_event_in_one_hour", blank=True)
-    notify_registration_closes_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                            default=None, related_name="notify_registration_closes_tomorrow", blank=True)
+    notify_event_tomorrow = models.ForeignKey(
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_event_tomorrow",
+        blank=True,
+    )
+    notify_event_in_one_hour = models.ForeignKey(
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_event_in_one_hour",
+        blank=True,
+    )
+    notify_registration_closes_tomorrow = models.ForeignKey(
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_registration_closes_tomorrow",
+        blank=True,
+    )
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -40,6 +58,7 @@ class Ticket(models.Model):
     def schedule_notifications(self, start_time: datetime) -> None:
         """Schedule notifications for this ticket."""
         from notifications import tasks
+
         self.remove_notifications()  # Make sure that all tasks are removed
 
         # (Du har anmält dig till) YYY (som är) med XXX är imorgon
@@ -67,10 +86,12 @@ class Ticket(models.Model):
         booking_freezes_at = self.event.booking_freezes_at
         eta3 = booking_freezes_at - timedelta(days=1)
         if eta3 > timezone.now():
-            self.notify_registration_closes_tomorrow = ScheduledCeleryTasks.schedule_task(
-                task_function=tasks.notify_event_registration_closes_tomorrow,
-                eta=eta3,
-                arguments=[self.event.id],
+            self.notify_registration_closes_tomorrow = (
+                ScheduledCeleryTasks.schedule_task(
+                    task_function=tasks.notify_event_registration_closes_tomorrow,
+                    eta=eta3,
+                    arguments=[self.event.id],
+                )
             )
         else:
             self.task_id_notify_registration_closes_tomorrow = None
@@ -96,7 +117,7 @@ class Ticket(models.Model):
 
 @receiver(post_save, sender=Ticket)
 def schedule_ticket_notifications(
-        sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
+    sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
 ) -> None:
     should_be_processed: bool = getattr(instance, "_signal_receivers_disabled", False)
 
@@ -141,8 +162,14 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    notify_registration_opening = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                    default=None, related_name="notify_event_registration_opening", blank=True)
+    notify_registration_opening = models.ForeignKey(
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_event_registration_opening",
+        blank=True,
+    )
 
     send_notifications_for_event = models.BooleanField(
         default=True,
@@ -185,6 +212,7 @@ class Event(models.Model):
 
     def schedule_notifications(self) -> None:
         from notifications import tasks
+
         self.remove_notifications()  # Make sure that all tasks are removed
 
         # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
@@ -213,7 +241,7 @@ class Event(models.Model):
         else:
             return "Event"
 
-    def revoke_and_reschedule_tasks(self):
+    def revoke_and_reschedule_tasks(self) -> None:
         """
         Remove and reschedule notifications for the event and all related tickets if the event is in the future.
         """
@@ -234,7 +262,7 @@ class Event(models.Model):
 
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(
-        sender: Type[Event], instance: Event, created: bool, **kwargs: Any
+    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
     # On update, remove old notifications
     if getattr(instance, "_signal_receivers_disabled", False):

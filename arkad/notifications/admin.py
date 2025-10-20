@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def"
 from typing import Any
 
 from django.contrib import admin, messages
@@ -38,6 +39,7 @@ class NotificationLogAdmin(admin.ModelAdmin):  # type: ignore
         # Only possible to delete in DEBUG mode
         return DEBUG
 
+
 @admin.action(description="Fetch live status and update selected tasks")
 def refetch_status_action(modeladmin, request, queryset):
     """Refetches the live status and updates the database record for selected tasks."""
@@ -50,12 +52,11 @@ def refetch_status_action(modeladmin, request, queryset):
             modeladmin.message_user(
                 request,
                 f"Error updating task {task.task_id}: {e}",
-                level=messages.ERROR
+                level=messages.ERROR,
             )
 
     modeladmin.message_user(
-        request,
-        f"Successfully updated status for {updated_count} scheduled task(s)."
+        request, f"Successfully updated status for {updated_count} scheduled task(s)."
     )
 
 
@@ -74,45 +75,43 @@ def revoke_tasks_action(modeladmin, request, queryset):
             modeladmin.message_user(
                 request,
                 f"Error revoking task {task.task_id}: {e}",
-                level=messages.ERROR
+                level=messages.ERROR,
             )
 
-    modeladmin.message_user(
-        request,
-        f"Successfully revoked {revoked_count} task(s)."
-    )
+    modeladmin.message_user(request, f"Successfully revoked {revoked_count} task(s).")
 
 
 # --- ModelAdmin Class ---
 
+
 @admin.register(ScheduledCeleryTasks)
-class ScheduledCeleryTasksAdmin(admin.ModelAdmin):
+class ScheduledCeleryTasksAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # Fields displayed in the list view
     list_display = (
-        'task_name',
-        'eta',
-        'db_status',  # Property to show DB status
-        'live_status',  # Property to show live status
-        'is_revoked',
-        'task_id_link'
+        "task_name",
+        "eta",
+        "db_status",  # Property to show DB status
+        "live_status",  # Property to show live status
+        "is_revoked",
+        "task_id_link",
     )
 
     # Fields that can be filtered on
-    list_filter = ('revoked', 'status', 'eta')
+    list_filter = ("revoked", "status", "eta")
 
     # Fields that can be searched
-    search_fields = ('task_name', 'task_id')
+    search_fields = ("task_name", "task_id")
 
     # Fields to display when viewing/editing a single record
     readonly_fields = (
-        'task_name',
-        'task_arguments',
-        'eta',
-        'task_id',
-        'db_status',
-        'live_status',
-        'task_result',
-        'task_error',
+        "task_name",
+        "task_arguments",
+        "eta",
+        "task_id",
+        "db_status",
+        "live_status",
+        "task_result",
+        "task_error",
     )
 
     # Custom actions
@@ -124,22 +123,24 @@ class ScheduledCeleryTasksAdmin(admin.ModelAdmin):
 
     # --- Custom Display Properties ---
 
-    @admin.display(description='DB Status')
+    @admin.display(description="DB Status")
     def db_status(self, obj):
         """Displays the stored database status with styling."""
         status = obj.status
-        if status in ['SUCCESS']:
-            color = 'green'
-        elif status in ['FAILURE']:
-            color = 'red'
-        elif status in ['PENDING', 'RETRY']:
-            color = 'orange'
+        if status in ["SUCCESS"]:
+            color = "green"
+        elif status in ["FAILURE"]:
+            color = "red"
+        elif status in ["PENDING", "RETRY"]:
+            color = "orange"
         else:
-            color = 'blue'
+            color = "blue"
 
-        return format_html(f'<span style="color: {color}; font-weight: bold;">{status}</span>')
+        return format_html(
+            f'<span style="color: {color}; font-weight: bold;">{status}</span>'
+        )
 
-    @admin.display(description='Live Status')
+    @admin.display(description="Live Status")
     def live_status(self, obj):
         """Fetches the live status from Celery and displays it."""
         try:
@@ -147,39 +148,41 @@ class ScheduledCeleryTasksAdmin(admin.ModelAdmin):
         except Exception:
             status = "ERROR_FETCHING"
 
-        color = 'gray'
-        if status in ['SUCCESS']:
-            color = 'green'
-        elif status in ['FAILURE', 'REVOKED']:
-            color = 'red'
-        elif status in ['PENDING', 'RETRY']:
-            color = 'orange'
-        elif status in ['STARTED']:
-            color = 'blue'
+        color = "gray"
+        if status in ["SUCCESS"]:
+            color = "green"
+        elif status in ["FAILURE", "REVOKED"]:
+            color = "red"
+        elif status in ["PENDING", "RETRY"]:
+            color = "orange"
+        elif status in ["STARTED"]:
+            color = "blue"
 
-        return format_html(f'<span style="color: {color}; font-weight: bold;">{status} (LIVE)</span>')
+        return format_html(
+            f'<span style="color: {color}; font-weight: bold;">{status} (LIVE)</span>'
+        )
 
-    @admin.display(description='Revoked')
+    @admin.display(description="Revoked")
     def is_revoked(self, obj):
         """Displays the revoked status with an icon."""
         return obj.revoked
 
-    is_revoked.boolean = True  # Displays a checkmark/X icon
+    is_revoked.boolean = True  # type: ignore[attr-defined]
 
-    @admin.display(description='Task ID')
+    @admin.display(description="Task ID")
     def task_id_link(self, obj):
         """Allows copy-paste of the task ID."""
         return format_html(f'<code title="{obj.task_id}">{obj.task_id[:8]}...</code>')
 
-    @admin.display(description='Result')
+    @admin.display(description="Result")
     def task_result(self, obj):
         """Displays stored result."""
         if obj.result:
             # Use a slightly monospace font for result/error
-            return format_html(f'<pre>{obj.result}</pre>')
+            return format_html(f"<pre>{obj.result}</pre>")
         return "N/A"
 
-    @admin.display(description='Error/Traceback')
+    @admin.display(description="Error/Traceback")
     def task_error(self, obj):
         """Displays stored error/traceback."""
         if obj.error:

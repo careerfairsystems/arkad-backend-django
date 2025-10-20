@@ -34,7 +34,12 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
     list_filter = ("student_session__company", "status")
 
     # Make some fields read-only in the admin detail view for safety
-    readonly_fields = ("timestamp", "notify_timeslot_tomorrow", "notify_timeslot_in_one_hour", "notify_timeslot_booking_closes_tomorrow")
+    readonly_fields = (
+        "timestamp",
+        "notify_timeslot_tomorrow",
+        "notify_timeslot_in_one_hour",
+        "notify_timeslot_booking_closes_tomorrow",
+    )
 
     @admin.display(description="Company", ordering="student_session__company")
     def get_company(self, obj: StudentSessionApplication) -> str:
@@ -55,13 +60,21 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
 class StudentSessionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("company", "booking_open_time", "booking_close_time")
     actions = ["revoke_and_reschedule_tasks_action"]
-    readonly_fields = ["notify_registration_open", ]
+    readonly_fields = [
+        "notify_registration_open",
+    ]
 
-    def revoke_and_reschedule_tasks_action(self, request, queryset):
+    def revoke_and_reschedule_tasks_action(self, request, queryset):  # type: ignore[no-untyped-def]
         for session in queryset:
             session.revoke_and_reschedule_tasks()
-        self.message_user(request, f"Revoked and rescheduled tasks for {queryset.count()} student session(s).")
-    revoke_and_reschedule_tasks_action.short_description = "Revoke and reschedule all scheduled tasks for selected student sessions"
+        self.message_user(
+            request,
+            f"Revoked and rescheduled tasks for {queryset.count()} student session(s).",
+        )
+
+    revoke_and_reschedule_tasks_action.short_description = (  # type: ignore[attr-defined]
+        "Revoke and reschedule all scheduled tasks for selected student sessions"
+    )
 
 
 @admin.register(StudentSessionTimeslot)

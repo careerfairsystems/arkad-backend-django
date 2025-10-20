@@ -9,7 +9,6 @@ from django.db.models import UniqueConstraint
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
-from celery.result import AsyncResult  # type: ignore[import-untyped]
 from arkad.defaults import (
     STUDENT_SESSIONS_OPEN_UTC,
     STUDENT_SESSIONS_CLOSE_UTC,
@@ -58,15 +57,30 @@ class StudentSessionApplication(models.Model):
     )
 
     notify_timeslot_tomorrow = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_tomorrow", blank=True
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_timeslot_tomorrow",
+        blank=True,
     )
 
     notify_timeslot_in_one_hour = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_in_one_hour", blank=True
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_timeslot_in_one_hour",
+        blank=True,
     )
 
     notify_timeslot_booking_closes_tomorrow = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_booking_closes_tomorrow", blank=True
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="notify_timeslot_booking_closes_tomorrow",
+        blank=True,
     )
 
     class Meta:
@@ -155,6 +169,7 @@ class StudentSessionApplication(models.Model):
             "Can only schedule notifications for accepted applications"
         )
         from notifications import tasks
+
         self.remove_notifications()  # Make sure to not duplicate tasks
 
         eta1 = start_time - timedelta(hours=24)
@@ -371,6 +386,7 @@ class StudentSession(models.Model):
 
     def schedule_notifications(self) -> None:
         from notifications import tasks
+
         if self.notify_registration_open:
             # Revoke existing task if it exists
             self.notify_registration_open.revoke()
@@ -391,7 +407,7 @@ class StudentSession(models.Model):
         self.schedule_notifications()
         return super().save(*args, **kwargs)
 
-    def revoke_and_reschedule_tasks(self):
+    def revoke_and_reschedule_tasks(self) -> None:
         # Remove and reschedule notifications for the session itself
         self.schedule_notifications()  # This already revokes and reschedules
         # For each timeslot, for each selected application, remove and reschedule notifications if timeslot is in the future

@@ -35,11 +35,13 @@ The routes to the app are:
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:
+def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore[no-untyped-def]
     """Notify the user that they have an event tomorrow (with email)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_event_tomorrow")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_event_tomorrow"
+        )
         return
 
     try:
@@ -91,11 +93,13 @@ def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_one_hour(self, ticket_uuid: uuid.UUID) -> None:
+def notify_event_one_hour(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore[no-untyped-def]
     """Notify the user that they have an event in one hour (FCM only)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_event_one_hour")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_event_one_hour"
+        )
         return
 
     try:
@@ -166,13 +170,15 @@ def _get_session_notification_texts(
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_student_session_tomorrow(
+def notify_student_session_tomorrow(  # type: ignore[no-untyped-def]
     self, user_id: int, student_session_id: int, timeslot_id: int
 ) -> None:
     """Notify the user about a student session tomorrow (with email)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_student_session_tomorrow")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_student_session_tomorrow"
+        )
         return
 
     try:
@@ -227,13 +233,15 @@ def notify_student_session_tomorrow(
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_student_session_one_hour(
+def notify_student_session_one_hour(  # type: ignore[no-untyped-def]
     self, user_id: int, student_session_id: int, timeslot_id: int
 ) -> None:
     """Notify the user about a student session in one hour (FCM only)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_student_session_one_hour")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_student_session_one_hour"
+        )
         return
 
     try:
@@ -272,11 +280,13 @@ def notify_student_session_one_hour(
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_registration_open(self, event_id: int) -> None:
+def notify_event_registration_open(self, event_id: int) -> None:  # type: ignore[no-untyped-def]
     """Broadcast notification that registration for a general event has opened (FCM only)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_event_registration_open")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_event_registration_open"
+        )
         return
 
     try:
@@ -295,11 +305,13 @@ def notify_event_registration_open(self, event_id: int) -> None:
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_student_session_registration_open(self, student_session_id: int) -> None:
+def notify_student_session_registration_open(self, student_session_id: int) -> None:  # type: ignore[no-untyped-def]
     """Broadcast notification that registration for a student session/company event has opened (FCM only)."""
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_student_session_registration_open")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_student_session_registration_open"
+        )
         return
 
     try:
@@ -335,13 +347,15 @@ def notify_student_session_registration_open(self, student_session_id: int) -> N
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:
+def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:  # type: ignore[no-untyped-def]
     """
     Remind registered users that event registration/unbooking closes tomorrow (with email).
     """
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_event_registration_closes_tomorrow")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_event_registration_closes_tomorrow"
+        )
         return
 
     try:
@@ -386,7 +400,7 @@ def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_student_session_timeslot_booking_freezes_tomorrow(
+def notify_student_session_timeslot_booking_freezes_tomorrow(  # type: ignore[no-untyped-def]
     self, timeslot_id: int, application_id: int
 ) -> None:
     """
@@ -394,7 +408,9 @@ def notify_student_session_timeslot_booking_freezes_tomorrow(
     """
     # Skip execution if the task was revoked
     if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(f"Skipping revoked task {self.request.id} for notify_student_session_timeslot_booking_freezes_tomorrow")
+        logger.info(
+            f"Skipping revoked task {self.request.id} for notify_student_session_timeslot_booking_freezes_tomorrow"
+        )
         return
 
     try:
