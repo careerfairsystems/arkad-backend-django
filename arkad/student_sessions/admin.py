@@ -1,6 +1,7 @@
 from typing import Any
 
 from django.contrib import admin
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from import_export.admin import ImportExportModelAdmin
 
@@ -9,6 +10,24 @@ from .import_export_resources import (
     StudentSessionApplicationResource,
     StudentSessionAttendeeResource,
 )
+
+
+class StudentSessionListFilter(admin.SimpleListFilter):
+    title = "Session"
+    parameter_name = "student_session"
+
+    def lookups(
+        self,
+        request: HttpRequest,
+        model_admin: admin.ModelAdmin,  # type: ignore[type-arg]
+    ) -> list[tuple[str, str]]:
+        sessions = StudentSession.objects.all()
+        return [(str(session.id), str(session)) for session in sessions]
+
+    def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:  # type: ignore[type-arg]
+        if self.value():
+            return queryset.filter(student_session__id=self.value())
+        return queryset
 
 
 @admin.register(StudentSessionApplication)
@@ -31,7 +50,12 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
 
     # This is key for your requirement to export applications for a specific company.
     # It adds a filter sidebar in the admin.
-    list_filter = ("student_session__session_type", "student_session__company", "status")
+    list_filter = (
+        "student_session__session_type",
+        StudentSessionListFilter,
+        "status",
+        "student_session__company__name",
+    )
 
     # Make some fields read-only in the admin detail view for safety
     readonly_fields = (
@@ -80,7 +104,7 @@ class StudentSessionAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 @admin.register(StudentSessionTimeslot)
 class StudentSessionTimeslotAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = ("student_session", "start_time", "duration", "get_selected_count")
-    list_filter = ("student_session__company",)
+    list_filter = (StudentSessionListFilter,)
 
     @admin.display(description="Selected Applications")
     def get_selected_count(self, obj: StudentSessionTimeslot) -> str:
