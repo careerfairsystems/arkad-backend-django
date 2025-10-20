@@ -25,9 +25,11 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
-    notify_event_in_one_hour = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
-    notify_registration_closes_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
+    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_event_tomorrow")
+    notify_event_in_one_hour = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
+                                                 default=None, related_name="notify_event_in_one_hour")
+    notify_registration_closes_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
+                                                            default=None, related_name="notify_registration_closes_tomorrow")
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -94,7 +96,7 @@ class Ticket(models.Model):
 
 @receiver(post_save, sender=Ticket)
 def schedule_ticket_notifications(
-    sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
+        sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
 ) -> None:
     should_be_processed: bool = getattr(instance, "_signal_receivers_disabled", False)
 
@@ -139,7 +141,8 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    notify_registration_opening = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
+    notify_registration_opening = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
+                                                    default=None, related_name="notify_event_registration_opening")
 
     send_notifications_for_event = models.BooleanField(
         default=True,
@@ -192,7 +195,6 @@ class Event(models.Model):
                 arguments=[self.id],
             )
 
-
     def remove_notifications(self) -> None:
         if self.notify_registration_opening:
             self.notify_registration_opening.revoke()
@@ -214,7 +216,7 @@ class Event(models.Model):
 
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(
-    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
+        sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
     # On update, remove old notifications
     if getattr(instance, "_signal_receivers_disabled", False):

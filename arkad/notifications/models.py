@@ -104,8 +104,17 @@ class ScheduledCeleryTasks(models.Model):
         Schedule a Celery task to be executed at a specific time (eta) with given arguments.
         Returns the ScheduledCeleryTasks instance representing the scheduled task.
         """
+
+        task_name: str
+        if hasattr(task_function, "name"):
+            task_name = cast(str, getattr(task_function, "name"))
+        elif hasattr(task_function, "__class__") and hasattr(task_function.__class__, "name"):
+            task_name = cast(str, getattr(task_function.__class__, "name"))
+        else:
+            task_name = str(task_function)
+
         scheduled_task = cls.objects.create(
-            task_name=task_function.name,
+            task_name=task_name,
             task_arguments=arguments,
             eta=eta,
             task_id=task_function.apply_async(args=arguments, eta=eta).id

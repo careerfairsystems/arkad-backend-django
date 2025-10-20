@@ -17,6 +17,7 @@ from arkad.defaults import (
 )
 from arkad.settings import APP_BASE_URL
 from arkad.utils import unique_file_upload_path
+from notifications.models import ScheduledCeleryTasks
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
 from companies.models import Company
@@ -56,14 +57,16 @@ class StudentSessionApplication(models.Model):
         default=ApplicationStatus.PENDING,
     )
 
-    task_id_notify_timeslot_tomorrow = models.CharField(
-        default=None, null=True, editable=False
+    notify_timeslot_tomorrow = models.ForeignKey(
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_tomorrow"
     )
-    task_id_notify_timeslot_in_one_hour = models.CharField(
-        default=None, null=True, editable=False
+
+    notify_timeslot_in_one_hour = models.ForeignKey(
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_in_one_hour"
     )
-    task_notify_timeslot_booking_closes_tomorrow = models.CharField(
-        default=None, null=True, editable=False
+
+    notify_timeslot_booking_closes_tomorrow = models.ForeignKey(
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_booking_closes_tomorrow"
     )
 
     class Meta:
@@ -152,44 +155,42 @@ class StudentSessionApplication(models.Model):
             "Can only schedule notifications for accepted applications"
         )
         from notifications import tasks
+        self.remove_notifications()  # Make sure to not duplicate tasks
 
         eta1 = start_time - timedelta(hours=24)
         if eta1 > timezone.now():
-            task_notify_tmrw = tasks.notify_student_session_tomorrow.apply_async(
-                args=[self.user.id, self.student_session.id, timeslot_id],
+            self.notify_timeslot_tomorrow = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_student_session_tomorrow,
                 eta=eta1,
+                arguments=[self.user.id, self.student_session.id, timeslot_id],
             )
-            self.task_id_notify_timeslot_tomorrow = task_notify_tmrw.id
 
         eta2 = start_time - timedelta(hours=1)
         if eta2 > timezone.now():
-            task_notify_one_hour = tasks.notify_student_session_one_hour.apply_async(
-                args=[self.user.id, self.student_session.id, timeslot_id], eta=eta2
+            self.notify_timeslot_in_one_hour = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_student_session_one_hour,
+                eta=eta2,
+                arguments=[self.user.id, self.student_session.id, timeslot_id],
             )
-            self.task_id_notify_timeslot_in_one_hour = task_notify_one_hour.id
-
         eta3 = unbook_closes_at - timedelta(days=1)
         if eta3 > timezone.now():
-            task_booking_closes_at = tasks.notify_student_session_timeslot_booking_freezes_tomorrow.apply_async(
-                args=[timeslot_id, self.id], eta=eta3
-            )
-            self.task_notify_timeslot_booking_closes_tomorrow = (
-                task_booking_closes_at.id
+            self.notify_timeslot_booking_closes_tomorrow = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_student_session_timeslot_booking_closes_tomorrow,
+                eta=eta3,
+                arguments=[timeslot_id, self.id],
             )
         self.save()
 
     def remove_notifications(self) -> None:
-        if self.task_id_notify_timeslot_tomorrow:
-            AsyncResult(self.task_id_notify_timeslot_tomorrow).revoke()
-            self.task_id_notify_timeslot_tomorrow = None
-
-        if self.task_id_notify_timeslot_in_one_hour:
-            AsyncResult(self.task_id_notify_timeslot_in_one_hour).revoke()
-            self.task_id_notify_timeslot_in_one_hour = None
-
-        if self.task_notify_timeslot_booking_closes_tomorrow:
-            AsyncResult(self.task_notify_timeslot_booking_closes_tomorrow).revoke()
-            self.task_notify_timeslot_booking_closes_tomorrow = None
+        if self.notify_timeslot_tomorrow:
+            self.notify_timeslot_tomorrow.revoke()
+            self.notify_timeslot_tomorrow = None
+        if self.notify_timeslot_in_one_hour:
+            self.notify_timeslot_in_one_hour.revoke()
+            self.notify_timeslot_in_one_hour = None
+        if self.notify_timeslot_booking_closes_tomorrow:
+            self.notify_timeslot_booking_closes_tomorrow.revoke()
+            self.notify_timeslot_booking_closes_tomorrow = None
         self.save()
 
 
@@ -336,8 +337,13 @@ class StudentSession(models.Model):
         blank=True,
         help_text="Name for the session, if not used the company name is shown",
     )
-    task_id_notify_registration_open = models.CharField(
-        default=None, null=True, editable=False
+
+    notify_registration_open = models.ForeignKey(
+        ScheduledCeleryTasks,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        related_name="student_session_notify_registration_open",
     )
 
     def __str__(self) -> str:
@@ -364,16 +370,16 @@ class StudentSession(models.Model):
 
     def schedule_notifications(self) -> None:
         from notifications import tasks
+        if self.notify_registration_open:
+            # Revoke existing task if it exists
+            self.notify_registration_open.revoke()
 
-        if self.task_id_notify_registration_open:
-            AsyncResult(self.task_id_notify_registration_open).revoke()
         if self.booking_open_time and self.booking_open_time > timezone.now():
             # Check that booking_open_time is in the future
-            self.task_id_notify_registration_open = (
-                tasks.notify_student_session_registration_open.apply_async(
-                    args=[self.id],
-                    eta=self.booking_open_time,
-                ).id
+            self.notify_registration_open = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_student_session_registration_open,
+                eta=self.booking_open_time,
+                arguments=[self.id],
             )
 
     def save(self, *args: Any, **kwargs: Any) -> None:
