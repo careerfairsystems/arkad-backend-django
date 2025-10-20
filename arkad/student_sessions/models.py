@@ -363,7 +363,7 @@ class StudentSession(models.Model):
     )
 
     def __str__(self) -> str:
-        return f"ID {self.id}: {self.company.name}"
+        return self.name or self.company.name
 
     def clean(self) -> None:
         """
