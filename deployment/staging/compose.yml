@@ -42,6 +42,7 @@ services:
       file: ../shared-compose.yaml
       service: celery-worker
     container_name: arkad-staging-celery-worker
+    command: celery -A arkad_staging worker -l info --concurrency=1 --max-memory-per-child=1048576  # 1GB max memory per child
     environment:
       - SENTRY_ENVIRONMENT=staging
     env_file:
