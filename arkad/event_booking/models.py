@@ -139,12 +139,7 @@ class Event(models.Model):
     )  # Counter for booked tickets
     capacity = models.IntegerField(null=False)
 
-    task_id_notify_registration_opening = models.CharField(
-        default=None, null=True, blank=True, editable=False
-    )
-    task_id_notify_registration_closing = models.CharField(
-        default=None, null=True, blank=True, editable=False
-    )
+    notify_registration_opening = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
 
     send_notifications_for_event = models.BooleanField(
         default=True,
@@ -182,29 +177,26 @@ class Event(models.Model):
         return f"{self.name}'s event {self.start_time} to {self.end_time}"
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
-        self._remove_notifications()
+        self.remove_notifications()
         return super().delete(*args, **kwargs)
 
-    def _schedule_notifications(self) -> None:
+    def schedule_notifications(self) -> None:
         from notifications import tasks
+        self.remove_notifications()  # Make sure that all tasks are removed
 
         # Anmälan för företagsbesök/lunchföreläsning med XXX har öppnat
         if self.release_time and self.release_time > timezone.now():
-            task_notify_registration_open = (
-                tasks.notify_event_registration_open.apply_async(
-                    args=[self.id], eta=self.release_time
-                )
+            self.notify_registration_opening = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_event_registration_open,
+                eta=self.release_time,
+                arguments=[self.id],
             )
-            self.task_id_notify_registration_opening = task_notify_registration_open.id
 
-    def _remove_notifications(self) -> None:
-        if self.task_id_notify_registration_opening:
-            AsyncResult(self.task_id_notify_registration_opening).revoke()
-            self.task_id_notify_registration_opening = None
 
-        if self.task_id_notify_registration_closing:
-            AsyncResult(self.task_id_notify_registration_closing).revoke()
-            self.task_id_notify_registration_closing = None
+    def remove_notifications(self) -> None:
+        if self.notify_registration_opening:
+            self.notify_registration_opening.revoke()
+            self.notify_registration_opening = None
 
     def verify_user_has_ticket(self, user_id: int) -> bool:
         return self.tickets.filter(user_id=user_id, used=False).exists()
@@ -227,33 +219,24 @@ def schedule_event_notifications(
     # On update, remove old notifications
     if getattr(instance, "_signal_receivers_disabled", False):
         return
-    if (
-        instance.send_notifications_for_event
-        or instance.task_id_notify_registration_opening is not None
-        or instance.task_id_notify_registration_closing is not None
-    ):
-        instance._remove_notifications()
     if instance.send_notifications_for_event:
-        instance._schedule_notifications()
+        instance.schedule_notifications()
         for ticket in instance.tickets.all():
             # Reschedule notifications for all tickets
-            ticket.remove_notifications()
             ticket.schedule_notifications(instance.start_time)
             setattr(ticket, "_signal_receivers_disabled", True)
             ticket.save(
                 update_fields=[
-                    "task_id_notify_event_tomorrow",
-                    "task_id_notify_event_in_one_hour",
-                    "task_id_notify_registration_closes_tomorrow",
+                    "notify_event_tomorrow",
+                    "notify_event_in_one_hour",
+                    "notify_registration_closes_tomorrow",
                 ]
             )
-    if instance.send_notifications_for_event:
         # Save but do not trigger the signal again
         # Ugly fix
         setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
             update_fields=[
-                "task_id_notify_registration_opening",
-                "task_id_notify_registration_closing",
+                "notify_registration_opening",
             ]
         )
