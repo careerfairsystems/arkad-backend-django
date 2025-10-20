@@ -7,6 +7,7 @@ from celery.result import AsyncResult
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 from firebase_admin.messaging import UnregisteredError  # type: ignore[import-untyped]
 
 from email_app.emails import send_generic_information_email
@@ -104,6 +105,10 @@ class ScheduledCeleryTasks(models.Model):
         Schedule a Celery task to be executed at a specific time (eta) with given arguments.
         Returns the ScheduledCeleryTasks instance representing the scheduled task.
         """
+
+        # Make sure that eta is in future
+        if eta <= timezone.now():
+            raise ValueError("ETA must be in the future.")
 
         task_name: str
         if hasattr(task_function, "name"):
