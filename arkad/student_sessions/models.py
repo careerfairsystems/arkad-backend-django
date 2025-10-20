@@ -58,15 +58,15 @@ class StudentSessionApplication(models.Model):
     )
 
     notify_timeslot_tomorrow = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_tomorrow"
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_tomorrow", blank=True
     )
 
     notify_timeslot_in_one_hour = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_in_one_hour"
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_in_one_hour", blank=True
     )
 
     notify_timeslot_booking_closes_tomorrow = models.ForeignKey(
-        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_booking_closes_tomorrow"
+        ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_timeslot_booking_closes_tomorrow", blank=True
     )
 
     class Meta:
@@ -175,7 +175,7 @@ class StudentSessionApplication(models.Model):
         eta3 = unbook_closes_at - timedelta(days=1)
         if eta3 > timezone.now():
             self.notify_timeslot_booking_closes_tomorrow = ScheduledCeleryTasks.schedule_task(
-                task_function=tasks.notify_student_session_timeslot_booking_closes_tomorrow,
+                task_function=tasks.notify_student_session_timeslot_booking_freezes_tomorrow,
                 eta=eta3,
                 arguments=[timeslot_id, self.id],
             )
@@ -342,6 +342,7 @@ class StudentSession(models.Model):
         ScheduledCeleryTasks,
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         default=None,
         related_name="student_session_notify_registration_open",
     )
@@ -389,6 +390,27 @@ class StudentSession(models.Model):
         self.full_clean()
         self.schedule_notifications()
         return super().save(*args, **kwargs)
+
+    def revoke_and_reschedule_tasks(self):
+        # Remove and reschedule notifications for the session itself
+        self.schedule_notifications()  # This already revokes and reschedules
+        # For each timeslot, for each selected application, remove and reschedule notifications if timeslot is in the future
+        for timeslot in self.timeslots.all():
+            for application in timeslot.selected_applications.all():
+                application.remove_notifications()
+                if timeslot.start_time > timezone.now() and application.is_accepted():
+                    application.schedule_notifications(
+                        timeslot.start_time,
+                        unbook_closes_at=timeslot.booking_closes_at,
+                        timeslot_id=timeslot.id,
+                    )
+
+                setattr(application, "_signal_receivers_disabled", True)
+                application.save()
+            setattr(timeslot, "_signal_receivers_disabled", True)
+            timeslot.save()
+        setattr(self, "_signal_receivers_disabled", True)
+        self.save()
 
 
 @receiver(m2m_changed, sender=StudentSessionTimeslot.selected_applications.through)

@@ -8,6 +8,8 @@ from .views import create_lunch_event_view
 
 
 class EventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    actions = ["revoke_and_reschedule_tasks_action"]
+
     def get_urls(self) -> list[Any]:
         urls = super().get_urls()
         custom_urls = [
@@ -23,6 +25,13 @@ class EventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         extra_context = extra_context or {}
         extra_context["show_button"] = True
         return super().changelist_view(request, extra_context=extra_context)
+
+    def revoke_and_reschedule_tasks_action(self, request, queryset):
+        for event in queryset:
+            event.revoke_and_reschedule_tasks()
+        self.message_user(request, f"Revoked and rescheduled tasks for {queryset.count()} event(s).")
+
+    revoke_and_reschedule_tasks_action.short_description = "Revoke and reschedule all scheduled tasks for selected events"
 
 
 admin.site.register(Event, EventAdmin)

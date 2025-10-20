@@ -25,11 +25,11 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_event_tomorrow")
+    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None, related_name="notify_event_tomorrow", blank=True)
     notify_event_in_one_hour = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                 default=None, related_name="notify_event_in_one_hour")
+                                                 default=None, related_name="notify_event_in_one_hour", blank=True)
     notify_registration_closes_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                            default=None, related_name="notify_registration_closes_tomorrow")
+                                                            default=None, related_name="notify_registration_closes_tomorrow", blank=True)
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -142,7 +142,7 @@ class Event(models.Model):
     capacity = models.IntegerField(null=False)
 
     notify_registration_opening = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True,
-                                                    default=None, related_name="notify_event_registration_opening")
+                                                    default=None, related_name="notify_event_registration_opening", blank=True)
 
     send_notifications_for_event = models.BooleanField(
         default=True,
@@ -212,6 +212,24 @@ class Event(models.Model):
             return "Banquet"
         else:
             return "Event"
+
+    def revoke_and_reschedule_tasks(self):
+        """
+        Remove and reschedule notifications for the event and all related tickets if the event is in the future.
+        """
+        # Remove and reschedule notifications for the event itself
+        self.remove_notifications()
+        if self.send_notifications_for_event:
+            self.schedule_notifications()
+            # For each ticket, remove and reschedule notifications if the event is in the future
+            for ticket in self.tickets.all():
+                ticket.remove_notifications()
+                if self.start_time > timezone.now():
+                    ticket.schedule_notifications(self.start_time)
+                setattr(ticket, "_signal_receivers_disabled", True)
+                ticket.save()
+            setattr(self, "_signal_receivers_disabled", True)
+            self.save()
 
 
 @receiver(post_save, sender=Event)

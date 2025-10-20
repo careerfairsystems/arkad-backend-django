@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 from typing import Any, cast
 
@@ -120,7 +121,7 @@ class ScheduledCeleryTasks(models.Model):
 
         scheduled_task = cls.objects.create(
             task_name=task_name,
-            task_arguments=arguments,
+            task_arguments=json.loads(json.dumps(arguments, default=str)),  # Ensure JSON serializable, if not use str()
             eta=eta,
             task_id=task_function.apply_async(args=arguments, eta=eta).id
         )
@@ -168,8 +169,9 @@ class ScheduledCeleryTasks(models.Model):
         """
         Revoke this scheduled Celery task.
         """
+        from arkad.celery import app as celery_app
         if not self.revoked:
-            AsyncResult(str(self.task_id)).revoke()
+            AsyncResult(str(self.task_id), app=celery_app).revoke()
             self.revoked = True
             self.save(update_fields=["revoked"])
         else:
@@ -180,6 +182,18 @@ class ScheduledCeleryTasks(models.Model):
         self.error = str(self.fetch_error)
         self.result = str(self.fetch_result)
         self.save()
+
+    @classmethod
+    def is_revoked(cls, task_id: str) -> bool:
+        """
+        Verify that the task with given task_id is not revoked.
+        """
+        try:
+            task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
+            return task.revoked
+        except cls.DoesNotExist:
+            logging.error(f"Task with ID {task_id} does not exist. Counting as revoked")
+            return True
 
 # Automatically send out notifications when a Notification is created
 @receiver(pre_save, sender=Notification)
