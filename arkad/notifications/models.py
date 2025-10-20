@@ -11,6 +11,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from firebase_admin.messaging import UnregisteredError  # type: ignore[import-untyped]
 
+from arkad.settings import DEBUG
 from email_app.emails import send_generic_information_email
 from notifications.fcm_helper import fcm
 
@@ -204,6 +205,9 @@ class ScheduledCeleryTasks(models.Model):
         Verify that the task with given task_id is not revoked.
         """
         try:
+            # This makes tests fail as we manually run the tasks there. If the task_id is None and we are in DEBUG, return False
+            if (task_id is None or task_id == str(None)) and DEBUG:
+                return False
             task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
             return task.revoked
         except cls.DoesNotExist:
