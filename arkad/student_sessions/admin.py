@@ -21,7 +21,7 @@ class StudentSessionListFilter(admin.SimpleListFilter):
         request: HttpRequest,
         model_admin: admin.ModelAdmin,  # type: ignore[type-arg]
     ) -> list[tuple[str, str]]:
-        sessions = StudentSession.objects.all()
+        sessions = StudentSession.objects.select_related("company").all()
         return [(str(session.id), str(session)) for session in sessions]
 
     def queryset(self, request: HttpRequest, queryset: QuerySet) -> QuerySet:  # type: ignore[type-arg]
