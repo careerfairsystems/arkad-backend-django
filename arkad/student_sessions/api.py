@@ -103,6 +103,7 @@ def get_student_sessions(request: AuthenticatedRequest):
                 session_type=s.session_type,
                 location=s.location,
                 name=s.name,
+                company_event_at=s.company_event_at,  # For now, we do not check if actually company event
             )
             for s in sessions
         ],
