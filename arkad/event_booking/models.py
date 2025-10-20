@@ -14,6 +14,7 @@ from arkad.defaults import DEFAULT_VISIBLE_TIME_EVENT, DEFAULT_RELEASE_TIME_EVEN
 from companies.models import Company
 from event_booking.schemas import EventUserStatus
 from user_models.models import User
+from notifications.models import ScheduledCeleryTasks
 
 EVENT_TYPES: dict[str, str] = {"ce": "Company event", "lu": "Lunch", "ba": "Banquet"}
 
@@ -24,15 +25,9 @@ class Ticket(models.Model):
     event = models.ForeignKey("Event", on_delete=models.CASCADE, related_name="tickets")
     used = models.BooleanField(default=False)
 
-    task_id_notify_event_tomorrow = models.CharField(
-        default=None, null=True, blank=True, editable=False
-    )
-    task_id_notify_event_in_one_hour = models.CharField(
-        default=None, null=True, blank=True, editable=False
-    )
-    task_id_notify_registration_closes_tomorrow = models.CharField(
-        default=None, null=True, blank=True, editable=False
-    )
+    notify_event_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
+    notify_event_in_one_hour = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
+    notify_registration_closes_tomorrow = models.ForeignKey(ScheduledCeleryTasks, on_delete=models.SET_NULL, null=True, default=None)
 
     def __str__(self) -> str:
         return f"{self.user}'s ticket to {self.event}"
@@ -48,55 +43,49 @@ class Ticket(models.Model):
         # (Du har anmält dig till) YYY (som är) med XXX är imorgon
         eta1 = start_time - timedelta(hours=24)
         if eta1 > timezone.now():
-            task_notify_event_tmrw = tasks.notify_event_tomorrow.apply_async(
-                args=[self.uuid],
+            self.notify_event_tomorrow = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_event_tomorrow,
                 eta=eta1,
+                arguments=[self.uuid],
             )
-            self.task_id_notify_event_tomorrow = task_notify_event_tmrw.id
         else:
             self.task_id_notify_event_tomorrow = None
 
         eta2 = start_time - timedelta(hours=1)
         if eta2 > timezone.now():
             # (Du har anmält dig till) YYY (som är) med XXX är om en timme
-            task_notify_event_one_hour = tasks.notify_event_one_hour.apply_async(
-                args=[
-                    self.uuid,
-                ],
+            self.notify_event_in_one_hour = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_event_one_hour,
                 eta=eta2,
+                arguments=[self.uuid],
             )
-            self.task_id_notify_event_in_one_hour = task_notify_event_one_hour.id
         else:
             self.task_id_notify_event_in_one_hour = None
         # Anmälan för YYY med XXX stänger imorgon
         booking_freezes_at = self.event.booking_freezes_at
         eta3 = booking_freezes_at - timedelta(days=1)
         if eta3 > timezone.now():
-            task_notify_registration_closes = (
-                tasks.notify_event_registration_closes_tomorrow.apply_async(
-                    args=[self.event.id],
-                    eta=eta3,
-                )
-            )
-            self.task_id_notify_registration_closes_tomorrow = (
-                task_notify_registration_closes.id
+            self.notify_registration_closes_tomorrow = ScheduledCeleryTasks.schedule_task(
+                task_function=tasks.notify_event_registration_closes_tomorrow,
+                eta=eta3,
+                arguments=[self.event.id],
             )
         else:
             self.task_id_notify_registration_closes_tomorrow = None
 
     def remove_notifications(self) -> None:
         """Remove scheduled notifications for this ticket."""
-        if self.task_id_notify_event_tomorrow:
-            AsyncResult(self.task_id_notify_event_tomorrow).revoke()
+        if self.notify_event_tomorrow:
+            self.notify_event_tomorrow.revoke()
             self.task_id_notify_event_tomorrow = None
 
-        if self.task_id_notify_event_in_one_hour:
-            AsyncResult(self.task_id_notify_event_in_one_hour).revoke()
-            self.task_id_notify_event_in_one_hour = None
+        if self.notify_event_in_one_hour:
+            self.notify_event_in_one_hour.revoke()
+            self.notify_event_in_one_hour = None
 
-        if self.task_id_notify_registration_closes_tomorrow:
-            AsyncResult(self.task_id_notify_registration_closes_tomorrow).revoke()
-            self.task_id_notify_registration_closes_tomorrow = None
+        if self.notify_registration_closes_tomorrow:
+            self.notify_registration_closes_tomorrow.revoke()
+            self.notify_registration_closes_tomorrow = None
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:  # type: ignore
         self.remove_notifications()
@@ -114,9 +103,9 @@ def schedule_ticket_notifications(
         setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
             update_fields=[
-                "task_id_notify_event_tomorrow",
-                "task_id_notify_event_in_one_hour",
-                "task_id_notify_registration_closes_tomorrow",
+                "notify_event_tomorrow",
+                "notify_event_in_one_hour",
+                "notify_registration_closes_tomorrow",
             ]
         )
 

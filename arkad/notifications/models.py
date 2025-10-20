@@ -110,6 +110,7 @@ class ScheduledCeleryTasks(models.Model):
             eta=eta,
             task_id=task_function.apply_async(args=arguments, eta=eta).id
         )
+        logging.info(f"Scheduled task {scheduled_task.task_name} with ID {scheduled_task.task_id} at {scheduled_task.eta}")
         return scheduled_task
 
     @property
