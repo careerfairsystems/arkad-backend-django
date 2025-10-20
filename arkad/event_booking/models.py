@@ -69,8 +69,6 @@ class Ticket(models.Model):
                 eta=eta1,
                 arguments=[self.uuid],
             )
-        else:
-            self.task_id_notify_event_tomorrow = None
 
         eta2 = start_time - timedelta(hours=1)
         if eta2 > timezone.now():
@@ -80,8 +78,6 @@ class Ticket(models.Model):
                 eta=eta2,
                 arguments=[self.uuid],
             )
-        else:
-            self.task_id_notify_event_in_one_hour = None
         # Anmälan för YYY med XXX stänger imorgon
         booking_freezes_at = self.event.booking_freezes_at
         eta3 = booking_freezes_at - timedelta(days=1)
@@ -93,14 +89,12 @@ class Ticket(models.Model):
                     arguments=[self.event.id],
                 )
             )
-        else:
-            self.task_id_notify_registration_closes_tomorrow = None
 
     def remove_notifications(self) -> None:
         """Remove scheduled notifications for this ticket."""
         if self.notify_event_tomorrow:
             self.notify_event_tomorrow.revoke()
-            self.task_id_notify_event_tomorrow = None
+            self.notify_event_tomorrow = None
 
         if self.notify_event_in_one_hour:
             self.notify_event_in_one_hour.revoke()
