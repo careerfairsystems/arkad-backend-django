@@ -1,6 +1,9 @@
+import datetime
 import logging
-from typing import Any
+from typing import Any, cast
 
+from celery import Task
+from celery.result import AsyncResult
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
@@ -67,15 +70,101 @@ class Notification(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=(
-                    models.Q(target_user__isnull=False, notification_topic__isnull=True)
-                    | models.Q(
-                        target_user__isnull=True, notification_topic__isnull=False
-                    )
+                        models.Q(target_user__isnull=False, notification_topic__isnull=True)
+                        | models.Q(
+                    target_user__isnull=True, notification_topic__isnull=False
+                )
                 ),
                 name="either_user_or_topic_not_both",
             )
         ]
 
+
+class ScheduledCeleryTasks(models.Model):
+    task_name = models.CharField(max_length=255)
+    task_arguments = models.JSONField(default=list)
+    task_id = models.CharField(editable=False, unique=True)
+
+    eta = models.DateTimeField(null=False, blank=False)
+    revoked = models.BooleanField(default=False)
+
+    status = models.CharField(max_length=255, null=True, blank=True, editable=False, default="PENDING",
+                              verbose_name="Status, must be manually refreshed")
+    result = models.TextField(null=True, blank=True, editable=False)
+    error = models.TextField(null=True, blank=True, editable=False)
+
+    def __str__(self) -> str:
+        if not self.revoked:
+            return f"Scheduled Task: {self.task_name} at {self.eta}"
+        return f"Revoked Task: {self.task_name} at {self.eta}"
+
+    @classmethod
+    def schedule_task(cls, task_function: Task, eta: datetime.datetime, arguments: list[Any]) -> "ScheduledCeleryTasks":
+        """
+        Schedule a Celery task to be executed at a specific time (eta) with given arguments.
+        Returns the ScheduledCeleryTasks instance representing the scheduled task.
+        """
+        scheduled_task = cls.objects.create(
+            task_name=task_function.name,
+            task_arguments=arguments,
+            eta=eta,
+            task_id=task_function.apply_async(args=arguments, eta=eta).id
+        )
+        return scheduled_task
+
+    @property
+    def fetch_status(self) -> str:
+        """
+        Returns the current Celery task status.
+        Does NOT depend on stored DB state, gets live state from Celery backend.
+        """
+        result = AsyncResult(self.task_id)
+        return str(result.status)
+
+    @property
+    def fetch_result(self) -> Any:
+        """
+        Get the return value of the Celery task if it finished successfully.
+        """
+        result = AsyncResult(self.task_id)
+        if result.successful():
+            return result.result
+        return None
+
+    @property
+    def fetch_error(self) -> Any:
+        """
+        Get error traceback if task failed.
+        """
+        result = AsyncResult(self.task_id)
+        if result.failed():
+            return str(result.result)  # exception message
+        return None
+
+    @classmethod
+    def revoke_task_by_id(cls, task_id: str) -> None:
+        """
+        Revoke a scheduled Celery task.
+        """
+        task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
+        return task.revoke()
+
+    def revoke(self) -> None:
+        """
+        Revoke this scheduled Celery task.
+        """
+        if not self.revoked:
+            AsyncResult(str(self.task_id)).revoke()
+            self.revoked = True
+            self.save(update_fields=["revoked"])
+        else:
+            logging.warning(f"Task {self.task_id} already revoked.")
+
+    def update_status(self):
+        self.status = str(self.fetch_status)
+        self.error = str(self.fetch_error)
+        self.result = str(self.fetch_result)
+        self.save()
 
 # Automatically send out notifications when a Notification is created
 @receiver(pre_save, sender=Notification)

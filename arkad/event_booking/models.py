@@ -43,6 +43,7 @@ class Ticket(models.Model):
     def schedule_notifications(self, start_time: datetime) -> None:
         """Schedule notifications for this ticket."""
         from notifications import tasks
+        self.remove_notifications()  # Make sure that all tasks are removed
 
         # (Du har anmält dig till) YYY (som är) med XXX är imorgon
         eta1 = start_time - timedelta(hours=24)
@@ -106,8 +107,11 @@ class Ticket(models.Model):
 def schedule_ticket_notifications(
     sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
 ) -> None:
-    if created:
+    should_be_processed: bool = getattr(instance, "_signal_receivers_disabled", False)
+
+    if created and should_be_processed:
         instance.schedule_notifications(instance.event.start_time)
+        setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
             update_fields=[
                 "task_id_notify_event_tomorrow",
@@ -246,6 +250,7 @@ def schedule_event_notifications(
             # Reschedule notifications for all tickets
             ticket.remove_notifications()
             ticket.schedule_notifications(instance.start_time)
+            setattr(ticket, "_signal_receivers_disabled", True)
             ticket.save(
                 update_fields=[
                     "task_id_notify_event_tomorrow",
