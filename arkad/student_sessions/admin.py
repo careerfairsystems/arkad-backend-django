@@ -31,7 +31,7 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
 
     # This is key for your requirement to export applications for a specific company.
     # It adds a filter sidebar in the admin.
-    list_filter = ("student_session__company", "status")
+    list_filter = ("student_session__session_type", "student_session__company", "status")
 
     # Make some fields read-only in the admin detail view for safety
     readonly_fields = (
