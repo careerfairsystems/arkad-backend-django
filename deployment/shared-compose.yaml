@@ -68,6 +68,7 @@ services:
       - ${PWD}/private:/app/arkad/private
     networks:
       - app_network
+    mem_limit: 300M
 
   websocket:
     restart: unless-stopped
