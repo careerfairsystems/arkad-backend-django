@@ -76,4 +76,4 @@ services:
 volumes:
   media_volume:
   static_volume:
-  redis_data:
+  redis_data_staging:
