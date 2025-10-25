@@ -19,6 +19,8 @@ services:
       file: ../shared-compose.yaml
       service: redis
     container_name: arkad-staging-redis
+    volumes:
+      - redis_data_staging:/data
 
   web:
     extends:
@@ -74,4 +76,4 @@ services:
 volumes:
   media_volume:
   static_volume:
-  redis_data:
+  redis_data_staging:
