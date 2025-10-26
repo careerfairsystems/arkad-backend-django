@@ -86,7 +86,7 @@ class Ticket(models.Model):
                 ScheduledCeleryTasks.schedule_task(
                     task_function=tasks.notify_event_registration_closes_tomorrow,
                     eta=eta3,
-                    arguments=[self.event.id],
+                    arguments=[self.uuid],
                 )
             )
 

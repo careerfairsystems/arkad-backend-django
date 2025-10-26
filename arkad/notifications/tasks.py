@@ -347,7 +347,7 @@ def notify_student_session_registration_open(self, student_session_id: int) -> N
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:  # type: ignore[no-untyped-def]
+def notify_event_registration_closes_tomorrow(self, ticket_uuid: str) -> None:  # type: ignore[no-untyped-def]
     """
     Remind registered users that event registration/unbooking closes tomorrow (with email).
     """
@@ -359,44 +359,43 @@ def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:  # t
         return
 
     try:
-        event = Event.objects.prefetch_related("tickets__user").get(id=event_id)
-    except Event.DoesNotExist:
-        logger.warning(f"Event with id {event_id} not found.")
+        ticket = Ticket.objects.select_related("user", "event").get(
+            uuid=ticket_uuid, used=False
+        )
+    except Ticket.DoesNotExist:
+        logger.warning(f"Ticket with uuid {ticket_uuid} not found or already used.")
         return
 
-    # Filter for active tickets
-    active_tickets = event.tickets.filter(used=False).select_related("user").all()
+    user = ticket.user
+    event = ticket.event
+    title = f"Unbooking for {event.name} Closes Tomorrow! ⚠️"
 
-    for user_ticket in active_tickets:
-        user = user_ticket.user
-        title = f"Unbooking for {event.name} Closes Tomorrow! ⚠️"
+    # 1. FCM/Notification Body (Concise)
+    fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
 
-        # 1. FCM/Notification Body (Concise)
-        fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
+    # 2. Email Body (Rich/Detailed)
+    email_body = (
+        f"The registration and unbooking window for {event.name} closes tomorrow. "
+        f"If you are unable to attend, please unbook your ticket immediately. This is crucial to allow students on the waiting list to get a spot! "
+        f"Thank you for being considerate."
+    )
 
-        # 2. Email Body (Rich/Detailed)
-        email_body = (
-            f"The registration and unbooking window for {event.name} closes tomorrow. "
-            f"If you are unable to attend, please unbook your ticket immediately. This is crucial to allow students on the waiting list to get a spot! "
-            f"Thank you for being considerate."
-        )
-
-        link = f"{APP_BASE_URL}/events/detail/{event.id}/ticket"
-        Notification.objects.create(
-            target_user=user,
-            title=title,
-            body=fcm_body,  # Used for FCM
-            email_body=email_body,  # Used for Email
-            # Email fields
-            greeting=f"Hi {user.first_name},",
-            heading=f"Reminder: {event.name}",
-            button_text="Manage Your Ticket",
-            button_link=link,
-            fcm_link=link,
-            note="Thank you for helping us make the most of every spot!",
-            email_sent=True,
-            fcm_sent=True,
-        )
+    link = f"{APP_BASE_URL}/events/detail/{event.id}/ticket"
+    Notification.objects.create(
+        target_user=user,
+        title=title,
+        body=fcm_body,  # Used for FCM
+        email_body=email_body,  # Used for Email
+        # Email fields
+        greeting=f"Hi {user.first_name},",
+        heading=f"Reminder: {event.name}",
+        button_text="Manage Your Ticket",
+        button_link=link,
+        fcm_link=link,
+        note="Thank you for helping us make the most of every spot!",
+        email_sent=True,
+        fcm_sent=True,
+    )
 
 
 @shared_task(bind=True)  # type: ignore

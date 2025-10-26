@@ -241,13 +241,13 @@ class NotificationTasksTestCase(TestCase):
 
     def test_notify_event_registration_closes_tomorrow(self) -> None:
         """Tests unbooking reminder is sent to active ticket holders."""
-        Ticket.objects.create(
+        t = Ticket.objects.create(
             user=self.user2, event=self.event, used=False, uuid=uuid.uuid4()
         )
 
-        tasks.notify_event_registration_closes_tomorrow(self.event.id)
+        tasks.notify_event_registration_closes_tomorrow(t.uuid)
 
-        self.assertEqual(Notification.objects.count(), 2)
+        self.assertEqual(Notification.objects.count(), 1)
         notifications = Notification.objects.order_by("target_user__id")
 
         # Prepare safe string fields for each notification
@@ -255,8 +255,7 @@ class NotificationTasksTestCase(TestCase):
         n0_body = notifications[0].body or ""
         n0_email_body = notifications[0].email_body or ""
 
-        # Check notification for user1 (Alice)
-        self.assertEqual(notifications[0].target_user, self.user1)
+        self.assertEqual(notifications[0].target_user, self.user2)
         self.assertTrue(notifications[0].email_sent)
 
         # Check content keywords
@@ -264,12 +263,6 @@ class NotificationTasksTestCase(TestCase):
         self.assertIn(self.event.name, n0_title)
         self.assertIn("closes tomorrow", n0_body)
         self.assertIn("unbook your ticket immediately", n0_email_body)
-
-        # Check notification for user2 (Bob)
-        self.assertEqual(notifications[1].target_user, self.user2)
-
-        # Check that the used ticket holder did NOT receive a notification.
-        self.assertNotIn(self.ticket_used2.user, [n.target_user for n in notifications])
 
     # --- Student Session Task Tests (REGULAR SESSION) ---
 
