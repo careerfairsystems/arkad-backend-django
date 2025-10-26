@@ -90,6 +90,7 @@ class ScheduledCeleryTasks(models.Model):
 
     eta = models.DateTimeField(null=False, blank=False)
     revoked = models.BooleanField(default=False)
+    has_run = models.BooleanField(default=False)
 
     status = models.CharField(
         max_length=255,
@@ -200,19 +201,19 @@ class ScheduledCeleryTasks(models.Model):
         self.save()
 
     @classmethod
-    def is_revoked(cls, task_id: str) -> bool:
+    def should_run(cls, task_id: str) -> bool:
         """
         Verify that the task with given task_id is not revoked.
         """
         try:
-            # This makes tests fail as we manually run the tasks there. If the task_id is None and we are in DEBUG, return False
+            # This makes tests fail as we manually run the tasks there. If the task_id is None, and we are in DEBUG, return False
             if (task_id is None or task_id == str(None)) and DEBUG:
-                return False
+                return True
             task: "ScheduledCeleryTasks" = cls.objects.get(task_id=task_id)
-            return task.revoked
+            return not task.revoked and not task.has_run
         except cls.DoesNotExist:
             logging.error(f"Task with ID {task_id} does not exist. Counting as revoked")
-            return True
+            return False
 
 
 # Automatically send out notifications when a Notification is created
