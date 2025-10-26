@@ -12,15 +12,14 @@ TEST_TASK_ID = str(uuid.uuid4())
 
 
 class DbBackedTaskValidityTests(TestCase):
-
-    def setUp(self):
+    def setUp(self):  # type: ignore[no-untyped-def]
         """
         Create a mock 'self' object that mimics a Celery task instance.
         This object is what the decorator will receive as 'self'.
         """
         self.mock_task_self = MagicMock()
         self.mock_task_self.request.id = TEST_TASK_ID
-        self.mock_task_self.name = 'mock_task_for_testing'
+        self.mock_task_self.name = "mock_task_for_testing"
 
         # This is the "original function" that the decorator wraps.
         # We make it a mock so we can check if it was called.
@@ -28,14 +27,11 @@ class DbBackedTaskValidityTests(TestCase):
 
         # Create a database entry for the task to run
         self.db_task_entry = ScheduledCeleryTasks.objects.create(
-            task_id=TEST_TASK_ID,
-            revoked=False,
-            has_run=False,
-            eta=timezone.now()
+            task_id=TEST_TASK_ID, revoked=False, has_run=False, eta=timezone.now()
         )
 
-    @patch('notifications.tasks.ScheduledCeleryTasks.should_run')
-    def test_task_runs_when_valid_and_updates_db(self, mock_should_run):
+    @patch("notifications.tasks.ScheduledCeleryTasks.should_run")
+    def test_task_runs_when_valid_and_updates_db(self, mock_should_run):  # type: ignore[no-untyped-def]
         """
         Tests the "happy path":
         1. should_run() returns True.
@@ -63,8 +59,8 @@ class DbBackedTaskValidityTests(TestCase):
         self.db_task_entry.refresh_from_db()
         self.assertTrue(self.db_task_entry.has_run)
 
-    @patch('notifications.tasks.ScheduledCeleryTasks.should_run')
-    def test_task_skips_when_revoked(self, mock_should_run):
+    @patch("notifications.tasks.ScheduledCeleryTasks.should_run")
+    def test_task_skips_when_revoked(self, mock_should_run):  # type: ignore[no-untyped-def]
         """
         Tests the "skip path":
         1. should_run() returns False.
@@ -91,9 +87,11 @@ class DbBackedTaskValidityTests(TestCase):
         self.db_task_entry.refresh_from_db()
         self.assertFalse(self.db_task_entry.has_run)
 
-    @patch('notifications.tasks.logger')
-    @patch('notifications.tasks.ScheduledCeleryTasks.should_run')
-    def test_task_runs_but_logs_warning_if_db_entry_missing(self, mock_should_run, mock_logger):
+    @patch("notifications.tasks.logger")
+    @patch("notifications.tasks.ScheduledCeleryTasks.should_run")
+    def test_task_runs_but_logs_warning_if_db_entry_missing(  # type: ignore[no-untyped-def]
+        self, mock_should_run, mock_logger
+    ):
         """
         Tests the edge case where the task runs, but on the update step,
         the corresponding DB entry is gone.
