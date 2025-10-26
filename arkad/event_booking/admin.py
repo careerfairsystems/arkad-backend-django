@@ -91,7 +91,6 @@ class EventAdmin(ExportMixin, admin.ModelAdmin):  # type: ignore[type-arg, misc]
     )
     list_filter = ("type", "start_time", "company")
     search_fields = ("name", "description", "company__name")
-    inlines = [TicketInline]
     actions = ["revoke_and_reschedule_tasks_action"]
 
     readonly_fields = ("number_booked", "notify_registration_opening")

@@ -31,6 +31,7 @@ class Ticket(models.Model):
         default=None,
         related_name="notify_event_tomorrow",
         blank=True,
+        editable=False,
     )
     notify_event_in_one_hour = models.ForeignKey(
         ScheduledCeleryTasks,
@@ -39,6 +40,7 @@ class Ticket(models.Model):
         default=None,
         related_name="notify_event_in_one_hour",
         blank=True,
+        editable=False,
     )
     notify_registration_closes_tomorrow = models.ForeignKey(
         ScheduledCeleryTasks,
@@ -47,6 +49,7 @@ class Ticket(models.Model):
         default=None,
         related_name="notify_registration_closes_tomorrow",
         blank=True,
+        editable=False,
     )
 
     def __str__(self) -> str:
@@ -163,6 +166,7 @@ class Event(models.Model):
         default=None,
         related_name="notify_event_registration_opening",
         blank=True,
+        editable=False,
     )
 
     send_notifications_for_event = models.BooleanField(
@@ -253,6 +257,7 @@ class Event(models.Model):
             setattr(self, "_signal_receivers_disabled", True)
             self.save()
 
+
 @receiver(pre_save, sender=Event)
 def cache_old_event_times(sender: Type[Event], instance: Event, **kwargs: Any) -> None:
     """
@@ -268,11 +273,11 @@ def cache_old_event_times(sender: Type[Event], instance: Event, **kwargs: Any) -
             # Should not happen on a pre_save for an existing pk, but good to be safe
             pass
 
+
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(
-        sender: Type[Event], instance: Event, created: bool, **kwargs: Any
+    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
-
     if getattr(instance, "_signal_receivers_disabled", False):
         return
 
