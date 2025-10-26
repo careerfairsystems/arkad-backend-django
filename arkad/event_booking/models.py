@@ -5,7 +5,7 @@ from typing import Type, Any
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, CheckConstraint
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -86,7 +86,7 @@ class Ticket(models.Model):
                 ScheduledCeleryTasks.schedule_task(
                     task_function=tasks.notify_event_registration_closes_tomorrow,
                     eta=eta3,
-                    arguments=[self.event.id],
+                    arguments=[self.uuid],
                 )
             )
 
@@ -253,29 +253,53 @@ class Event(models.Model):
             setattr(self, "_signal_receivers_disabled", True)
             self.save()
 
+@receiver(pre_save, sender=Event)
+def cache_old_event_times(sender: Type[Event], instance: Event, **kwargs: Any) -> None:
+    """
+    Store the 'old' start_time on the instance object *before* it gets saved
+    so we can compare it in the post_save signal.
+    """
+    if instance.pk:  # Check if this is an update (not a new creation)
+        try:
+            old_instance = Event.objects.get(pk=instance.pk)
+            # Store the old time on the instance for later use
+            setattr(instance, "_old_start_time", old_instance.start_time)
+        except Event.DoesNotExist:
+            # Should not happen on a pre_save for an existing pk, but good to be safe
+            pass
 
 @receiver(post_save, sender=Event)
 def schedule_event_notifications(
-    sender: Type[Event], instance: Event, created: bool, **kwargs: Any
+        sender: Type[Event], instance: Event, created: bool, **kwargs: Any
 ) -> None:
-    # On update, remove old notifications
+
     if getattr(instance, "_signal_receivers_disabled", False):
         return
+
+    # Get the old start_time we cached in the pre_save signal
+    old_start_time = getattr(instance, "_old_start_time", None)
+
+    # If it's not a new event AND the start_time hasn't changed, do nothing.
+    if not created and old_start_time == instance.start_time:
+        return  # The times didn't change, so no rescheduling is needed.
+
     if instance.send_notifications_for_event:
+        # Schedule notifications for the Event itself
         instance.schedule_notifications()
+
+        tickets_to_update = []
         for ticket in instance.tickets.all():
-            # Reschedule notifications for all tickets
             ticket.schedule_notifications(instance.start_time)
-            setattr(ticket, "_signal_receivers_disabled", True)
-            ticket.save(
-                update_fields=[
-                    "notify_event_tomorrow",
-                    "notify_event_in_one_hour",
-                    "notify_registration_closes_tomorrow",
-                ]
-            )
-        # Save but do not trigger the signal again
-        # Ugly fix
+            tickets_to_update.append(ticket)
+
+        if tickets_to_update:
+            fields_to_update = [
+                "notify_event_tomorrow",
+                "notify_event_in_one_hour",
+                "notify_registration_closes_tomorrow",
+            ]
+            Ticket.objects.bulk_update(tickets_to_update, fields_to_update)
+
         setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
             update_fields=[

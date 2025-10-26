@@ -1,5 +1,8 @@
 import logging
 import uuid
+from functools import wraps
+from typing import Any, Callable
+
 from celery import shared_task  # type: ignore[import-untyped]
 
 from event_booking.models import Event, Ticket
@@ -31,19 +34,34 @@ The routes to the app are:
 """
 
 
+def db_backed_task_validity(func) -> Callable:  # type: ignore # noqa: F821
+    # Skip execution if the task was revoked
+    @wraps(func)
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> None:
+        if not ScheduledCeleryTasks.should_run(str(self.request.id)):
+            logger.info(f"Skipping revoked task {self.request.id} for {self.name}")
+            return
+        func(self, *args, **kwargs)
+        # Update has_run flag in ScheduledCeleryTasks
+        try:
+            task = ScheduledCeleryTasks.objects.get(task_id=str(self.request.id))
+            task.has_run = True
+            task.save()
+        except ScheduledCeleryTasks.DoesNotExist:
+            logger.warning(
+                f"ScheduledCeleryTasks entry for task {self.request.id} not found."
+            )
+
+    return wrapper
+
+
 # --- Event Reminders ---
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore[no-untyped-def]
     """Notify the user that they have an event tomorrow (with email)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_event_tomorrow"
-        )
-        return
-
     try:
         # Select user and event to minimize queries
         ticket: Ticket = Ticket.objects.select_related("user", "event").get(
@@ -93,15 +111,9 @@ def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_event_one_hour(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore[no-untyped-def]
     """Notify the user that they have an event in one hour (FCM only)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_event_one_hour"
-        )
-        return
-
     try:
         ticket: Ticket = Ticket.objects.select_related("user", "event").get(
             uuid=ticket_uuid, used=False
@@ -170,17 +182,11 @@ def _get_session_notification_texts(
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_student_session_tomorrow(  # type: ignore[no-untyped-def]
     self, user_id: int, student_session_id: int, timeslot_id: int
 ) -> None:
     """Notify the user about a student session tomorrow (with email)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_student_session_tomorrow"
-        )
-        return
-
     try:
         user = User.objects.get(id=user_id)
         session: StudentSession = StudentSession.objects.select_related("company").get(
@@ -233,17 +239,11 @@ def notify_student_session_tomorrow(  # type: ignore[no-untyped-def]
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_student_session_one_hour(  # type: ignore[no-untyped-def]
     self, user_id: int, student_session_id: int, timeslot_id: int
 ) -> None:
     """Notify the user about a student session in one hour (FCM only)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_student_session_one_hour"
-        )
-        return
-
     try:
         user = User.objects.get(id=user_id)
         session: StudentSession = StudentSession.objects.select_related("company").get(
@@ -280,15 +280,9 @@ def notify_student_session_one_hour(  # type: ignore[no-untyped-def]
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_event_registration_open(self, event_id: int) -> None:  # type: ignore[no-untyped-def]
     """Broadcast notification that registration for a general event has opened (FCM only)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_event_registration_open"
-        )
-        return
-
     try:
         event: Event = Event.objects.get(id=event_id)
     except Event.DoesNotExist:
@@ -305,15 +299,9 @@ def notify_event_registration_open(self, event_id: int) -> None:  # type: ignore
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_student_session_registration_open(self, student_session_id: int) -> None:  # type: ignore[no-untyped-def]
     """Broadcast notification that registration for a student session/company event has opened (FCM only)."""
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_student_session_registration_open"
-        )
-        return
-
     try:
         session: StudentSession = StudentSession.objects.select_related("company").get(
             id=student_session_id
@@ -347,72 +335,59 @@ def notify_student_session_registration_open(self, student_session_id: int) -> N
 
 
 @shared_task(bind=True)  # type: ignore
-def notify_event_registration_closes_tomorrow(self, event_id: int) -> None:  # type: ignore[no-untyped-def]
+@db_backed_task_validity
+def notify_event_registration_closes_tomorrow(self, ticket_uuid: str) -> None:  # type: ignore[no-untyped-def]
     """
     Remind registered users that event registration/unbooking closes tomorrow (with email).
     """
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_event_registration_closes_tomorrow"
-        )
-        return
-
     try:
-        event = Event.objects.prefetch_related("tickets__user").get(id=event_id)
-    except Event.DoesNotExist:
-        logger.warning(f"Event with id {event_id} not found.")
+        ticket = Ticket.objects.select_related("user", "event").get(
+            uuid=ticket_uuid, used=False
+        )
+    except Ticket.DoesNotExist:
+        logger.warning(f"Ticket with uuid {ticket_uuid} not found or already used.")
         return
 
-    # Filter for active tickets
-    active_tickets = event.tickets.filter(used=False).select_related("user").all()
+    user = ticket.user
+    event = ticket.event
+    title = f"Unbooking for {event.name} Closes Tomorrow! ⚠️"
 
-    for user_ticket in active_tickets:
-        user = user_ticket.user
-        title = f"Unbooking for {event.name} Closes Tomorrow! ⚠️"
+    # 1. FCM/Notification Body (Concise)
+    fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
 
-        # 1. FCM/Notification Body (Concise)
-        fcm_body = f"Registration/unbooking for {event.name} closes tomorrow! Please unbook your spot now if you can no longer attend."
+    # 2. Email Body (Rich/Detailed)
+    email_body = (
+        f"The registration and unbooking window for {event.name} closes tomorrow. "
+        f"If you are unable to attend, please unbook your ticket immediately. This is crucial to allow students on the waiting list to get a spot! "
+        f"Thank you for being considerate."
+    )
 
-        # 2. Email Body (Rich/Detailed)
-        email_body = (
-            f"The registration and unbooking window for {event.name} closes tomorrow. "
-            f"If you are unable to attend, please unbook your ticket immediately. This is crucial to allow students on the waiting list to get a spot! "
-            f"Thank you for being considerate."
-        )
-
-        link = f"{APP_BASE_URL}/events/detail/{event.id}/ticket"
-        Notification.objects.create(
-            target_user=user,
-            title=title,
-            body=fcm_body,  # Used for FCM
-            email_body=email_body,  # Used for Email
-            # Email fields
-            greeting=f"Hi {user.first_name},",
-            heading=f"Reminder: {event.name}",
-            button_text="Manage Your Ticket",
-            button_link=link,
-            fcm_link=link,
-            note="Thank you for helping us make the most of every spot!",
-            email_sent=True,
-            fcm_sent=True,
-        )
+    link = f"{APP_BASE_URL}/events/detail/{event.id}/ticket"
+    Notification.objects.create(
+        target_user=user,
+        title=title,
+        body=fcm_body,  # Used for FCM
+        email_body=email_body,  # Used for Email
+        # Email fields
+        greeting=f"Hi {user.first_name},",
+        heading=f"Reminder: {event.name}",
+        button_text="Manage Your Ticket",
+        button_link=link,
+        fcm_link=link,
+        note="Thank you for helping us make the most of every spot!",
+        email_sent=True,
+        fcm_sent=True,
+    )
 
 
 @shared_task(bind=True)  # type: ignore
+@db_backed_task_validity
 def notify_student_session_timeslot_booking_freezes_tomorrow(  # type: ignore[no-untyped-def]
     self, timeslot_id: int, application_id: int
 ) -> None:
     """
     Remind selected users that timeslot booking/unbooking closes tomorrow (with email).
     """
-    # Skip execution if the task was revoked
-    if ScheduledCeleryTasks.is_revoked(str(self.request.id)):
-        logger.info(
-            f"Skipping revoked task {self.request.id} for notify_student_session_timeslot_booking_freezes_tomorrow"
-        )
-        return
-
     try:
         # Import inside the task to avoid potential Celery startup issues/circular imports
 
