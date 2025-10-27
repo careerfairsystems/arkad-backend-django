@@ -116,9 +116,9 @@ class Ticket(models.Model):
 def schedule_ticket_notifications(
     sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
 ) -> None:
-    should_be_processed: bool = getattr(instance, "_signal_receivers_disabled", False)
+    disabled: bool = getattr(instance, "_signal_receivers_disabled", False)
 
-    if created and should_be_processed:
+    if created and not disabled:
         instance.schedule_notifications(instance.event.start_time)
         setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
