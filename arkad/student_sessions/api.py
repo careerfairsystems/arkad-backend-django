@@ -70,12 +70,7 @@ def get_student_sessions(request: AuthenticatedRequest):
 
     If the user is authenticated, it will also include their application status for each session.
     """
-    sessions: list[StudentSession] = list(
-        StudentSession.objects.filter(
-            Q(booking_close_time__isnull=True)
-            | Q(booking_close_time__gt=timezone.now())
-        ).all()
-    )
+    sessions: list[StudentSession] = list(StudentSession.objects.all())
     id_to_session: dict[int, StudentSession] = {s.id: s for s in sessions}
     my_applications_statuses: dict[int, Literal["accepted", "pending", "rejected"]] = (
         dict()

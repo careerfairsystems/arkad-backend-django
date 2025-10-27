@@ -116,9 +116,9 @@ class Ticket(models.Model):
 def schedule_ticket_notifications(
     sender: Type[Ticket], instance: Ticket, created: bool, **kwargs: Any
 ) -> None:
-    should_be_processed: bool = getattr(instance, "_signal_receivers_disabled", False)
+    disabled: bool = getattr(instance, "_signal_receivers_disabled", False)
 
-    if created and should_be_processed:
+    if created and not disabled:
         instance.schedule_notifications(instance.event.start_time)
         setattr(instance, "_signal_receivers_disabled", True)
         instance.save(
@@ -269,6 +269,7 @@ def cache_old_event_times(sender: Type[Event], instance: Event, **kwargs: Any) -
             old_instance = Event.objects.get(pk=instance.pk)
             # Store the old time on the instance for later use
             setattr(instance, "_old_start_time", old_instance.start_time)
+            setattr(instance, "_old_release_time", old_instance.release_time)
         except Event.DoesNotExist:
             # Should not happen on a pre_save for an existing pk, but good to be safe
             pass
@@ -283,31 +284,38 @@ def schedule_event_notifications(
 
     # Get the old start_time we cached in the pre_save signal
     old_start_time = getattr(instance, "_old_start_time", None)
+    old_release_time = getattr(instance, "_old_release_time", None)
+
+    start_changed: bool = created or old_start_time != instance.start_time
+    release_changed: bool = created or old_release_time != instance.release_time
 
     # If it's not a new event AND the start_time hasn't changed, do nothing.
-    if not created and old_start_time == instance.start_time:
+    if not created and not start_changed and not release_changed:
         return  # The times didn't change, so no rescheduling is needed.
 
     if instance.send_notifications_for_event:
         # Schedule notifications for the Event itself
-        instance.schedule_notifications()
+        if release_changed:
+            instance.schedule_notifications()
 
-        tickets_to_update = []
-        for ticket in instance.tickets.all():
-            ticket.schedule_notifications(instance.start_time)
-            tickets_to_update.append(ticket)
+        if start_changed:
+            tickets_to_update = []
+            for ticket in instance.tickets.all():
+                ticket.schedule_notifications(instance.start_time)
+                tickets_to_update.append(ticket)
 
-        if tickets_to_update:
-            fields_to_update = [
-                "notify_event_tomorrow",
-                "notify_event_in_one_hour",
-                "notify_registration_closes_tomorrow",
-            ]
-            Ticket.objects.bulk_update(tickets_to_update, fields_to_update)
+            if tickets_to_update:
+                fields_to_update = [
+                    "notify_event_tomorrow",
+                    "notify_event_in_one_hour",
+                    "notify_registration_closes_tomorrow",
+                ]
+                Ticket.objects.bulk_update(tickets_to_update, fields_to_update)
 
-        setattr(instance, "_signal_receivers_disabled", True)
-        instance.save(
-            update_fields=[
-                "notify_registration_opening",
-            ]
-        )
+        if release_changed:
+            setattr(instance, "_signal_receivers_disabled", True)
+            instance.save(
+                update_fields=[
+                    "notify_registration_opening",
+                ]
+            )
