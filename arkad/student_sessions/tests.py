@@ -168,6 +168,26 @@ class StudentSessionTests(TestCase):
             self.assertIsNotNone(session2)
             self.assertEqual(session2.user_status, status)
 
+    def test_get_sessions_after_booking_close(self):
+        """Test that sessions are still returned after a booking close"""
+        ss = self._create_student_session(self.company_user1.company)
+        ss.booking_close_time = timezone.now() + datetime.timedelta(days=1)
+
+        resp = self.client.get(
+            "/api/student-session/all",
+            headers=self._get_auth_headers(self.student_users[0]),
+        )
+        self.assertEqual(resp.status_code, 200)
+        # Make sure that this ss is in the response
+        data = StudentSessionNormalUserListSchema(**resp.json())
+        session = next(
+            (s for s in data.student_sessions if s.id == ss.id),
+            None,
+        )
+        self.assertIsNotNone(
+            session, "Session should be present after booking close time"
+        )
+
     def test_exhibitor_create_timeslot(self):
         """Test that exhibitors can create timeslots"""
         _ = self._create_student_session(self.company_user1.company)
