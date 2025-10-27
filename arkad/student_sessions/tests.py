@@ -171,7 +171,8 @@ class StudentSessionTests(TestCase):
     def test_get_sessions_after_booking_close(self):
         """Test that sessions are still returned after a booking close"""
         ss = self._create_student_session(self.company_user1.company)
-        ss.booking_close_time = timezone.now() + datetime.timedelta(days=1)
+        ss.booking_close_time = timezone.now() - datetime.timedelta(days=1)
+        ss.save()
 
         resp = self.client.get(
             "/api/student-session/all",
