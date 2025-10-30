@@ -118,7 +118,9 @@ class StudentSessionApplication(models.Model):
         Notification.objects.create(
             target_user=self.user,
             title=f"Your application to {self.student_session.company.name} has been accepted",
-            body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted. Enter the app to see more information",
+            body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted."
+            f" Timeslots are already released so hurry up and enter the app and book your spot!",
+            email_body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted.\n\nTimeslots are already released so hurry up and enter the app and book your spot!\n They follow first come first served principle.",
             greeting=f"Hi {self.user.first_name},",
             heading="Application Accepted",
             button_text="View Session",
