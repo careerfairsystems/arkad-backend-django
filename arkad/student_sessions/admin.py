@@ -65,6 +65,9 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
         "notify_timeslot_booking_closes_tomorrow",
     )
 
+    # Add custom actions
+    actions = ["accept_applications_action", "deny_applications_action"]
+
     @admin.display(description="Company", ordering="student_session__company")
     def get_company(self, obj: StudentSessionApplication) -> str:
         return obj.student_session.company.name
@@ -77,6 +80,38 @@ class StudentSessionApplicationAdmin(ImportExportModelAdmin):  # type: ignore[ty
         Passes the request object to the resource.
         """
         return {"request": request}
+
+    def accept_applications_action(
+        self, request: HttpRequest, queryset: QuerySet[StudentSessionApplication]
+    ) -> None:
+        """Accept selected applications."""
+        count = 0
+        for application in queryset:
+            if not application.is_accepted():
+                application.accept()
+                count += 1
+        self.message_user(
+            request,
+            f"Successfully accepted {count} application(s).",
+        )
+
+    accept_applications_action.short_description = "Accept selected applications"  # type: ignore[attr-defined]
+
+    def deny_applications_action(
+        self, request: HttpRequest, queryset: QuerySet[StudentSessionApplication]
+    ) -> None:
+        """Deny selected applications."""
+        count = 0
+        for application in queryset:
+            if not application.is_rejected():
+                application.deny()
+                count += 1
+        self.message_user(
+            request,
+            f"Successfully denied {count} application(s).",
+        )
+
+    deny_applications_action.short_description = "Deny selected applications"  # type: ignore[attr-defined]
 
 
 # You can also register your other models for convenience

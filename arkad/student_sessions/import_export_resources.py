@@ -157,10 +157,7 @@ class StudentSessionApplicationResource(resources.ModelResource):  # type: ignor
         # If status changed to rejected, call deny() method
         elif new_status == "rejected" and original_status != "rejected":
             # Send email
-            instance.user.email_user(
-                f"Your application to {instance.student_session.company.name} has been rejected",
-                "We regret to inform you that your application has been rejected.\n",
-            )
+            instance.deny()
 
     class Meta:
         model = StudentSessionApplication
