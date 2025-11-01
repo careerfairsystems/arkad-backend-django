@@ -16,7 +16,7 @@ from arkad.defaults import (
 )
 from arkad.settings import APP_BASE_URL
 from arkad.utils import unique_file_upload_path
-from notifications.models import ScheduledCeleryTasks
+from notifications.models import ScheduledCeleryTasks, Notification
 from student_sessions.dynamic_fields import FieldModificationSchema
 from user_models.models import User
 from companies.models import Company
@@ -135,9 +135,12 @@ class StudentSessionApplication(models.Model):
     def deny(self) -> None:
         self.status = ApplicationStatus.REJECTED
 
-        self.user.email_user(
-            f"Your application to {self.student_session.company.name} has been rejected",
-            "We regret to inform you that your application has been rejected.\n",
+        Notification.objects.create(
+            target_user=self.user,
+            title=f"Your application to {self.student_session.company.name} has been sadly been rejected",
+            body=f"We regret to inform you that your application to {self.student_session.company.name} has been rejected.",
+            email_sent=True,
+            fcm_sent=False,  # No FCM for rejection
         )
         self.save()
 
