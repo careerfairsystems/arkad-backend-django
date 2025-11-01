@@ -1,4 +1,5 @@
 import datetime
+import logging
 from datetime import timedelta
 from functools import partial
 from typing import Any
@@ -96,44 +97,49 @@ class StudentSessionApplication(models.Model):
 
     def accept(self) -> None:
         self.status = ApplicationStatus.ACCEPTED
+        try:
 
-        # For company events, automatically create a timeslot if it doesn't exist
-        if self.student_session.session_type == SessionType.COMPANY_EVENT:
-            with transaction.atomic():
-                timeslot, created = (
-                    StudentSessionTimeslot.objects.select_for_update().get_or_create(
-                        student_session=self.student_session,
-                        start_time=self.student_session.company_event_at,
-                        defaults={
-                            "duration": COMPANY_EVENT_DEFAULT_DURATION,  # 8 hours in minutes
-                        },
+            # For company events, automatically create a timeslot if it doesn't exist
+            if self.student_session.session_type == SessionType.COMPANY_EVENT:
+                with transaction.atomic():
+                    timeslot, created = (
+                        StudentSessionTimeslot.objects.select_for_update().get_or_create(
+                            student_session=self.student_session,
+                            start_time=self.student_session.company_event_at,
+                            defaults={
+                                "duration": COMPANY_EVENT_DEFAULT_DURATION,  # 8 hours in minutes
+                            },
+                        )
                     )
-                )
-                # Automatically add this application to the timeslot
-                timeslot.add_selection(self)
+                    # Automatically add this application to the timeslot
+                    timeslot.add_selection(self)
 
-        from notifications.models import Notification  # Avoid circular import
+            from notifications.models import Notification  # Avoid circular import
 
-        link = f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}"
-        Notification.objects.create(
-            target_user=self.user,
-            title=f"Your application to {self.student_session.company.name} has been accepted",
-            body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted."
-            f" Timeslots are already released so hurry up and enter the app and book your spot!",
-            email_body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted.\n\nTimeslots are already released so hurry up and enter the app and book your spot!\n They follow first come first served principle.",
-            greeting=f"Hi {self.user.first_name},",
-            heading="Application Accepted",
-            button_text="View Session",
-            button_link=link,
-            fcm_link=link,
-            note="We look forward to seeing you there!",
-            email_sent=True,
-            fcm_sent=True,
-        )
-        self.save()
+            link = f"{APP_BASE_URL}/sessions/book/{self.student_session.company.id if self.student_session.company else ''}"
+            Notification.objects.create(
+                target_user=self.user,
+                title=f"Your application to {self.student_session.company.name} has been accepted",
+                body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted."
+                f" Timeslots are already released so hurry up and enter the app and book your spot!",
+                email_body=f"Congratulations! Your application to {self.student_session.company.name} has been accepted.\n\nTimeslots are already released so hurry up and enter the app and book your spot!\n They follow first come first served principle.",
+                greeting=f"Hi {self.user.first_name},",
+                heading="Application Accepted",
+                button_text="View Session",
+                button_link=link,
+                fcm_link=link,
+                note="We look forward to seeing you there!",
+                email_sent=True,
+                fcm_sent=True,
+            )
+        except Exception as e:
+            raise e
+        finally:
+            self.save()
 
     def deny(self) -> None:
         self.status = ApplicationStatus.REJECTED
+        self.save()
 
         Notification.objects.create(
             target_user=self.user,
@@ -142,7 +148,6 @@ class StudentSessionApplication(models.Model):
             email_sent=True,
             fcm_sent=False,  # No FCM for rejection
         )
-        self.save()
 
     def is_accepted(self) -> bool:
         return self.status == ApplicationStatus.ACCEPTED
