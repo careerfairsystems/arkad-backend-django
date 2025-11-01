@@ -1,5 +1,4 @@
 import datetime
-import logging
 from datetime import timedelta
 from functools import partial
 from typing import Any
@@ -98,7 +97,6 @@ class StudentSessionApplication(models.Model):
     def accept(self) -> None:
         self.status = ApplicationStatus.ACCEPTED
         try:
-
             # For company events, automatically create a timeslot if it doesn't exist
             if self.student_session.session_type == SessionType.COMPANY_EVENT:
                 with transaction.atomic():
