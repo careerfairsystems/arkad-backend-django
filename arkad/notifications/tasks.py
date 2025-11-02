@@ -134,7 +134,7 @@ def notify_event_one_hour(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore
         title=f"Heads Up: {event.name} is in 1 Hour! ⏰",
         body=f"Your event starts in one hour{location_str} at {local_start_time}! Get ready.",
         fcm_sent=True,
-        fcm_link=f"{APP_BASE_URL}/events/detail/{event.id}",
+        fcm_link=f"{APP_BASE_URL}/events/detail/{event.id}/ticket",
     )
 
 
