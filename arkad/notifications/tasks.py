@@ -88,7 +88,7 @@ def notify_event_tomorrow(self, ticket_uuid: uuid.UUID) -> None:  # type: ignore
     email_body = (
         f"You have a confirmed ticket for the event {event.name} starting tomorrow at {local_start_time}."
         f"{f' It will be held at {event.location}.' if event.location else ''}"
-        f"\n\nPlease arrive on time to ensure you get your spot! If your plans have changed, we kindly ask you to unbook your ticket."
+        f"\n\nPlease arrive on time to ensure you get your spot!"
     )
     email_note = "We look forward to seeing you there!"
 
