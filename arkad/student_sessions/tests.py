@@ -76,6 +76,7 @@ class StudentSessionTests(TestCase):
         defaults = {
             "start_time": timezone.now() + datetime.timedelta(hours=1),
             "duration": 30,
+            "booking_closes_at": timezone.now() + datetime.timedelta(days=1),
         }
         defaults.update(kwargs)
         return StudentSessionTimeslot.objects.create(
@@ -1399,6 +1400,7 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=event_time,
             duration=480,
+            booking_closes_at=timezone.now() + datetime.timedelta(days=1),
         )
 
         # Create and accept multiple applications
@@ -1438,6 +1440,7 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=timezone.now() + datetime.timedelta(hours=1),
             duration=30,
+            booking_closes_at=timezone.now() + datetime.timedelta(days=1),
         )
 
         # Accept two applications
@@ -1575,6 +1578,7 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=event_time,
             duration=480,
+            booking_closes_at=timezone.now() + datetime.timedelta(days=1),
         )
 
         # Accept first student and have them book
@@ -1618,11 +1622,13 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=timezone.now() + datetime.timedelta(hours=1),
             duration=30,
+            booking_closes_at=timezone.now() + datetime.timedelta(hours=24),
         )
         StudentSessionTimeslot.objects.create(
             student_session=session,
             start_time=timezone.now() + datetime.timedelta(hours=2),
             duration=30,
+            booking_closes_at=timezone.now() + datetime.timedelta(hours=24),
         )
 
         # Accept two students
@@ -1717,6 +1723,7 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=event_time,
             duration=480,
+            booking_closes_at=timezone.now() + datetime.timedelta(hours=24),
         )
 
         # Create and book application
@@ -1831,6 +1838,7 @@ class CompanyEventSessionTests(TestCase):
             student_session=session,
             start_time=event_time,
             duration=240,  # 4 hours (different from default 8)
+            booking_closes_at=timezone.now() + datetime.timedelta(hours=24),
         )
 
         # Accept application
