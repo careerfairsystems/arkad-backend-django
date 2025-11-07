@@ -54,6 +54,7 @@ def create_lunch_event_view(request: HttpRequest) -> HttpResponse:
                 end_time=end_time,
                 visible_time=visible_time,
                 capacity=amount,
+                number_booked=amount,  # fully booked by default, no one should be allowed to get tickets trough app
                 location="Restaurant",
                 send_notifications_for_event=False,
             )

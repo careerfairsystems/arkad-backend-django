@@ -235,11 +235,11 @@ def get_student_session_timeslots(request: AuthenticatedRequest, company_id: int
         .filter(
             Q(student_session__company_id=company_id)
             & (
-                Q(booking_closes_at__gte=timezone.now())
-                | Q(booking_closes_at__isnull=True)
-            )
-            & (
-                Q(num_selected_applications__lt=max_applications_per_slot)
+                (
+                    Q(booking_closes_at__gte=timezone.now())
+                    | Q(booking_closes_at__isnull=True)
+                )
+                & Q(num_selected_applications__lt=max_applications_per_slot)
                 | Q(selected_applications=application)
             )
         )

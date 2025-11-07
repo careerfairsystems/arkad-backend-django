@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 
 from companies.models import Company, Job
@@ -10,8 +11,17 @@ def update_or_create_company(schema: ExhibitorSchema) -> Tuple[Company | None, b
     """
     Create or update a Company instance from a Pydantic schema.
     """
-    if not schema.name or not schema.profile:
+    if not schema.name:
+        logging.warning("Exhibitor schema missing name, skipping.")
         return None, False  # Skip invalid entries
+    if not schema.profile:
+        logging.warning(
+            f"Exhibitor '{schema.name}' missing profile, Saving empty company."
+        )
+        return Company.objects.update_or_create(
+            name=schema.name,
+            defaults={},
+        )
 
     profile = schema.profile
     logotype = profile.logotype
