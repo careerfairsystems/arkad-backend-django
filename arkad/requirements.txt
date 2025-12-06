@@ -107,7 +107,7 @@ types-qrcode==8.2.0.20250914
 types-reportlab==4.4.4.20250926
 typing_extensions==4.12.2
 tzdata==2025.2
-urllib3==2.5.0
+urllib3==2.6.0
 uuid==1.30
 vine==5.1.0
 wcwidth==0.2.14
